@@ -1,8 +1,12 @@
-#!/usr/local/bin/perl -w 
+#!/usr/bin/perl -w
+
+eval 'exec /usr/bin/perl -w  -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+
 use strict;
 
 BEGIN {
-	$ENV{'CGL_CHATTER'} = 1;
+	$ENV{'CGL_CHATTER'} = 0;
 }
 
 
@@ -41,36 +45,55 @@ my $TM = new CGL::TranslationMachine();
 
 my $annotation = new CGL::Annotation($file);
 
+my $focus = $annotation->meta_data('focus_feature_id');
+
 my $i = 0;
 while (my $c = $annotation->contig($i)){
-	die unless defined($c->residues); #gh exit(1) ?
+	epitaph()  unless defined($c->residues); #gh exit(1) ?
 	$i++;
 }
 my $iterator = new CGL::Annotation::Iterator($annotation);
 
+my %seen;
 while (my $data = $iterator->next_by_transcript()){
                 my $t = $data->[0];
                 my $g = $data->[1];
 
-		die unless has_transcript_if_required($g); #gh: exit(2) ?
+		epitaph() unless has_transcript_if_required($g); #gh: exit(2) ?
 
-		die unless has_protein_if_required($t);    #gh: exit(3) ?
+		epitaph() unless has_protein_if_required($t);    #gh: exit(3) ?
 
 		next unless transcript_is_in_scope($t); 
 
 		
-		die unless provided_transcript_residues_match_computed($t); #gh: exit(4) ?
+		epitaph() unless provided_transcript_residues_match_computed($t); #gh: exit(4) ?
 
 		my $i = 0;
 		while (my $p  = $t->translation($i)){
-			die unless provided_translation_residues_match_computed($t, $p); #gh: exit(5) ?
+			epitaph() unless provided_translation_residues_match_computed($t, $p); #gh:exit(5) ?
 			$i++;
 		}
+		$seen{$g->id} = $g;
 }
-#gh: exit(0)?
-print "DOCUMENT IS VALID\n";
+
+foreach my $id (keys %seen){
+	if (defined($focus)) {next unless $id eq $focus};
+
+	my $g = $seen{$id};
+
+	my $syns = $g->properties('synonym')|| 'no_synonyms_for_this_gene';
+
+	print "DOC_VALID"."\t".$g->uniquename()."\t".$syns."\t".$file."\n"; 
+}
+
+exit(0);
 #-----------------------------------------------------------------------------
 #---------------------------------- SUBS -------------------------------------
+#-----------------------------------------------------------------------------
+sub epitaph {
+
+	die "DOC_INVALID"."\t"."-"."\t"."-"."\t".$file."\n";
+}
 #-----------------------------------------------------------------------------
 sub provided_translation_residues_match_computed {
         my $t = shift;
@@ -175,27 +198,19 @@ sub has_protein_if_required {
 }
 #-----------------------------------------------------------------------------
 
-__END__
 
-=head1 NAME
 
-cgl_validate
 
-=head1 SYNOPSIS
 
-  cgl_validate <chaos.xml file>
 
-  cgl_validate CG33070.chaos.xml
 
-=head1 DESCRIPTION
 
-A simple script that attempts to check the semantic integrity of a
-chaos.xml document.
 
-=head1 DOCUMENTATION
 
-L<http://www.yandell-lab.org/cgl>
 
-=cut
+
+
+
+
 
 
