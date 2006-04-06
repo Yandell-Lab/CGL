@@ -5,11 +5,8 @@ use Getopt::Std;
 use vars qw($opt_t $opt_p $opt_c);
 getopts('t p c');
 
-use lib ('/Users/myandell/lib',
-	);
-
 BEGIN {
-	$ENV{'CGL_CHATTER'} = 1;
+    $ENV{'CGL_CHATTER'} = 0;
 }
 
 $| = 1;
@@ -22,8 +19,8 @@ use FastaFile;
 use Fasta;
 
 my $usage = "
-
-chaos_data_dumper: takes a Chaos XML file & dumps the contig, transcripts and proteins from it 
+chaos_data_dumper: takes a Chaos XML file & dumps the contig, transcripts\n
+and proteins from it 
 
 OPTIONS: -t (transcripts) -p (proteins) -c (contigs)
 
@@ -38,43 +35,50 @@ example : chaos_data_dumper -t <chaos.xml file>
 #-----------------------------------------------------------------------------
 
 die $usage unless $ARGV[0];
-
 die $usage unless (defined $opt_t || defined $opt_p || defined $opt_c); 
 
-my $file  = $ARGV[0];
-
-my (@CONTIGS, @TRANSCRIPTS, @PROTEINS);
-
+my $file = $ARGV[0];
 my $chaos = new CGL::Annotation($file);
-
-my $focus = $chaos->meta_data('focus_feature_id') || 'no focus given in file';
-
-
+my $focus = $chaos->meta_data('focus_feature_id') || 
+    'no focus given in file';
 my $iterator = new CGL::Annotation::Iterator($chaos);
-
 my $s = $chaos->contig(0);
+my (@CONTIGS, @TRANSCRIPTS, @PROTEINS);
 
 to_fasta($s);
 
 while (my $g = $iterator->next_by_gene()){
-
-	next unless $g->id eq $focus;
-	my $i = 0;
-	while(my $t = $g->transcript($i)){
-		to_fasta($t);
-		my $p = $t->translation(0);
-		to_fasta($p);	
-		$i++;
+    next unless $g->id eq $focus;
+    my $i = 0;
+    while(my $t = $g->transcript($i)){
+	my $p = $t->translation(0);
+	my $transcr_count = scalar @{$g->transcripts};
+	my $transcr_length = length($t->residues);
+	my $xtra_header;
+	if ($p) {
+	    my $transl_begin = $p->metaPos($t, 0);
+	    my $transl_end = $p->metaPos($t, length($p->residues));
+	    $xtra_header = " |transcr_count: $transcr_count" .
+		"|CDS: ${transl_begin}-${transl_end}" .
+		"|transcr_length: $transcr_length";
 	}
+	else {
+	    $xtra_header = " |transcr_count: $transcr_count" .
+		"|CDS: N/A|transcr_length: $transcr_length";
+	}
+	to_fasta($t, $xtra_header);
+	to_fasta($p, $xtra_header) if $p;	
+	$i++;
+    }
 } 
 if    ($opt_t){
-	dump_it(\@TRANSCRIPTS);
+    dump_it(\@TRANSCRIPTS);
 }
 elsif ($opt_p){
-	dump_it(\@TRANSCRIPTS);
+    dump_it(\@TRANSCRIPTS);
 }
 elsif ($opt_c){
-	dump_it(\@TRANSCRIPTS);
+    dump_it(\@TRANSCRIPTS);
 }
 else {
 }
@@ -82,46 +86,49 @@ else {
 #---------------------------------- SUBS -------------------------------------
 #-----------------------------------------------------------------------------
 sub dump_it {
-
-	my $data;
-
-	if    ($opt_t){
-        	$data = \@TRANSCRIPTS;
-	}
-	elsif ($opt_p){
-        	$data = \@PROTEINS;
-	}
-	elsif ($opt_c){
-        	$data = \@CONTIGS;
-	}
-
-	foreach my $fasta (@{$data}){
-		print $$fasta;
-	}
+    
+    my $data;
+    
+    if    ($opt_t){
+	$data = \@TRANSCRIPTS;
+    }
+    elsif ($opt_p){
+	$data = \@PROTEINS;
+    }
+    elsif ($opt_c){
+	$data = \@CONTIGS;
+    }
+    
+    foreach my $fasta (@{$data}){
+	print $$fasta;
+    }
 }
 #-----------------------------------------------------------------------------
 sub to_fasta {
-	my $o = shift;
+    my ($o, $xtra_header) = @_;
 
+    if (ref($o) =~ /Protein$/){
+	my $fasta = Fasta::toFasta('>' . $o->name() . $xtra_header,
+				   \$o->residues());
+	push(@PROTEINS, $fasta);
+    }
+    elsif (ref($o) =~ /Transcript$/){
+	my $fasta = Fasta::toFasta('>' . $o->name() . $xtra_header, 
+				   \$o->residues());
+	push(@TRANSCRIPTS, $fasta);
+    }
+    elsif (ref($o) =~ /Contig$/){
 	my $fasta = Fasta::toFasta('>'.$o->name(), \$o->residues());
-
-	if (ref($o) =~ /Protein$/){
-		push(@PROTEINS, $fasta);
-	}
-	elsif (ref($o) =~ /Transcript$/){
-		push(@TRANSCRIPTS, $fasta);
-	}
-	elsif (ref($o) =~ /Contig$/){
-		push(@CONTIGS, $fasta);
-        }
-        else {
-		die "Unknow type passed to sub to_fasta:".ref($o)."\n";
-        }
-
+	push(@CONTIGS, $fasta);
+    }
+    else {
+	die "Unknow type passed to sub to_fasta:".ref($o)."\n";
+    }
+    
 }
 #-----------------------------------------------------------------------------
 sub gotControlC {
-
-	die "died in chaos_data_dumper::gotContolC\n";
+    
+    die "died in chaos_data_dumper::gotContolC\n";
 }
 #-----------------------------------------------------------------------------
