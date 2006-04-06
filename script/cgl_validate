@@ -80,10 +80,8 @@ foreach my $id (keys %seen){
 	if (defined($focus)) {next unless $id eq $focus};
 
 	my $g = $seen{$id};
-
-	my $syns = $g->properties('synonym')|| 'no_synonyms_for_this_gene';
-
-	print "DOC_VALID"."\t".$g->uniquename()."\t".$syns."\t".$file."\n"; 
+	my $syns = find_synonyms($g) || 'no_synonyms_for_this_gene';
+	print "DOC_VALID\t" . $g->uniquename() . "\t$syns\t$file\n"; 
 }
 
 exit(0);
@@ -198,7 +196,22 @@ sub has_protein_if_required {
 }
 #-----------------------------------------------------------------------------
 
-
+sub find_synonyms {
+    my $g = shift;
+    my $notes = $g->properties('note');
+    my $olt = $g->properties('old_locus_tag')->[0];
+    my $synonym_list;
+    for my $note (@$notes) {
+	if ($note =~ /synonym[s]?:/) {
+	    $note =~ s/synonym[s]?:\s*//;
+	    my %synonyms;
+	    map {$synonyms{$_}++} split /[,;]/, $note;
+	    $synonyms{$olt}++;
+	    $synonym_list = join "; ", sort keys %synonyms;
+	}
+    }
+    return $synonym_list;
+}
 
 
 
