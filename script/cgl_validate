@@ -1,130 +1,99 @@
-#!/usr/bin/perl -w
-
-eval 'exec /usr/bin/perl -w  -S $0 ${1+"$@"}'
-    if 0; # not running under some shell
-
+#!/usr/bin/perl
 use strict;
+use warnings;
 
-BEGIN {
-	$ENV{'CGL_CHATTER'} = 0;
-}
-
-
-$| = 1;
 use FileHandle;
 use CGL::Annotation;
 use CGL::Annotation::Iterator;
 use CGL::TranslationMachine;
 use CGL::Ontology::SO;
 
-my $usage = "
-
-cgl_validate: a simple script that attempts to check 
-          the semantic integrity of a chaos.xml 
-          document 
-
-cgl_validate <chaos.xml file>
-
-cgl_validate CG33070.chaos.xml
-
-
-\n"; 
-
 #-----------------------------------------------------------------------------
 #----------------------------------- MAIN ------------------------------------
 #-----------------------------------------------------------------------------
+my $usage = "
 
-die $usage unless $ARGV[0];
+A script that checks the semantic integrity of a chaos.xml document. 
 
-my $file  = $ARGV[0];
+cgl_validate <chaos.xml>
 
+"; 
+
+my $file  = shift;
+die $usage unless $file;
 
 my $SO = new CGL::Ontology::SO();
-
 my $TM = new CGL::TranslationMachine();
 
-my $chaos = new CGL::Annotation($file);
+my $chaos;
+eval {$chaos= new CGL::Annotation($file)};
+print_out('DOC_INVALID', undef, $file) if $@;
 
 my $focus = $chaos->meta_data('focus_feature_id')
     || 'no focus given in file';
 
-
 my $i = 0;
-while (my $c = $chaos->contig($i)){
-	epitaph()  unless defined($c->residues); #gh exit(1) ?
-	$i++;
+while (my $c = $chaos->contig($i++)){
+	print_out('DOC_INVALID', undef, $file)  
+	    unless defined($c->residues);
 }
+
 my $iterator = new CGL::Annotation::Iterator($chaos);
 
-
-### Merge this with the loop below ###
-while (my $gene = $iterator->next_by_gene()) {
-	next unless $gene->id eq $focus;
-	if (! defined $gene->transcript(0)) {
-		my $lt = $gene->properties('locus_tag')
-		    if $gene->properties('locus_tag');
-		my $syns = find_synonyms($gene) || 
-		    'no_synonyms_for_this_gene';
-		print "NO_TRNSCPT\t" . $gene->uniquename(). 
-		    ":$lt\t$syns\t$file\n"; 
+while (my $g = $iterator->next_by_gene()) {
+	next unless $g->id eq $focus;
+	
+	unless (has_transcript_if_required($g)) {
+		print_out('NO_TRANSCRIPT', $g, $file);
+		next;
 	}
-}
-
-my %seen;
-while (my $data = $iterator->next_by_transcript()){
-                my $t = $data->[0];
-                my $g = $data->[1];
-
-		epitaph() unless has_transcript_if_required($g); #gh: exit(2) ?
-
-		epitaph() unless has_protein_if_required($t);    #gh: exit(3) ?
-
+	
+	my $i = 0;
+	while (my $t = $g->transcript($i++)) {		
 		next unless transcript_is_in_scope($t); 
-
+		print_out('DOC_INVALID', $g, $file)
+		    unless has_protein_if_required($t);
+		print_out('DOC_INVALID', $g, $file)
+		    unless transcript_resd_match_computed($t);
 		
-		epitaph() unless provided_transcript_residues_match_computed($t); #gh: exit(4) ?
-
 		my $i = 0;
-		while (my $p  = $t->translation($i)){
-			epitaph() unless provided_translation_residues_match_computed($t, $p); #gh:exit(5) ?
-			$i++;
+		while (my $p  = $t->translation($i++)){
+			print_out('DOC_INVALID', $g, $file) 
+			    unless translation_resd_match_computed($t, $p);
 		}
-		$seen{$g->id} = $g;
-}
-
-
-
-foreach my $id (keys %seen){
-	if (defined($focus)) {next unless $id eq $focus};
-
-	my $g = $seen{$id};
-	my $lt = $g->properties('locus_tag')
-	    if $g->properties('locus_tag');
-	my $syns = find_synonyms($g) || 'no_synonyms_for_this_gene';
-	print "DOC_VALID\t" . $g->uniquename(). ":$lt\t$syns\t$file\n"; 
+	}
+	print_out('DOC_VALID', $g, $file);
 }
 
 exit(0);
 #-----------------------------------------------------------------------------
 #---------------------------------- SUBS -------------------------------------
 #-----------------------------------------------------------------------------
-sub epitaph {
+sub print_out {
+	my ($label, $g, $file) = @_;
 
-	die "DOC_INVALID"."\t"."-"."\t"."-"."\t".$file."\n";
+	my $name      = 'no_name';
+	my $locus_tag = 'no_locus_tag';
+	my $synonyms  = 'no_synonyms';
+
+	if ($g) {
+		$locus_tag = get_locus_tag($g) || 'no_locus_tag';
+		$synonyms  = find_synonyms($g) || 'no_synonyms_for_this_gene';
+		$name      = $g->uniquename()  || 'no_unique_name';
+	}
+
+	print "$label\t$name:$locus_tag\t$synonyms\t$file\n";
+	die if $label =~ /DOC_INVALID/;
 }
 #-----------------------------------------------------------------------------
-sub provided_translation_residues_match_computed {
+sub translation_resd_match_computed {
         my $t = shift;
 	my $p = shift;
 
         if (defined($p->residues)){
                 my $residues = compute_protein_residues($t, $p);  
-
 		return 0 unless defined($residues);
-
                 return 0 unless $p->residues() eq $residues;
-        }
-        else {
         }
 
         return 1;
@@ -135,27 +104,22 @@ sub compute_protein_residues {
 	my $p = shift;
 
 	my $transcript_residues = compute_transcript_residues($t);
- 
 	my $translation_offset = $p->metaPos($t, 0);
-
-	my $translation = $TM->translate_from_offset($transcript_residues, $translation_offset);
+	my $translation = $TM->translate_from_offset($transcript_residues, 
+						     $translation_offset);
 
 	($translation) = $translation =~ /([A-Z]+)/;
 
 	return $translation;
 }
 #-----------------------------------------------------------------------------
-sub provided_transcript_residues_match_computed {
+sub transcript_resd_match_computed {
 	my $t = shift;
 
 	if (defined($t->residues)){
 		my $residues = compute_transcript_residues($t); 
-
 		return 0 unless defined($residues);
-
 		return 0 unless $t->residues() eq $residues;
-	}
-	else {
 	}
 
 	return 1;
@@ -192,11 +156,8 @@ sub compute_transcript_residues {
 sub has_transcript_if_required {
         my $g = shift;
 
-
         if ($SO->a_is_hyponym_of_b($g->type(), 'gene')){
                 return 0 unless defined($g->transcript(0));
-        }
-        else {
         }
 
         return 1;
@@ -205,17 +166,13 @@ sub has_transcript_if_required {
 sub has_protein_if_required {
 	my $t = shift;
 
-	
 	if ($SO->a_is_hyponym_of_b($t->type(), 'mRNA')){
 		return 0 unless defined($t->translation(0));
-	}
-	else {
 	}
 
 	return 1;
 }
 #-----------------------------------------------------------------------------
-
 sub find_synonyms {
     my $g = shift;
     my $note_holder = $g->properties('note');
@@ -241,9 +198,11 @@ sub find_synonyms {
     my $synonym_list = join "; ", sort keys %synonyms;
     return $synonym_list;
 }
-
-
-
+#-----------------------------------------------------------------------------
+sub get_locus_tag {
+	my $g = shift;
+	return $g->properties('locus_tag');
+}
 
 
 
