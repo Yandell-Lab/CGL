@@ -43,16 +43,32 @@ my $SO = new CGL::Ontology::SO();
 
 my $TM = new CGL::TranslationMachine();
 
-my $annotation = new CGL::Annotation($file);
+my $chaos = new CGL::Annotation($file);
 
-my $focus = $annotation->meta_data('focus_feature_id');
+my $focus = $chaos->meta_data('focus_feature_id')
+    || 'no focus given in file';
+
 
 my $i = 0;
-while (my $c = $annotation->contig($i)){
+while (my $c = $chaos->contig($i)){
 	epitaph()  unless defined($c->residues); #gh exit(1) ?
 	$i++;
 }
-my $iterator = new CGL::Annotation::Iterator($annotation);
+my $iterator = new CGL::Annotation::Iterator($chaos);
+
+
+### Merge this with the loop below ###
+while (my $gene = $iterator->next_by_gene()) {
+	next unless $gene->id eq $focus;
+	if (! defined $gene->transcript(0)) {
+		my $lt = $gene->properties('locus_tag')
+		    if $gene->properties('locus_tag');
+		my $syns = find_synonyms($gene) || 
+		    'no_synonyms_for_this_gene';
+		print "NO_TRNSCPT\t" . $gene->uniquename(). 
+		    ":$lt\t$syns\t$file\n"; 
+	}
+}
 
 my %seen;
 while (my $data = $iterator->next_by_transcript()){
@@ -76,12 +92,16 @@ while (my $data = $iterator->next_by_transcript()){
 		$seen{$g->id} = $g;
 }
 
+
+
 foreach my $id (keys %seen){
 	if (defined($focus)) {next unless $id eq $focus};
 
 	my $g = $seen{$id};
+	my $lt = $g->properties('locus_tag')
+	    if $g->properties('locus_tag');
 	my $syns = find_synonyms($g) || 'no_synonyms_for_this_gene';
-	print "DOC_VALID\t" . $g->uniquename() . "\t$syns\t$file\n"; 
+	print "DOC_VALID\t" . $g->uniquename(). ":$lt\t$syns\t$file\n"; 
 }
 
 exit(0);
@@ -198,18 +218,27 @@ sub has_protein_if_required {
 
 sub find_synonyms {
     my $g = shift;
-    my $notes = $g->properties('note');
-    my $olt = $g->properties('old_locus_tag')->[0];
-    my $synonym_list;
-    for my $note (@$notes) {
-	if ($note =~ /synonym[s]?:/) {
-	    $note =~ s/synonym[s]?:\s*//;
-	    my %synonyms;
+    my $note_holder = $g->properties('note');
+    my @notes;
+    if (ref $note_holder eq 'ARRAY') {
+	@notes = @$note_holder;
+    }
+    else {
+	@notes = ();
+    }
+    my $olt = $g->properties('old_locus_tag')
+	if $g->properties('old_locus_tag');
+    my $lt = $g->properties('locus_tag')
+	if $g->properties('locus_tag');
+    my %synonyms;
+    for my $note (@notes) {
+	if ($note =~ s/synonym[s]?:\s*//) {
 	    map {$synonyms{$_}++} split /[,;]/, $note;
-	    $synonyms{$olt}++;
-	    $synonym_list = join "; ", sort keys %synonyms;
 	}
     }
+    $synonyms{$olt}++ if $olt;
+    $synonyms{$lt}++ if $lt;
+    my $synonym_list = join "; ", sort keys %synonyms;
     return $synonym_list;
 }
 

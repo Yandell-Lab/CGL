@@ -163,9 +163,11 @@ sub AUTOLOAD {
         my ($call) = $AUTOLOAD =~/.*\:\:(\w+)$/;
         $call =~/DESTROY/ && return;
 
-        print STDERR "Annotation::Feature::Sequence_variant AutoLoader called for: ",
-              "\$self->$call","()\n";
-        print STDERR "call to AutoLoader issued from: ", $caller, "\n";
+        if($ENV{CGL_CHATTER}) {
+	    print STDERR "Annotation::Feature::Sequence_variant AutoLoader called for: ",
+	    "\$self->$call","()\n";
+	    print STDERR "call to AutoLoader issued from: ", $caller, "\n";
+	}
 
         if (defined($arg)){
                 $self->{$call} = $arg;

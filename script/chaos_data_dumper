@@ -106,19 +106,21 @@ sub dump_it {
 #-----------------------------------------------------------------------------
 sub to_fasta {
     my ($o, $xtra_header) = @_;
+    my $locus_tag = $o->properties('locus_tag');
 
     if (ref($o) =~ /Protein$/){
-	my $fasta = Fasta::toFasta('>' . $o->name() . $xtra_header,
-				   \$o->residues());
+	my $fasta = Fasta::toFasta('>' . $o->uniquename() . ":$locus_tag" . 
+				   $xtra_header, \$o->residues());
 	push(@PROTEINS, $fasta);
     }
     elsif (ref($o) =~ /Transcript$/){
-	my $fasta = Fasta::toFasta('>' . $o->name() . $xtra_header, 
-				   \$o->residues());
+	my $fasta = Fasta::toFasta('>' . $o->uniquename() . ":$locus_tag" . 
+				   $xtra_header, \$o->residues());
 	push(@TRANSCRIPTS, $fasta);
     }
     elsif (ref($o) =~ /Contig$/){
-	my $fasta = Fasta::toFasta('>'.$o->name(), \$o->residues());
+	my $fasta = Fasta::toFasta('>'.$o->uniquename() . ":$locus_tag",
+				   \$o->residues());
 	push(@CONTIGS, $fasta);
     }
     else {

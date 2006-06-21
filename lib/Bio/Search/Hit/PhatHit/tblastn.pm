@@ -325,9 +325,11 @@ sub AUTOLOAD
         my ($call) = $AUTOLOAD =~/.*\:\:(\w+)$/;
         $call =~/DESTROY/ && return;
 
-        print STDERR "tblastn::PhatHit::AutoLoader called for: ",
-              "\$self->$call","()\n";
-        print STDERR "call to AutoLoader issued from: ", $caller, "\n";
+        if($ENV{CGL_CHATTER}) {
+	    print STDERR "tblastn::PhatHit::AutoLoader called for: ",
+	    "\$self->$call","()\n";
+	    print STDERR "call to AutoLoader issued from: ", $caller, "\n";
+	}
 
         if (@_){
                 $self->{$call} = shift;

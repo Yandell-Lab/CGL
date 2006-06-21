@@ -159,7 +159,7 @@ BEGIN {
 
 ################################################ subroutine header begin ##
 
-=head2 new
+=head1 new
 
  Usage     :
 
@@ -198,7 +198,7 @@ sub new {
 
 ################################################ subroutine header begin ##
 
-=head2 residues
+=head1 residues
 
  Usage     :
 
@@ -246,7 +246,7 @@ sub residues {
 
 ################################################ subroutine header begin ##
 
-=head2 nbeg
+=head1 nbeg
 
  Usage     :
 
@@ -296,7 +296,7 @@ sub nbeg {
 
 ################################################ subroutine header begin ##
 
-=head2 nend
+=head1 nend
 
  Usage     :
 
@@ -346,7 +346,7 @@ sub nend {
 
 ################################################ subroutine header begin ##
 
-=head2 length
+=head1 length
 
  Usage     :
 
@@ -390,7 +390,7 @@ sub length {
 }
 ################################################ subroutine header begin ##
 
-=head2 uniquename
+=head1 uniquename
 
  Usage     :
 
@@ -434,7 +434,7 @@ sub uniquename {
 
 ################################################ subroutine header begin ##
 
-=head2 featureLocation XXXX NOT FINISHED
+=head1 featureLocation XXXX NOT FINISHED
 
  Usage     :
 
@@ -483,7 +483,7 @@ sub featureLocation {
 
 ################################################ subroutine header begin ##
 
-=head2 name
+=head1 name
 
  Usage     :
 
@@ -525,7 +525,7 @@ sub name {
 
 ################################################ subroutine header begin ##
 
-=head2 type
+=head1 type
 
  Usage     :
 
@@ -565,7 +565,7 @@ sub type {
 
 ################################################ subroutine header begin ##
 
-=head2 strand
+=head1 strand
 
  Usage     :
 
@@ -613,7 +613,7 @@ sub strand {
 
 ################################################ subroutine header begin ##
 
-=head2 id
+=head1 id
 
  Usage     :
 
@@ -653,7 +653,7 @@ sub id {
 
 ################################################ subroutine header begin ##
 
-=head2 inScope
+=head1 inScope
 
  Usage     :
 
@@ -706,7 +706,7 @@ sub inScope {
 
 ################################################ subroutine header begin ##
 
-=head2 properties
+=head1 properties
 
  Usage     :
 
@@ -756,7 +756,7 @@ sub properties {
 
 ################################################ subroutine header begin ##
 
-=head2 relationships
+=head1 relationships
 
  Usage     :
 
@@ -796,7 +796,7 @@ sub relationships {
 
 ################################################ subroutine header begin ##
 
-=head2 _add_id
+=head1 _add_id
 
  Usage     : *private*
 
@@ -837,7 +837,7 @@ sub _add_id {
 
 ################################################ subroutine header begin ##
 
-=head2 _so
+=head1 _so
 
  Usage     : *private*
 
@@ -883,7 +883,7 @@ sub _add_id {
 
 ################################################ subroutine header begin ##
 
-=head2 _add_residues
+=head1 _add_residues
 
  Usage     : *private*
 
@@ -896,7 +896,7 @@ sub _add_id {
  Purpose   : Add residues from a contig to a feature.
  Returns   : Whether the feature is "inScope".
  Argument  : A reference to a contig.
- Throws    : die()'s if either the Feature or the contig has an invalid
+ Throws    : die()s if either the Feature or the contig has an invalid
            : strand.
  Comments  :
  See Also  :
@@ -961,7 +961,7 @@ sub _add_residues
 
 ################################################ subroutine header begin ##
 
-=head2 _load_feature
+=head1 _load_feature
 
  Usage     : *private*
 
@@ -1004,7 +1004,7 @@ sub _load_feature {
 
 ################################################ subroutine header begin ##
 
-=head2 _add_location
+=head1 _add_location
 
  Usage     : *private*
 
@@ -1035,7 +1035,7 @@ sub _add_location {
 
 ################################################ subroutine header begin ##
 
-=head2 _add_relationship
+=head1 _add_relationship
 
  Usage     : *private*
 
@@ -1066,7 +1066,7 @@ sub _add_relationship {
 
 ################################################ subroutine header begin ##
 
-=head2 _get_begin_end_on_src
+=head1 _get_begin_end_on_src
 
  Usage     : *private*
 
@@ -1111,7 +1111,7 @@ sub _get_begin_end_on_src
 
 ################################################ subroutine header begin ##
 
-=head2 _add_src_id
+=head1 _add_src_id
 
  Usage     : *private*
 
@@ -1141,7 +1141,7 @@ sub _add_src_id {
 
 ################################################ subroutine header begin ##
 
-=head2 AUTOLOAD
+=head1 AUTOLOAD
 
  Usage     : *private*
 

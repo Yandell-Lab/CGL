@@ -465,9 +465,11 @@ sub AUTOLOAD
         my ($call) = $AUTOLOAD =~/.*\:\:(\w+)$/;
         $call =~/DESTROY/ && return;
 
-        print STDERR "CGL::Annotation::Feature::Gene AutoLoader called for: ",
-              "\$self->$call","()\n";
-        print STDERR "call to AutoLoader issued from: ", $caller, "\n";
+        if($ENV{CGL_CHATTER}) {
+	    print STDERR "CGL::Annotation::Feature::Gene AutoLoader called for: ",
+	    "\$self->$call","()\n";
+	    print STDERR "call to AutoLoader issued from: ", $caller, "\n";
+	}
 
         if (@_){
                 $self->{$call} = shift;
