@@ -135,22 +135,32 @@ while (my $g = $iterator->next_by_gene()){
                            unless defined($splice_donor);
 
                         my $pos_e_b_in_p;
+                        my $pos_e_e_in_p;
                         my $aa;
                         my $codon;
-                        if (defined($p) && defined($t->metaPos($p, $pos_e_b_in_t))){
-                                $pos_e_b_in_p = $t->metaPos($p, $pos_e_b_in_t);
-                                $aa           = $p->aa($pos_e_b_in_p);
-                                $codon        =  $p->triplet($t, int($pos_e_b_in_p));
-                        }
-                        else {
-                                $pos_e_b_in_p =  'not defined';
-                                $aa           =  'not defined';
-                                $codon        =  'not defined';
-                        }
+                        if (defined($p)) {
+				if (defined($t->metaPos($p, $pos_e_b_in_t))){
+					$pos_e_b_in_p = $t->metaPos($p, $pos_e_b_in_t);
+					
+					$aa           = $p->aa($pos_e_b_in_p);
+					$codon        =  $p->triplet($t, int($pos_e_b_in_p));
+				}
+				else {
+					$pos_e_b_in_p =  'not defined';
+					$aa           =  'not defined';
+					$codon        =  'not defined';
+				}
+				if (defined($t->metaPos($p, $pos_e_e_in_t))) {
+					$pos_e_e_in_p = $t->metaPos($p, $pos_e_e_in_t);				
+				}
+				else {
+					$pos_e_e_in_p =  'not defined';
+				}
+			}
 
 			print "\t\t\texon\($j\) type:".$e->type."\n";
                         print "\t\t\texon\($j\) id:".$e->id."\n";
-			 print "\t\t\texon\($j\) src_id:".$e->src_id."\n";
+			print "\t\t\texon\($j\) src_id:".$e->src_id."\n";
                         print "\t\t\texon\($j\) isCoding:".$e->isCoding($p, $t)."\n" if defined($p);
                         print "\t\t\texon\($j\) isFirstExon:".$t->isFirstExon($e)."\n";
                         print "\t\t\texon\($j\) isLastExon:".$t->isLastExon($e)."\n";
@@ -161,6 +171,7 @@ while (my $g = $iterator->next_by_gene()){
                         print "\t\t\texon\($j\) beg in t:$pos_e_b_in_t\n";
                         print "\t\t\texon\($j\) end in t:$pos_e_e_in_t\n";
                         print "\t\t\texon\($j\) beg in p:$pos_e_b_in_p\n";
+                        print "\t\t\texon\($j\) end in p:$pos_e_e_in_p\n";
                         print "\t\t\texon\($j\) aa \@ beg in p:$aa\n";
                         print "\t\t\texon\($j\)codon \@ beg in t:$codon\n";
                         print "\n";
