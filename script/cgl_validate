@@ -22,43 +22,46 @@ cgl_validate <chaos.xml>
 my $file  = shift;
 die $usage unless $file;
 
-my $SO = new CGL::Ontology::SO();
-my $TM = new CGL::TranslationMachine();
+my $so = new CGL::Ontology::SO();
+my $tm = new CGL::TranslationMachine();
 
 my $chaos;
 eval {$chaos= new CGL::Annotation($file)};
-print_out('DOC_INVALID', undef, $file) if $@;
+print_out('DOC_INVALID', undef, $file, $@) if $@;
 
 my $focus = $chaos->meta_data('focus_feature_id')
     || 'no focus given in file';
 
 my $i = 0;
 while (my $c = $chaos->contig($i++)){
-	print_out('DOC_INVALID', undef, $file)  
+	print_out('DOC_INVALID', undef, $file, $@)  
 	    unless defined($c->residues);
 }
 
-my $iterator = new CGL::Annotation::Iterator($chaos);
+my $iterator;
+eval{$iterator = new CGL::Annotation::Iterator($chaos)};
+print_out('DOC_INVALID', undef, $file, '$@') if $@;
+
 
 while (my $g = $iterator->next_by_gene()) {
 	next unless $g->id eq $focus;
 	
 	unless (has_transcript_if_required($g)) {
-		print_out('NO_TRANSCRIPT', $g, $file);
+		print_out('NO_TRANSCRIPT', $g, $file, 'has_transcript_if_required($g)');
 		next;
 	}
 	
 	my $i = 0;
 	while (my $t = $g->transcript($i++)) {		
 		next unless transcript_is_in_scope($t); 
-		print_out('DOC_INVALID', $g, $file)
+		print_out('DOC_INVALID', $g, $file, 'has_protein_if_required($t);')
 		    unless has_protein_if_required($t);
-		print_out('DOC_INVALID', $g, $file)
+		print_out('DOC_INVALID', $g, $file, 'transcript_resd_match_computed($t)')
 		    unless transcript_resd_match_computed($t);
 		
-		my $i = 0;
-		while (my $p  = $t->translation($i++)){
-			print_out('DOC_INVALID', $g, $file) 
+		my $j = 0;
+		while (my $p  = $t->translation($j++)){
+			print_out('DOC_INVALID', $g, $file, 'translation_resd_match_computed($t, $p)') 
 			    unless translation_resd_match_computed($t, $p);
 		}
 	}
@@ -70,7 +73,7 @@ exit(0);
 #---------------------------------- SUBS -------------------------------------
 #-----------------------------------------------------------------------------
 sub print_out {
-	my ($label, $g, $file) = @_;
+	my ($label, $g, $file, $debug) = @_;
 
 	my $name      = 'no_name';
 	my $locus_tag = 'no_locus_tag';
@@ -83,7 +86,10 @@ sub print_out {
 	}
 
 	print "$label\t$name:$locus_tag\t$synonyms\t$file\n";
-	die if $label =~ /DOC_INVALID/;
+	if ($label !~ /DOC_VALID/) {
+		chomp $debug;
+		die "$debug\t$name:$locus_tag\t$file\n";
+	}
 }
 #-----------------------------------------------------------------------------
 sub translation_resd_match_computed {
@@ -92,6 +98,7 @@ sub translation_resd_match_computed {
 
         if (defined($p->residues)){
                 my $residues = compute_protein_residues($t, $p);  
+
 		return 0 unless defined($residues);
                 return 0 unless $p->residues() eq $residues;
         }
@@ -102,11 +109,15 @@ sub translation_resd_match_computed {
 sub compute_protein_residues {
 	my $t = shift;
 	my $p = shift;
-
+	
 	my $transcript_residues = compute_transcript_residues($t);
-	my $translation_offset = $p->metaPos($t, 0);
-	my $translation = $TM->translate_from_offset($transcript_residues, 
-						     $translation_offset);
+	
+	my $translation_offset;
+	eval{$translation_offset = $p->metaPos($t, 0)};
+	print_out('DOC_INVALID', undef, $file, $@) if $@;
+
+	my $translation = $tm->translate_from_offset($transcript_residues, 
+						       $translation_offset);
 
 	($translation) = $translation =~ /([A-Z]+)/;
 
@@ -117,7 +128,8 @@ sub transcript_resd_match_computed {
 	my $t = shift;
 
 	if (defined($t->residues)){
-		my $residues = compute_transcript_residues($t); 
+		my $residues = compute_transcript_residues($t);
+ 
 		return 0 unless defined($residues);
 		return 0 unless $t->residues() eq $residues;
 	}
@@ -129,7 +141,10 @@ sub transcript_is_in_scope {
 	my $t = shift;
 
 	foreach my $e (@{$t->exons}){
-		return 0 unless $e->inScope();
+		my $scope;
+		eval{$scope = $e->inScope()};
+		print_out('DOC_INVALID', undef, $file, $@) if $@;
+		return 0 unless $scope;
 	}
 
 	return 1;
@@ -142,11 +157,18 @@ sub compute_transcript_residues {
         my $nE = $t->nend();
 
         my $residues  ='';
-        foreach my $e (@{$t->exons}){
-                unless (defined($e->residues)){
-                        return undef;
-                }
-                $residues .= $e->residues();
+	my @exons;
+	eval{@exons = @{$t->exons}};
+	print_out('DOC_INVALID', undef, $file, $@) if $@;
+			
+
+        foreach my $e (@exons){
+		return undef unless $e;
+		my $e_residues;
+		eval{$e_residues = $e->residues};
+		print_out('DOC_INVALID', undef, $file, $@) if $@;
+		return undef unless (defined($e_residues));
+                $residues .= $e_residues;
         }
 
 	return $residues;
@@ -156,8 +178,14 @@ sub compute_transcript_residues {
 sub has_transcript_if_required {
         my $g = shift;
 
-        if ($SO->a_is_hyponym_of_b($g->type(), 'gene')){
-                return 0 unless defined($g->transcript(0));
+	my $type;
+	eval{$type = $so->a_is_hyponym_of_b($g->type(), 'gene')};
+	print_out('DOC_INVALID', $g, $file, $@) if $@;
+        if ($type) {
+		my $t;
+		eval{$t = $g->transcript(0)};
+		print_out('DOC_INVALID', $g, $file, $@) if $@;
+		return 0 unless defined($t);
         }
 
         return 1;
@@ -166,8 +194,14 @@ sub has_transcript_if_required {
 sub has_protein_if_required {
 	my $t = shift;
 
-	if ($SO->a_is_hyponym_of_b($t->type(), 'mRNA')){
-		return 0 unless defined($t->translation(0));
+	my $type;
+	eval{$type = $so->a_is_hyponym_of_b($t->type(), 'mRNA')};
+	print_out('DOC_INVALID', undef, $file, $@) if $@;	
+	if ($type){
+		my $p;
+		eval{$p = $t->translation(0)};
+		print_out('DOC_INVALID', undef, $file, $@) if $@;
+		return 0 unless defined($p);
 	}
 
 	return 1;
