@@ -1,0 +1,19 @@
+
+# to get rid of all of the pod docs...
+perl -e '$/=undef; $a = <>; $a =~ s|#+[\s\w]+ begin ##.*?\n#+[\s\w]+ end +##||sg; print $a' 
+
+
+Standard getters/setters
+
+   sub group {
+     my $self  = shift;
+   
+     if (@_) {
+       $self->{group} = shift;
+     }
+     return $self->{group};
+   }
+
+
+ToDo for release
+	talk about env. variables for the ontologies.
