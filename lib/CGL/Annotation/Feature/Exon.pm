@@ -91,7 +91,7 @@ BEGIN {
 
 ################################################ subroutine header begin ##
 
-=head2 new
+=head1 new
 
  Usage     : How to use this function/method
 
@@ -135,7 +135,7 @@ sub new {
 
 ################################################ subroutine header begin ##
 
-=head2 length
+=head1 length
 
  Usage     : How to use this function/method
 
@@ -177,7 +177,7 @@ sub length {
 
 ################################################ subroutine header begin ##
 
-=head2 isCoding
+=head1 isCoding
 
  Usage     : How to use this function/method
 
@@ -240,7 +240,7 @@ sub isCoding {
 
 ################################################ subroutine header begin ##
 
-=head2 metaPos
+=head1 metaPos
 
  Usage     : How to use this function/method
 
@@ -316,7 +316,7 @@ sub metaPos {
 
 ################################################ subroutine header begin ##
 
-=head2 order
+=head1 order
 
  Usage     : How to use this function/method
 
@@ -372,7 +372,7 @@ sub order {
 
 ################################################ subroutine header begin ##
 
-=head2 AUTOLOAD
+=head1 AUTOLOAD
 
  Usage     : *private*
 
