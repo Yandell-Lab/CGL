@@ -673,10 +673,11 @@ sub load_seq {
         my $seqio = Bio::SeqIO->new(-file   => $file,
                                     -format => 'Fasta');
         my $seq = $seqio->next_seq;
-        my $def = $seq->description;
-        my $seq = $seq->seq;
+        my $id  = $seq->display_id;
 
-        return ($def, \$seq);
+        my $sequence = $seq->seq;
+
+        return ($id, \$sequence);
 }       
 #-------------------------------------------------------------------------------
 sub grab {
@@ -728,9 +729,7 @@ sub get_genes {
 	my $base_type  = shift;
 	my $flank      = shift;
 
-	my ($def, $seq)   = load_seq($fasta_file);
-
-	my ($c_id) = $def =~ />(\S+)/;
+	my ($c_id, $seq)   = load_seq($fasta_file);
 
 	print STDERR "loading features....\n";
 	my $features = get_features($gff3_file);
@@ -812,8 +811,21 @@ sub get_e_coors {
 	my $utrs_5 = shift;
 	my $utrs_3 = shift;
 
-	my ($alpha_l_beg, $alpha_l_end) = get_alpha_coors($cdss, $utrs_5);
-	my ($omega_l_beg, $omega_l_end) = get_omega_coors($cdss, $utrs_3);
+	my ($alpha_l_beg, $alpha_l_end, $f_exclude_beg, $f_exclude_end) = 
+	get_alpha_coors($cdss, $utrs_5);
+
+	my ($omega_l_beg, $omega_l_end, $t_exclude_beg, $t_exclude_end) = 
+	get_omega_coors($cdss, $utrs_3);
+
+	my %exclude;
+
+	if (defined($f_exclude_beg) && defined($f_exclude_end)){
+		$exclude{$f_exclude_beg}{$f_exclude_end}++;
+	}
+
+	if (defined($t_exclude_beg) && defined($t_exclude_end)){
+		$exclude{$t_exclude_beg}{$t_exclude_end}++;
+	}
 
 	my $c_size = @{$cdss};
 
@@ -832,7 +844,26 @@ sub get_e_coors {
   		}
 	}
 
-	return \%exon_coors;}
+	add_utr_exons($utrs_5, \%exon_coors, \%exclude) if defined($utrs_5);
+	add_utr_exons($utrs_3, \%exon_coors, \%exclude) if defined($utrs_3);
+	
+	return \%exon_coors;
+}
+#-------------------------------------------------------------------------------
+sub add_utr_exons {
+	my $utr_exons  = shift;
+	my $exon_coors = shift;
+	my $exclude    = shift;
+
+        for (my $i = 0; $i < @{$utr_exons}; $i++){
+                my ($l_beg, $l_end) = get_l_beg_end($utr_exons->[$i]);
+
+                next if $exclude->{$l_beg}->{$l_end};
+
+                $exon_coors->{$l_beg}->{$l_end}++;
+        }
+
+}
 #-------------------------------------------------------------------------------
 sub get_l_beg_end {
 
@@ -875,7 +906,7 @@ sub get_alpha_coors {
 			my $alpha_l_beg = $u_l_beg;
 			my $alpha_l_end = $c_l_end;
 			#warn  " ** five prime UTR found !\n";
-			return ($alpha_l_beg, $alpha_l_end);
+			return ($alpha_l_beg, $alpha_l_end, $u_l_beg, $u_l_end);
 		}
 		else {
 			#warn " u_l_end:$u_l_end c_l_beg:$c_l_beg\n";
@@ -909,7 +940,7 @@ sub get_omega_coors {
                         my $omega_l_beg = $c_l_beg;
                         my $omega_l_end = $u_l_end;
 			#warn  " ** three prime UTR found !\n";
-                        return ($omega_l_beg, $omega_l_end);
+                        return ($omega_l_beg, $omega_l_end, $u_l_beg, $u_l_end);
                 }
         }
         #warn  "no thee prime UTR found !\n";
