@@ -1,5 +1,0 @@
-TODO list for Perl module CGL
-
-- Get rid of Autoloader chatter
-
-- Ontology code should verify that the files actually exist before trying to use them.
