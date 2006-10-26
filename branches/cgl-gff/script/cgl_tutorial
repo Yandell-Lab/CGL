@@ -9,18 +9,20 @@ BEGIN {
 
 $| = 1;
 $SIG{INT} = \&gotControlC;
+use lib $ENV{CGL_GFF_LIB};
 use FileHandle;
 use CGL::Annotation;
+use CGL::Annotation::GFF3::FlyBase;
 use CGL::Annotation::Iterator;
-use CGL::TranslationMachine;
 
 my $usage = "
 
-cgl_tutorial: tutorial for the cgl library 
+cgl_tutorial: tutorial script for the CGL library.  This script demonstrates
+many of the functions of the CGL library. 
 
-cgl_tutorial <chaos.xml file>
+cgl_tutorial <gff3_file> <fasta_file> <one or more ids> 
 
-cgl_tutorial CG33070.chaos.xml
+cgl_tutorial ./sample_data/4.gff ../sample_data/dmel-4-chromosome-r4.3.fasta  FBtr0089155 FBgn0040037 
 
 
 \n"; 
@@ -29,36 +31,27 @@ cgl_tutorial CG33070.chaos.xml
 #----------------------------------- MAIN ------------------------------------
 #-----------------------------------------------------------------------------
 
-die $usage unless $ARGV[0];
+die $usage unless $ARGV[1];
 
-my $file  = $ARGV[0];
+my ($gff_file, $fasta_file, @ids) = @ARGV;
 
-my $chaos = new CGL::Annotation($file);
+my $ids_ref;
+scalar @ids > 0 
+    ? $ids_ref = \@ids 
+    : undef($ids_ref);
 
-   $chaos->validate();
+my $cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file, $ids_ref);
 
-print "########### meta_data ###############\n";
-my $meta_data = $chaos->meta_data();
-foreach my $datum (keys %{$meta_data}){
-	print "$datum:".$chaos->meta_data($datum)."\n";
-}
-print "###################################\n";
+my $iterator = new CGL::Annotation::Iterator($cgl);
 
-my $focus = $chaos->meta_data('focus_feature_id') || 'no focus given in file';
+my $contig = $cgl->contig(0);
+print "contig strand:".$contig->strand()."\n";
 
-
-print "FOCUS:$focus\n";
-
-my $iterator = new CGL::Annotation::Iterator($chaos);
-
-my $s = $chaos->contig(0);
-print "contig strand:".$s->strand()."\n";
-
-unless (defined($s->residues)){
+unless (defined($contig->residues)){
 	print "this file is lacking the contig residues! exiting.\n";
 	exit(0);
 }
-my $g = $chaos->gene(0);
+my $g = $cgl->gene(0);
 my $t = $g->transcript(0);
 
 while (my $g = $iterator->next_by_gene()){
