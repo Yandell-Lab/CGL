@@ -99,7 +99,7 @@ my $SO = new CGL::Ontology::SO();
 
 ################################################ subroutine header begin ##
 
-=head2 new
+=head1 new
 
  Usage     :
 
@@ -167,7 +167,7 @@ sub new {
 
 ################################################ subroutine header begin ##
 
-=head2 transcript
+=head1 transcript
 
  Usage     :
 
@@ -210,7 +210,7 @@ sub transcript {
 
 ################################################ subroutine header begin ##
 
-=head2 translation
+=head1 translation
 
  Usage     :
 
@@ -254,7 +254,7 @@ sub translation {
 
 ################################################ subroutine header begin ##
 
-=head2 get_gene_by_id
+=head1 get_gene_by_id
 
  Usage     :
 
@@ -304,7 +304,7 @@ sub get_gene_by_id {
 
 ################################################ subroutine header begin ##
 
-=head2 get_gene_by_name
+=head1 get_gene_by_name
 
  Usage     :
 
@@ -353,7 +353,7 @@ sub get_gene_by_name {
 
 ################################################ subroutine header begin ##
 
-=head2 get_gene_by_uniquename
+=head1 get_gene_by_uniquename
 
  Usage     :
 
@@ -402,7 +402,7 @@ sub get_gene_by_uniquename {
 
 ################################################ subroutine header begin ##
 
-=head2 gene
+=head1 gene
 
  Usage     :
 
@@ -446,7 +446,7 @@ sub gene {
 
 ################################################ subroutine header begin ##
 
-=head2 genes
+=head1 genes
 
  Usage     :
 
@@ -524,7 +524,7 @@ sub genes {
 
 ################################################ subroutine header begin ##
 
-=head2 transcripts
+=head1 transcripts
 
  Usage     :
 
@@ -596,7 +596,7 @@ sub transcripts {
 
 ################################################ subroutine header begin ##
 
-=head2 contig
+=head1 contig
 
  Usage     :
 
@@ -639,7 +639,7 @@ sub contig {
 
 ################################################ subroutine header begin ##
 
-=head2 contigs
+=head1 contigs
 
  Usage     :
 
@@ -711,7 +711,7 @@ sub _add_variant {
 #-------------------------------------------------------------------------------
 ################################################ subroutine header begin ##
 
-=head2 translations
+=head1 translations
 
  Usage     :
 
@@ -771,7 +771,7 @@ sub translations {
 
 ################################################ subroutine header begin ##
 
-=head2 exons
+=head1 exons
 
  Usage     :
 
@@ -818,7 +818,7 @@ sub exons {
 
 ################################################ subroutine header begin ##
 
-=head2 featuresByType
+=head1 featuresByType
 
  Usage     :
 
@@ -868,7 +868,7 @@ sub featuresByType {
 
 ################################################ subroutine header begin ##
 
-=head2 feature
+=head1 feature
 
  Usage     :
 
@@ -916,7 +916,7 @@ sub feature {
 
 ################################################ subroutine header begin ##
 
-=head2 features
+=head1 features
 
  Usage     :
 
@@ -956,7 +956,7 @@ sub features {
 
 ################################################ subroutine header begin ##
 
-=head2 relationships
+=head1 relationships
 
  Usage     :
 
@@ -997,7 +997,7 @@ sub relationships {
 
 ################################################ subroutine header begin ##
 
-=head2 trace
+=head1 trace
 
  Usage     :
 
@@ -1117,7 +1117,7 @@ sub trace {
 
 ################################################ subroutine header begin ##
 
-=head2 metadata
+=head1 metadata
 
  Usage     :
 
