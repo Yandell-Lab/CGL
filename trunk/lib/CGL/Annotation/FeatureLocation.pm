@@ -72,7 +72,7 @@ BEGIN {
 
 ################################################ subroutine header begin ##
 
-=head2 new
+=head1 new
 
  Usage     :
 
@@ -117,7 +117,7 @@ sub new
 
 ################################################ subroutine header begin ##
 
-=head2 group
+=head1 group
 
  Usage     :
 
@@ -165,7 +165,7 @@ sub group {
 
 ################################################ subroutine header begin ##
 
-=head2 nbeg
+=head1 nbeg
 
  Usage     : How to use this function/method
 
@@ -215,7 +215,7 @@ sub nbeg {
 
 ################################################ subroutine header begin ##
 
-=head2 nend
+=head1 nend
 
  Usage     : How to use this function/method
 
@@ -264,7 +264,7 @@ sub nend {
 
 ################################################ subroutine header begin ##
 
-=head2 srcfeature
+=head1 srcfeature
 
  Usage     :
 
@@ -313,7 +313,7 @@ sub srcfeature {
 
 ################################################ subroutine header begin ##
 
-=head2 srcfeature_id
+=head1 srcfeature_id
 
  Usage     : How to use this function/method
 
@@ -361,7 +361,7 @@ sub srcfeature_id {
 
 ################################################ subroutine header begin ##
 
-=head2 strand
+=head1 strand
 
  Usage     :
 
@@ -410,7 +410,7 @@ sub strand {
 
 ################################################ subroutine header begin ##
 
-=head2 rank
+=head1 rank
 
 Usage:
 
@@ -458,7 +458,7 @@ sub rank {
 
 ################################################ subroutine header begin ##
 
-=head2 AUTOLOAD
+=head1 AUTOLOAD
 
  Usage     : *private*
 
