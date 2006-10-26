@@ -74,8 +74,7 @@ package CGL::Annotation;
 use strict;
 use warnings;
 
-use XML::LibXML;
-
+use CGL::Annotation::GFF3::FlyBase;
 use CGL::Annotation::Feature;
 use CGL::Annotation::Feature::Contig;
 use CGL::Annotation::Feature::Exon;
@@ -126,40 +125,24 @@ my $SO = new CGL::Ontology::SO();
 ################################################## subroutine header end ##
 
 sub new {
-	my $class = shift;
-	my $file  = shift;
+	my $class      = shift;
+	my $gff_file   = shift;
+	my $fasta_file = shift;
+	my $format     = shift;
 
-	my $self = {};
+	my $self;
 
-	bless($self, $class);
-
-	if (defined($file)){
-		$self->file($file);
-		my $parser = new XML::LibXML();
-		my $doc = $parser->parse_file($self->file());
-	
-		$self->_load_meta_data($doc);
-		$self->_load_features($doc);
-		$self->_load_relationships($doc);
-		$self->_reverse_relationships();
+	if ($format =~ /FlyBase/i) {
+		$self = CGL::Annotation::GFF3::FlyBase->new($gff_file, $fasta_file);
 	}
-
-
-	my $iterator = new CGL::Annotation::Iterator($self);
-
-	while (my $data = $iterator->next_by_transcript()){
-                my $t = $data->[0];
-                my $g = $data->[1];
-
-		next unless transcript_is_in_scope($t);
-
-                $t->_add_residues_2();
-		my $i = 0;
-                while (my $p  = $t->translation($i)){
-			$p->_add_residues_2($t);
-                        $i++;
-                }
-
+	elsif ($format =~ /WormBase/i) {
+		$self = CGL::Annotation::GFF3::WormBase->new($gff_file, $fasta_file);
+	}
+	elsif ($format =~ /DictyBase/i) {
+		$self = CGL::Annotation::GFF3::DictyBase->new($gff_file, $fasta_file);
+	}
+	elsif ($format =~ /Maker/i) {
+		$self = CGL::Annotation::GFF3::Maker->new($gff_file, $fasta_file);
 	}
 	
 	return $self;
@@ -1162,61 +1145,6 @@ sub meta_data {
 #-------------------------------------------------------------------------------
 #--------------------------------- PRIVATE -------------------------------------
 #-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
-sub _load_meta_data {
-        my $self     = shift;
-        my $doc      = shift;
-
-
-	my $root = 'chaos';
-	foreach my $result (@{$doc->findnodes("//$root/chaos_metadata")}){
-		
-		my $tags = {};
-		parse($result, $tags, 'chaos_metadata');
-		push(@{$self->{chaos_metadata}}, $tags);
-	}
-
-}
-#-------------------------------------------------------------------------------
-sub _load_features {
-	my $self     = shift;
-	my $doc       = shift;
-
-	my $root = 'chaos';
-	foreach my $result (@{$doc->findnodes("//$root/feature")}){
-		my $tags = {};
-		parse($result, $tags, 'feature');
-
-		my $f = new CGL::Annotation::Feature($tags);
-
-		$self->_add_feature($f);
-	}
-}
-#-------------------------------------------------------------------------------
-sub _load_relationships {
-	my $self = shift;
-	my $doc  = shift;
-
-	my $root = 'chaos';
-	foreach my $result (@{$doc->findnodes("//$root/feature_relationship")}){
-                my $tags = {};
-                parse($result, $tags, 'feature_relationship');
-                my $r = new CGL::Annotation::FeatureRelationship($tags);
-                $self->_add_relationship($r);
-        }
-	
-}
-#-------------------------------------------------------------------------------
-sub _reverse_relationships {
-	my $self = shift;
-        foreach my $f ($self->features){
-		foreach my $r ($self->relationships){
-			if   ($r->oF eq $f->id || $r->sF eq $f->id){
-				$f->_add_relationship($r);
-			}
-		}
-        }
-}
 #-------------------------------------------------------------------------------
 sub _add_feature {
 	my $self = shift;
