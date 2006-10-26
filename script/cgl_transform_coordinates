@@ -2,7 +2,11 @@
 use strict;
 use warnings;
 
+use lib "$ENV{CGL_GFF_LIB}";
+
 use CGL::Annotation;
+use CGL::Annotation::GFF3::FlyBase;
+use PostData;
 use Getopt::Long;
 
 #-----------------------------------------------------------------------------
@@ -11,122 +15,108 @@ use Getopt::Long;
 
 my $usage = "
 
-This script takes a master_datastore.index file and compares residues from 
-different places on the all transcripts and the corresponding locations on the
-contigs.
+This script takes a gff file, a fasta file, and either a data file described
+below, or three values.  The first value is a transcript id, the second
+value is a coordinate on that transcript and the third value is also a
+coordinate on that transcript.  The script returns the transcript_id, a contig
+id, and two contig coordinates that correspond to the transcript coordinates 
+delimited by tabs.
+
+A data file may be given.  This file must be a tab delimited file with three 
+columns.  The three columns are the same as arguments to the command line.  A
+transcript id, and two coordinates.
 
 EXAMPLES:
 
-transform_coordinates master_datastore.index
+transform_coordinates -gff_file <gff_file> -fasta_file <fasta_file> \
+                      transcript_id coordinate coordinate
+transform_coordinates -gff_file <gff_file> -fasta_file <fasta_file> \
+                      -data_file <id_coordinate_file>
 
 ";
 
-my $ds_index_file = shift;
+my ($gff_file, $fasta_file, $data_file);
 
-die $usage if ! $ds_index_file;
+GetOptions ("gff_file=s"   => \$gff_file,
+	    "fasta_file=s" => \$fasta_file,
+	    "data_file=s"  => \$data_file);
 
-my @ds_index = parse_ds_index($ds_index_file);
+my ($id, $start, $end) = @ARGV;
 
-for my $gene_data (@ds_index) {
-	my $gene_name = $$gene_data{gene_name};
-	my $file_name = $$gene_data{file};
-	
-	my $cgl = CGL::Annotation->new($file_name);
-	my $focus = $cgl->meta_data('focus_feature_id')
-	    || 'no focus given in file';
+die $usage if ! (($id && $start && $end) || $data_file);
 
-	my $contig = $cgl->contig(0);
-	my $contig_id = $contig->id;
+#Get data from a file, from the command line or die.
+my $data;
+$data_file
+    ? $data = get_data($data_file)           : ($id && $start && $end) 
+    ? $data = {$id => {start => $start,
+		       end   => $end}}     : die $usage;
 
-	my $iterator = new CGL::Annotation::Iterator($cgl);
+#Get a list of the ids
+my @ids  = keys %{$data};
 
-	while (my $gene = $iterator->next_by_gene()){
-		next if ($gene->id ne $focus);
-		
-		my $i = 0;
-		while (my $transcript = $gene->transcript($i++)) {
+#Build a CGL object for the given ids
+my $cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file, \@ids);
 
-			my $id = $transcript->id;
-			
-			my $c_strand = $contig->strand;
-			my $t_strand = $transcript->strand;
+#Get Contig details
+my $contig = $cgl->contig(0);
+my $contig_id = $contig->id;
 
-			#Transcript start and end
-			my $t_start = 10; #$data->{$id}{start};
-			my $t_end   = length($transcript->residues) - 10; #$data->{$id}{end};
+#Grab all the genes
+my $genes = $cgl->genes;
 
-			$t_start--;
-			$t_end--;
-
-			#Grab first 10 and last 10 nts from transcript
-			my $t_sub_s = substr($transcript->residues, $t_start  , 10);
-			my $t_sub_e = substr($transcript->residues, $t_end  - 9, 10);
-
-			#Get contig start and end coresponding to transcript start and end
-			my $c_start = $transcript->metaPos($contig, $t_start);
-			my $c_end   = $transcript->metaPos($contig, $t_end);
-
-			$c_start--;
-			$c_end--;
-
-			#Get first 10 and last 10 nts from contig coordinates
-			my ($c_sub_s, $c_sub_e);
-			if ($transcript->strand() == 1){
-				$c_sub_s = substr($contig->residues    , $c_start, 10);
-				$c_sub_e = substr($contig->residues    , $c_end -9, 10);
-			}
-			else {
-				$c_sub_s = substr($contig->residues    , $c_start -9, 10);
-				$c_sub_e = substr($contig->residues    , $c_end, 10);
-			}
-			my $strand = $transcript->strand();
-			
-			my $c_start_b = $c_start;
-			my $c_end_b   = $c_end;
-			
-			if ( $t_strand != $c_strand) {
-				$t_sub_s =~ tr /ATCG/TAGC/;
-				$t_sub_s = reverse $t_sub_s;
-				$t_sub_e =~ tr /ATCG/TAGC/;
-				$t_sub_e = reverse $t_sub_e;
-			}
-			if ($t_sub_s ne $c_sub_s or $t_sub_e ne $c_sub_e) {
-				print "DANGER WILL ROBINSON!!!\n";
-				print "$id\n$t_sub_s\n$c_sub_s\n$t_sub_e\n$c_sub_e\n\n";
-				
-				print join "\n", ("T_ID: $id",
-						  "C_ID: $contig_id", 
-						  "T_Start: $t_start", 
-						  "T_End: $t_end", 
-						  "C_Start: $c_start_b", 
-						  "C_End: $c_end_b",
-						  "t_strand: $t_strand",
-						  "c_strand: $c_strand",
-						  "t_sub_s: $t_sub_s",
-						  "c_sub_s: $c_sub_s",
-						  "t_sub_e: $t_sub_e",
-						  "c_sub_e: $c_sub_e");
-				
-				print "\n\n";
-			}
-		}	
+#Build a hash of all transcript ids and the associated transcript
+#objects.
+my %trnsc_hash;
+for my $gene (@{$genes}) {
+	my $transcripts = $gene->transcripts;
+	for my $transcript (@{$transcripts}) {
+		my $transcript_id = $transcript->id;
+		$trnsc_hash{$transcript_id} = $transcript;
 	}
 }
+
+#For all id, coordinate sets get and print the contig id and coordinates.
+for my $id (@ids) {
+	my $transcript = $trnsc_hash{$id};
+
+	my $t_start = $data->{$id}{start};
+	my $t_end   = $data->{$id}{end};
+
+	#Grab first 10 and last 10 nts from transcript
+	my $t_sub_s = substr($transcript->residues, $t_start    , 10);
+	my $t_sub_e = substr($transcript->residues, $t_end      , 10);
+
+	#Get contig start and end coresponding to transcript start and end
+	my $c_start = $transcript->metaPos($contig, $t_start);
+	my $c_end   = $transcript->metaPos($contig, $t_end);
+
+	print join "\t", ($id,
+			  $contig_id,
+			  $c_start, 
+			  $c_end,
+			  );
+	print "\n";
+
+}	
+
 #-----------------------------------------------------------------------------
 #------------------------------- SUBROUTINES ---------------------------------
 #-----------------------------------------------------------------------------
-sub parse_ds_index {
-        my $ds_index_file = shift;
+#Read the data file.
+sub get_data {
+	my $id_file = shift;
+	open (IN, $id_file) or die "Can't open $id_file\n";
+	
+	my %data;
+	while (<IN>) {
+		my ($id, $start, $end) = split;
+		$data{$id}{start} = $start;
+		$data{$id}{end}   = $end;
+	}
+	
+	close IN;
+	
+	return \%data;
+}	
 
-        open(DS_IN,  $ds_index_file) or die "Can't open DS_IN: $ds_index_file";
-
-        my @genes;
-        while (<DS_IN>) {
-                chomp;
-                my ($valid, $gene_name, $synonym, $file) = split /\t/, $_;
-                next unless $valid eq 'DOC_VALID';
-                push @genes, {gene_name => $gene_name,
-                              file      => $file};
-        }
-        return @genes;
-}
