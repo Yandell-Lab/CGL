@@ -1,0 +1,180 @@
+BLASTN 2.0MP-WashU [09-Nov-2000] [linux-i686 19:13:41 11-Nov-2000]
+
+Copyright (C) 1996-2000 Washington University, Saint Louis, Missouri USA.
+All Rights Reserved.
+
+Reference:  Gish, W. (1996-2000) http://blast.wustl.edu
+
+Notice:  this program and its default parameter settings are optimized to find
+nearly identical sequences rapidly.  To identify weak similarities encoded in
+nucleic acid, use BLASTX, TBLASTN or TBLASTX.
+
+Query=  RE29470-RA
+        (775 letters)
+
+Database:  Dpseudo-scaffolds-6Apr.fasta
+           4653 sequences; 146,963,105 total letters.
+Searching....10....20....30....40....50....60....70....80....90....100% done
+
+                                                                     Smallest
+                                                                       Sum
+                                                              High  Probability
+Sequences producing High-scoring Segment Pairs:              Score  P(N)      N
+
+3197985 73068 bp 6 contigs                                     381  6.2e-09   1
+
+
+WARNING:  Descriptions of 15 database sequences were not reported due to the
+          limiting value of parameter V = 1.
+
+
+
+>3197985 73068 bp 6 contigs
+        Length = 73,068
+
+  Plus Strand HSPs:
+
+ Score = 381 (63.2 bits), Expect = 6.2e-09, P = 6.2e-09
+ Identities = 401/705 (56%), Positives = 401/705 (56%), Strand = Plus / Plus
+
+Query:    23 AATTATTTTAAAAGT-TGTGGCAAAAAAAAAATGAT-TATTTGATGACCGAAATTTGGAA 80
+             || ||| || | | | | | | ||||| ||  | || ||  | ||||   | ||||    
+Sbjct: 16827 AAATATATTTATATTATATTG-AAAAATAATTTAATATAAAT-ATGAATAATATTTCTTT 16884
+
+Query:    81 AAACGGATTTTGCCAAAAAGTTGATATTTGCAAACGGAATTTTTGTCAT--AACTTGGCT 138
+             |||   || | |  | ||| || || |||  ||| | ||||| | | ||  || |  |  
+Sbjct: 16885 AAA---ATAT-GAAAGAAATTT-AT-TTTA-AAATGAAATTTATTTAATTTAAATAAGAA 16937
+
+Query:   139 AAAGATGGTCATATAGATGTAAGA-ATAACTG-TTTTGAACA-GCTA-ATTACCAGTGCT 194
+             ||| ||  |  | || |||||| | |||| |  |||| || | |  | |||   | |  |
+Sbjct: 16938 AAAAATT-TGTTTTAAATGTAAAATATAATTTATTTTAAATATGAAACATTTTTATTT-T 16995
+
+Query:   195 AACGATCCCTATTACTTTTGAAGGATTTATGGAAATCAATTTTTGGG-CAA-ATTTTCAC 252
+             ||  ||    || |  |||     ||  | ||||| ||| |||     ||| || || | 
+Sbjct: 16996 AAATATGAA-AT-ATGTTTATTCTATAAA-GGAAAACAAATTTAAATACAATATATTTAT 17052
+
+Query:   253 AT-ATTTTTTAACA-TCATCAAAATTTGCAAACTATGTCAAAGAAATTTAATTTCCATTT 310
+              | || | | || | | ||   | |||  ||| ||||  ||| || ||| ||||  ||| 
+Sbjct: 17053 GTTATATATGAAAAATTATTTGA-TTT--AAA-TATGAAAAATAA-TTTCATTTA-ATTA 17106
+
+Query:   311 TTGAACACA-ATTTGATTGAAAATTT-AATTACAATCTCAGCGAGGTATGACAT-TCCAT 367
+             | ||| | | |||| |||  | || | || || | | |     |  ||||| || |   |
+Sbjct: 17107 T-GAA-ATATATTT-ATTTTACATCTGAAATATATT-TATTTTAAATATGAAATATTTTT 17162
+
+Query:   368 ACTCAGACAATTATTTTAAAAGTTGTGGCAAAAAA-AACTGATTATTTGATGACCGAAAT 426
+             | | | | |  | |  || || || |   ||| |  || | || |||| ||     ||||
+Sbjct: 17163 AATTAAATA--TGTGATAGAATTTATTTTAAATATGAAAT-AT-ATTTTATTT---AAAT 17215
+
+Query:   427 TTGGATAA-ACGG-ATTTTAAAGTTGATATTTACAAACGGAATTTTC-T-T--CATA-AC 479
+              ||   || ||   ||||||||  ||| || |  | |   |||||   | |  || | ||
+Sbjct: 17216 ATGACAAATACTTTATTTTAAACATGAAATATGTATATTTAATTTAAATATGACAAATAC 17275
+
+Query:   480 TTGGCT--AAAGATGGTC-ATATAGATGTAAGAATAACTGTTTTGAACAAGTT-ATTACC 535
+             ||   |  ||| |||    || || || |||   ||| | |   |||  |||| |||   
+Sbjct: 17276 TTTATTTTAAACATGAAATATGTATATTTAATT-TAAATATGA-GAAATAGTTTATTTTA 17333
+
+Query:   536 AGTGCTAACGATGCCTATTACTT-TTTGAAGGATTTAGGGAAATAAATTTTTGGGCAAAT 594
+             | |||  | | |    | || || ||| | | ||  ||   ||||| ||  |    | ||
+Sbjct: 17334 AATGCATAGGTTTATAAATATTTATTTTATGTATGAAG---AATAATTTAATTAAAATAT 17390
+
+Query:   595 TT-TCACATATTTTGTAACATCTCATCAAAATTTGCAAAATATGTCAAAGAAATTTAATT 653
+                | | || |||  |||  | | |  | |||||     | || | ||| | ||||||||
+Sbjct: 17391 GAATTATATTTTTCTTAATTTTTAAAAATAATTTATTTTAAATATGAAATATATTTAATT 17450
+
+Query:   654 TCGATTTTTGAACACAGTTTGATTGGAAATTTAATTACGAGCTCA 698
+             |  || |  ||| | ||  |  ||  |||| |||  |  |  |||
+Sbjct: 17451 TAAATATGAGAA-ATAGGGTTTTT--AAATATAAAAATTAATTCA 17492
+
+ Score = 301 (51.2 bits), Expect = 5.7e-05, P = 5.7e-05
+ Identities = 311/542 (57%), Positives = 311/542 (57%), Strand = Plus / Plus
+
+Query:   227 AAATCAATTTTTGGGCA-AATTTTCACATATTTTTTAACATCATCAAA-ATTTGCAAAC- 283
+             ||||  |||  |    | |||||| |  ||||||| || ||  | |   |||    | | 
+Sbjct: 16596 AAATATATTAATATTTACAATTTTTAT-TATTTTT-AATATT-TAATTCATTATTTATCA 16652
+
+Query:   284 TATGTCAAAGAAATTTAATTTCCATTTTTGAACACAATTTGATTGAAAATTTAAT-TACA 342
+             ||| |     | ||||||||| ||| |   || |||  || |   || ||||||| |  |
+Sbjct: 16653 TATTTATTTCATATTTAATTTACATATA--AA-ACAGCTTAAA--AATATTTAATATTAA 16707
+
+Query:   343 ATCTCAGCG--AGGTATGACATTC-CATACTCAGACAA-TT-ATTTTAAAAGTTGTGGCA 397
+             || | |  |  |  |||  ||||  |||| | | | || || ||||||||   | ||   
+Sbjct: 16708 ATTTAAATGTAAAATATTTCATTTACATA-TGAAATAAATTCATTTTAAA---TATG--- 16760
+
+Query:   398 AAAAAAACTGATTATTTGATGACCGAAATTTGGATAAACGGATTTT-AAAG-TTGATATT 455
+             ||| ||| | ||| ||  || || ||||| |   ||     ||| | |||  || |||||
+Sbjct: 16761 AAATAAATTTATT-TTAAAT-AC-GAAATATATTTATTTTAATTATGAAAAATTAATATT 16817
+
+Query:   456 TACAAACGGAATTTTCTTCATAAC-T-TGGCTAAAGATGGTCATATAGATGT-AAGAATA 512
+             |  ||   ||| | | || |||   | | |  ||| |   | ||||| || | || ||||
+Sbjct: 16818 TTAAATATGAAATATATTTATATTATATTGAAAAATAATTTAATATAAATATGAATAATA 16877
+
+Query:   513 ACTGTTTTGAACAAGTTATTACCAG-TGCTAACGATGCCTATTACTTTTTGAAGGATTTA 571
+               | |||  || | |  |  |     |  |||  |||   |||  | ||| |   |  ||
+Sbjct: 16878 TTTCTTTAAAATATGAAAGAAATTTATTTTAAA-ATGAA-ATT--TATTTAATTTAAATA 16933
+
+Query:   572 GGGAAATAAATTTTTGGGCAAATTTTCAC-ATA-TTT-TGTAACATCTCAT-CAAAATT- 626
+              | ||| |||||| |    |||| |  |  ||| ||| | | | || | |  ||   || 
+Sbjct: 16934 AGAAAA-AAATTTGTTTT-AAATGTAAAATATAATTTATTTTAAATATGAAACATTTTTA 16991
+
+Query:   627 TGCAAAATATGTCAAAGAAATTTAATTTCGATTTTTGAACACAG-TTTGATTGGAAATTT 685
+             |   |||||||  ||| |  ||||  ||| ||    ||| |||  ||| | |  || | |
+Sbjct: 16992 TTTTAAATATG--AAATATGTTTA--TTCTATAAAGGAAAACAAATTTAAATACAA-TAT 17046
+
+Query:   686 AATTACGAGCTC-A-GCGAGGT-ATAAGATTCCA-TATTCAGAC-AATTATTTTTAATGT 740
+             | ||| |   |  | |  |  | ||  ||||  | |||  | |  ||||   ||||||  
+Sbjct: 17047 ATTTATGTTATATATGAAAAATTATTTGATTTAAATATGAAAAATAATTTCATTTAATTA 17106
+
+Query:   741 TG 742
+             ||
+Sbjct: 17107 TG 17108
+
+
+WARNING:  HSPs involving 15 database sequences were not reported due to the
+          limiting value of parameter B = 1.
+
+
+Parameters:
+  B=1
+  V=1
+  E=0.0001
+  W=6
+  hspmax=10
+  wordmask=seg
+  span1
+
+  ctxfactor=2.00
+
+  Query                        -----  As Used  -----    -----  Computed  ----
+  Strand MatID Matrix name     Lambda    K       H      Lambda    K       H
+   +1      0   +5,-4           0.192   0.173   0.357    same    same    same
+               Q=10,R=10       0.104   0.0151  0.0600    n/a     n/a     n/a
+   -1      0   +5,-4           0.192   0.173   0.357    same    same    same
+               Q=10,R=10       0.104   0.0151  0.0600    n/a     n/a     n/a
+
+  Query
+  Strand MatID  Length  Eff.Length     E     S W   T  X   E2      S2
+   +1      0      775       775   0.00010  290 6 n/a 73  0.022    81
+                                                     91  0.023   121
+   -1      0      775       775   0.00010  290 6 n/a 73  0.022    81
+                                                     91  0.023   121
+
+
+Statistics:
+
+  Database:  /data/Drosophila/Pseudo/contigs/TigrAssembly/Dpseudo-scaffolds-6Apr.fasta
+   Title:  Dpseudo-scaffolds-6Apr.fasta
+   Posted:  2:16:30 PM PDT Apr 14, 2003
+   Created:  2:16:28 PM PDT Apr 14, 2003
+   Format:  XDF-1
+   # of letters in database:  146,963,105
+   # of sequences in database:  4653
+   # of database sequences satisfying E:  16
+  No. of states in DFA:  740 (53 KB)
+  Total size of DFA:  66 KB (128 KB)
+  Time to generate neighborhood:  0.00u 0.00s 0.00t  Elapsed: 00:00:00
+  No. of threads or processors used:  2
+  Search cpu time:  5.00u 0.03s 5.03t  Elapsed: 00:05:35
+  Total cpu time:  5.01u 0.03s 5.04t  Elapsed: 00:05:35
+  Start:  Tue Aug 26 16:27:27 2003   End:  Tue Aug 26 16:33:02 2003
+
+WARNINGS ISSUED:  2

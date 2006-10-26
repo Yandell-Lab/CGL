@@ -1,0 +1,60 @@
+#!/usr/bin/perl -w 
+
+eval 'exec /usr/bin/perl -w  -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+use strict;
+
+BEGIN {
+	#$ENV{'CGL_CHATTER'} = 1;
+}
+
+use lib ('/Users/myandell/lib',
+        );
+
+$| = 1;
+use FileHandle;
+use PostData;
+use CGL::Annotation;
+use CGL::Annotation::Iterator;
+use Cwd;
+use PostData;
+
+my $usage = "
+
+data_store_indexer: opens an xml file & spits out the uniquename of the
+                    focus feature and the explicit path to that file 
+                    designed to be used as the \"--all\" argument of 
+                    of ds_do. 
+
+data_store_indexer <chaos.xml file>
+
+data_store_indexer  dmel.sample.chaos.xml
+
+assuming you are in the chaos_datastore root directory:
+
+ds_do --all 'data_store_indexer `pwd`/*xml' | tee datastore.index
+
+the result is a tab delimited file with the following fields
+
+gene_uniquename gene_synomnyms explit_path_to_chaos.xml_file
+
+
+\n"; 
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+
+die $usage unless $ARGV[0];
+
+my $file  = $ARGV[0];
+
+my $return = system("/home/bmoore/CGL/script/cgl_validate $file");
+
+unless ($return ==0 ){
+	print "DOC_INVALID"."\t"."-"."\t"."-"."\t"."-"."\t".$file."\n";
+	exit(0);
+}
+#-----------------------------------------------------------------------------
+#---------------------------------- SUBS -------------------------------------
+#-----------------------------------------------------------------------------
