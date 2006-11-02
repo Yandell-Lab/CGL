@@ -34,7 +34,7 @@ my $contig_id = $contig->id;
 #Grab all the genes
 my $genes = $cgl->genes;
 
-my $exon_coors = get_exon_coors($cgl);
+my $exon_coors = get_exon_coors($cgl, 'Confirmed');
 
 print_template($exon_coors, $cgl);
 
@@ -64,7 +64,8 @@ sub print_template {
 }
 #-----------------------------------------------------------------------------
 sub get_exon_coors {
-	my $cgl = shift;
+	my $cgl    = shift;
+	my $status = shift;
 
 	my $genes = $cgl->genes();
 
@@ -72,6 +73,10 @@ sub get_exon_coors {
 	for my $g (@{$genes}) {
         	my $i = 0;
         	while (my $t = $g->transcript($i)){
+			unless ($t->status() eq $status){
+				$i++;
+				next;
+			}
                 	my $j = 0;
                 	while (my $e = $t->exon($j)){
                         	my $nbeg = $e->nbeg();
