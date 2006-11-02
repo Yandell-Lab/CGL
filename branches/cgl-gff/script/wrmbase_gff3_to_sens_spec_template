@@ -1,0 +1,92 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use lib "$ENV{CGL_GFF_LIB}";
+
+use CGL::Annotation;
+use CGL::Annotation::GFF3::WormBase;
+use Fasta;
+use Shadower;
+use PostData;
+use Getopt::Long;
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+
+my $usage = "
+
+ wrmbase_gff3_to_sens_spec_template <gff3 file> <fasta file>
+";
+
+my $gff3_file  = shift;
+my $fasta_file = shift;
+
+die $usage unless defined($gff3_file) && defined($fasta_file);
+
+my $cgl = new CGL::Annotation::GFF3::WormBase($gff3_file, $fasta_file);
+
+#Get Contig details
+my $contig = $cgl->contig(0);
+my $contig_id = $contig->id;
+
+#Grab all the genes
+my $genes = $cgl->genes;
+
+my $exon_coors = get_exon_coors($cgl);
+
+print_template($exon_coors, $cgl);
+
+#-----------------------------------------------------------------------------
+#------------------------------- SUBROUTINES ---------------------------------
+#-----------------------------------------------------------------------------
+sub print_template {
+	my $coors = shift;
+	my $cgl   = shift;
+
+	my $contig = $cgl->contig(0);
+
+	my $def = '>'.$contig->id();
+
+	my $seq = $contig->residues();
+
+	my $masked_seq = Shadower::maskSequence(\$seq, $coors, 0, '1');
+
+	$$masked_seq =~ s/[^1]/0/g;
+
+        my $m_fasta = Fasta::toFasta($def." gff3_sens_spec_template",
+                                     $masked_seq,
+                                    );
+
+
+        print $$m_fasta;
+}
+#-----------------------------------------------------------------------------
+sub get_exon_coors {
+	my $cgl = shift;
+
+	my $genes = $cgl->genes();
+
+	my @coors;
+	for my $g (@{$genes}) {
+        	my $i = 0;
+        	while (my $t = $g->transcript($i)){
+                	my $j = 0;
+                	while (my $e = $t->exon($j)){
+                        	my $nbeg = $e->nbeg();
+                        	my $nend = $e->nend();
+
+                        	push(@coors, [$nbeg, $nend]);
+
+                        	$j++;
+                	}
+                	$i++;
+        	}
+	
+	}
+
+	return \@coors;
+}
+#-----------------------------------------------------------------------------
+
