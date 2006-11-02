@@ -6,6 +6,7 @@ use lib "$ENV{CGL_GFF_LIB}";
 
 use CGL::Annotation;
 use CGL::Annotation::GFF3::WormBase;
+use CGL::Annotation::GFF3::Maker;
 use Fasta;
 use Shadower;
 use PostData;
