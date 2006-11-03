@@ -1,0 +1,580 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use lib "$ENV{CGL_GFF_LIB}";
+
+use CGL::Annotation;
+use CGL::Annotation::GFF3::nGASP;
+use CGL::Annotation::GFF3::WormBase;
+use Iterator::Fasta;
+use SimpleCluster;
+use Fasta;
+use Shadower;
+use PostData;
+use Getopt::Long;
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+
+my $usage = "
+
+maker_snap_comp <test_gff3 file> <ref_gff3 file > <fasta file> <snap or maker>
+";
+
+my $t_gff3_file = shift;
+my $r_gff3_file = shift;
+my $fasta_file  = shift;
+my $what        = shift;
+
+die $usage unless defined($t_gff3_file) && defined($r_gff3_file) && defined($fasta_file) && defined($what);
+
+my $t_cgl = new CGL::Annotation::GFF3::nGASP($t_gff3_file, $what);
+
+my $r_cgl = new CGL::Annotation::GFF3::WormBase($r_gff3_file, $fasta_file);
+
+my $t_exon_coors = get_exon_coors($t_cgl);
+
+my $r_exon_coors = get_exon_coors($r_cgl);
+
+nuc_level($t_exon_coors, $r_exon_coors, $fasta_file);
+
+exon_level($t_exon_coors, $r_exon_coors);
+
+gene_level($t_cgl, $r_cgl);
+
+#-----------------------------------------------------------------------------
+#------------------------------- SUBROUTINES ---------------------------------
+#-----------------------------------------------------------------------------
+sub init_counts_and_source {
+	my $gene_data = shift;
+	my $source    = shift;
+
+	my %c_s;
+        foreach my $i (sort keys %{$gene_data}){
+                my $strand = $gene_data->{$i}->{strand};
+                my $exons  = $gene_data->{$i}->{exons};
+                my $id     = $gene_data->{$i}->{g_id};
+
+		$c_s{$id}{source} = $source;
+		$c_s{$id}{counts} = 0;
+		
+	}
+	
+	return \%c_s;
+}
+#-----------------------------------------------------------------------------
+sub get_gene_span {
+	my $exons  = shift;
+	my $strand = shift;
+
+	my $span_nbeg;
+	my $span_nend;
+	my @nbegs;
+	my @nends;
+	foreach my $e (@{$exons}){
+		my $nbeg = $e->[0];
+		my $nend = $e->[1];
+
+		push(@nbegs, $nbeg);
+		push(@nends, $nend);
+	}
+
+        my @sorted_nbegs = sort {$a <=> $b} @nbegs;
+        my @sorted_nends = sort {$a <=> $b} @nends;
+
+	if ($strand == 1){
+		$span_nbeg = shift(@sorted_nbegs);
+		$span_nend = pop(@sorted_nends);
+	}
+	else {
+                $span_nbeg = pop(@sorted_nbegs);
+                $span_nend = shift(@sorted_nends);
+
+	}
+
+	return ($span_nbeg, $span_nend);
+}
+#-----------------------------------------------------------------------------
+sub nuc_level {
+        my $t_exon_coors  = shift;
+        my $r_exon_coors  = shift;
+	my $fasta_file    = shift;
+	
+	my $fasta_iterator = new Iterator::Fasta($fasta_file);
+
+	my $fasta = $fasta_iterator->nextEntry();
+
+
+	my $seq   = Fasta::getSeq($fasta);
+
+	my $r_seq = $$seq;
+	my $t_seq = $$seq;
+
+	my @r_coors;
+        foreach my $i (sort keys %{$r_exon_coors}){
+		my @keys = keys %{$r_exon_coors->{$i}};
+		my $j = $keys[0];
+		push(@r_coors, [$i, $j]); 
+	}
+
+	my @t_coors;
+        foreach my $i (sort keys %{$t_exon_coors}){
+		my @keys = %{$t_exon_coors->{$i}};
+		my $j = $keys[0];
+                push(@t_coors, [$i, $j]);
+        }
+
+	my $r_masked_seq = Shadower::maskSequence($seq, \@r_coors, 0, '1');
+	my $t_masked_seq = Shadower::maskSequence($seq, \@t_coors, 0, '1');
+
+	$$r_masked_seq =~ s/[^1]/0/g;
+	$$t_masked_seq =~ s/[^1]/0/g;
+
+        my $tp = 0;
+        my $tn = 0;
+        my $fp = 0;
+        my $fn = 0;
+        for (my $i = 0 ; $i < length($$r_masked_seq); $i++) {
+                my $ref = substr($$r_masked_seq, $i, 1);
+                my $ano = substr($$t_masked_seq, $i, 1);
+
+                if    ($ref == 1 && $ano == 1){
+                        $tp++;
+                }
+                elsif ($ref == 0 && $ano == 0){
+                        $tn++;
+                }
+                elsif ($ref == 1 && $ano == 0){
+                        $fn++;
+                }
+                elsif ($ref == 0 && $ano == 1){
+                        $fp++;
+                }
+
+        }
+        my $sn = $tp/($tp + $fn);
+        my $sp = $tp/($tp + $fp);
+        my $ac = ($sn + $sp)/2;
+
+	print "NUCLEOTIDE LEVEL\n";
+        print "SN:$sn\n";
+        print "SP:$sp\n";
+        print "AC:$ac\n";
+
+}
+#-----------------------------------------------------------------------------
+sub gene_level {
+        my $t_cgl = shift;
+        my $r_cgl = shift;
+
+        my $t_gene_data = get_gene_data($t_cgl);
+        my $r_gene_data = get_gene_data($r_cgl);
+
+	my $r_c_s = init_counts_and_source($r_gene_data, 'r');
+	my $t_c_s = init_counts_and_source($t_gene_data, 's');
+
+
+	my %matrix;
+
+        foreach my $i (sort keys %{$r_gene_data}){
+                my $r_strand = $r_gene_data->{$i}->{strand};
+                my $r_exons  = $r_gene_data->{$i}->{exons};
+                my $r_id     = $r_gene_data->{$i}->{g_id};
+
+                foreach my $j (sort keys %{$t_gene_data}){
+                        my $t_strand = $t_gene_data->{$j}->{strand};
+                        my $t_exons  = $t_gene_data->{$j}->{exons};
+                        my $t_id     = $t_gene_data->{$j}->{g_id};
+
+                        if ($r_strand == $t_strand && they_overlap($r_exons, $t_exons)){
+				$r_c_s->{$r_id}->{counts}++;
+				$t_c_s->{$t_id}->{counts}++;
+				$matrix{$r_id}{$t_id}++;
+                        }
+                }
+        }
+
+        my $pairs = SimpleCluster::pairs(\%matrix);
+        my $map   = SimpleCluster::singleLinkageClusters($pairs);
+
+        my %clustered;
+
+	my $one_ones = 0;
+        foreach my $c (keys %{$map}){
+                my $size = @{$map->{$c}};
+		next unless $size == 2;
+		my $r = 0;
+		my $t = 0;
+                foreach my $m (@{$map->{$c}}){
+			$r++ if defined($r_c_s->{$m});
+			$t++ if defined($t_c_s->{$m});
+		}
+		$one_ones++ if $r == 1 && $t == 1;
+	}
+        my $tp = 0;
+        my $fp = 0;
+        my $tn = 0;
+        my $fn = 0;
+
+	$tp += $one_ones;
+
+	foreach my $r_id (keys %{$r_c_s}){
+		my $counts = $r_c_s->{$r_id}->{counts};
+		
+		$fn++ if $counts == 0;
+		$fn++ if $counts >  1;
+
+	}
+
+        foreach my $t_id (keys %{$t_c_s}){
+                my $counts = $t_c_s->{$t_id}->{counts};
+
+		$fp++ if $counts == 0;
+		$fn++ if $counts >  1;
+        }
+
+        my $sn = $tp/($tp + $fn);
+        my $sp = $tp/($tp + $fp);
+        my $ac = ($sn + $sp)/2;
+
+        print "GENE LEVEL\n";
+
+        print "SN:$sn\n";
+        print "SP:$sp\n";
+        print "AC:$ac\n";
+
+=cut;
+	foreach my $i (sort keys %{$r_gene_data}){
+                my $r_strand = $r_gene_data->{$i}->{strand};
+                my $r_exons  = $r_gene_data->{$i}->{exons};
+                my $r_id     = $r_gene_data->{$i}->{g_id};
+
+                my $counts = $r_c_s->{$r_id}->{counts};
+
+		next unless $counts == 0;
+		
+		my ($nbeg, $nend) = get_gene_span($r_exons, $r_strand);
+
+		print "$r_id $nbeg $nend\n";
+	}
+=cut;
+}
+#-----------------------------------------------------------------------------
+sub cluster {
+	my $t_cgl = shift;
+	my $r_cgl = shift;
+
+	my $t_gene_data = get_gene_data($t_cgl);
+	my $r_gene_data = get_gene_data($r_cgl);
+
+	my %source;
+	my %matrix;
+	foreach my $i (sort keys %{$r_gene_data}){
+		my $r_strand = $r_gene_data->{$i}->{strand};
+		my $r_exons  = $r_gene_data->{$i}->{exons};
+		my $r_id     = $r_gene_data->{$i}->{g_id};
+		$source{$r_id} = 'r';
+
+		foreach my $j (sort keys %{$t_gene_data}){
+			my $t_strand = $t_gene_data->{$j}->{strand};
+			my $t_exons  = $t_gene_data->{$j}->{exons};
+			my $t_id     = $t_gene_data->{$j}->{g_id};
+
+			$source{$t_id} = 't';
+
+			if ($r_strand == $t_strand && they_overlap($r_exons, $t_exons)){
+				$matrix{$r_id}{$t_id}++;	
+			}
+		}
+	}
+
+	my $pairs = SimpleCluster::pairs(\%matrix);
+        my $map   = SimpleCluster::singleLinkageClusters($pairs);
+
+        my %clustered;
+
+	my $tp = 0;
+	my $fp = 0;
+	my $tn = 0;
+	my $fn = 0;
+
+
+	
+        foreach my $c (keys %{$map}){
+		my $size = @{$map->{$c}};
+		if ($size == 2){
+			$tp++;
+		}
+		else {
+			$fp += $size - 2;
+
+		}
+                foreach my $m (@{$map->{$c}}){
+                        my $source = $source{$m};
+			
+                        die "name not found in careful cluster!\n"
+                        unless defined $m;
+                        $clustered{$m}++;
+                }
+        }
+        # get the left overs...
+        foreach my $g_id (keys %source){
+
+                next if defined($clustered{$g_id});
+	
+		$fn++ if $source{$g_id} eq 'r';
+		$fp++ if $source{$g_id} eq 't';
+        }
+
+        my $sn = $tp/($tp + $fn);
+        my $sp = $tp/($tp + $fp);
+        my $ac = ($sn + $sp)/2;
+
+	print "GENE LEVEL\n";
+
+        print "SN:$sn\n";
+        print "SP:$sp\n";
+        print "AC:$ac\n";
+
+}
+#-----------------------------------------------------------------------------
+sub they_overlap {
+	my $r_exons = shift;
+	my $t_exons = shift;
+
+	foreach my $r_p (@{$r_exons}){
+		my $r_nbeg = $r_p->[0];
+		my $r_nend = $r_p->[1];
+		foreach my $t_p (@{$t_exons}){
+			my $t_nbeg = $t_p->[0];
+			my $t_nend = $t_p->[1];
+
+			my $class = compare($r_nbeg, $r_nend, $t_nbeg, $t_nend);
+			die "wrong strand!\n" if $class eq 'R';
+			
+
+			return 1 if $class;
+			
+		}
+	}
+	
+	return 0;
+}
+#------------------------------------------------------------------------
+sub same_strand {
+        my $aB = shift;
+        my $aE = shift;
+        my $bB = shift;
+        my $bE = shift;
+
+        if    ($aB <= $aE && $bB <= $bE){
+                return 1;
+        }
+        elsif ($aB >= $aE && $bB >= $bE){
+                return 1;
+        }
+        else {
+                return 0;
+        }
+}
+#------------------------------------------------------------------------
+sub compare {
+        my $aB = shift;
+        my $aE = shift;
+        my $bB = shift;
+        my $bE = shift;
+        my $r  = shift || 0;
+
+        my $class;
+        if(same_strand($aB, $aE, $bB, $bE)){
+
+        }
+        else {
+                return 'R';
+        }
+
+        my $s = 1;
+        if ($aB > $aE && $bB > $bE){
+                ($aB, $aE) = ($aE, $aB);
+                ($bB, $bE) = ($bE, $bB);
+                $s = -1;
+        }
+
+        if     ($bE < $aB || $bB > $aE){
+                # a        ----
+                # b  ----
+                $class = 0;
+        }
+        elsif (abs($aB - $bB) <= $r && abs($aE - $bE) <= $r){
+                #  a -----
+                #  b -----
+                $class = 1;
+        }
+        elsif ($bB < $aB && abs($aE - $bE) <= $r){
+                # a   ----
+                # b ------
+                $class = $s == 1 ? 'B' : 'b';
+        }
+        elsif ($aB < $bB && abs($aE - $bE) <= $r){
+                # a ------
+                # b   ----
+                $class = $s == 1 ? 'A' : 'a';
+        }
+        elsif (abs($aB - $bB) <= $r && $aE < $bE){
+                # a ----
+                # b ------
+                $class = $s == 1 ? 'b' : 'B';
+        }
+        elsif (abs($aB - $bB) <= $r && $aE > $bE){
+                # a ------
+                # b ----
+                $class = $s == 1 ? 'a' : 'A';
+        }
+       elsif ($aB > $bB && $aE < $bE){
+                # a   ----
+                # b --------
+                $class = 'I'; # I for In
+        }
+        elsif ($aB < $bB && $aE > $bE){
+                # a --------
+                # b   ----
+                $class = 'i'; # i for in
+        }
+        elsif ($aB < $bB && $aE < $bE){
+                # a ------
+                # b   -------
+                $class = $s == 1 ? 'Z' : 'z'; ; # Z for zig-zag
+        }
+        elsif ($aB > $bB && $aE > $bE){
+                # a      ------
+                # b -------
+                $class = $s == 1 ? 'z' : 'Z'; # z for Zig-zag
+        }
+	else {
+		die "WHAT The HELL!\n";
+	}
+        return $class;
+}
+#------------------------------------------------------------------------
+{
+my $id;
+sub get_id {
+	$id++;
+	return $id;	
+}
+}
+#-----------------------------------------------------------------------------
+sub get_gene_data {
+	my $cgl = shift;
+
+        my $genes = $cgl->genes();
+
+	my %data;
+
+	my $n = 0;
+        for my $g (@{$genes}) {
+                my $i = 0;
+                while (my $t = $g->transcript($i)){
+                        if (defined($t->status) && $t->status eq 'Predicted'){
+                                $i++;
+                                next;
+                        }
+
+			$data{$n}{strand} = $t->strand();	
+			$data{$n}{g_id}   = get_id();
+ 
+                        my $j = 0;
+                        while (my $e = $t->exon($j)){
+                                my $nbeg = $e->nbeg();
+                                my $nend = $e->nend();
+
+				push(@{$data{$n}{exons}}, [$nbeg, $nend]);
+
+                                $j++;
+                        }
+                        $i++;
+                }
+
+		$n++;
+        }
+
+	return \%data;
+}
+#-----------------------------------------------------------------------------
+sub exon_level {
+	my $t_exon_corrs = shift;
+	my $r_exon_coors = shift;
+
+        my $tp = 0;
+        my $tn = 0;
+        my $fp = 0;
+        my $fn = 0;
+
+	foreach my $t_nbeg (sort keys %{$t_exon_coors}){
+		my @keys = keys %{$t_exon_coors->{$t_nbeg}};
+		my $t_nend = $keys[0];
+
+		if (defined($r_exon_coors->{$t_nbeg}) && defined($r_exon_coors->{$t_nbeg}->{$t_nend})){
+			$tp++;
+		}
+		else {
+			$fp++;
+		}
+	}
+
+        foreach my $r_nbeg (sort keys %{$r_exon_coors}){
+                my @keys = keys %{$r_exon_coors->{$r_nbeg}};
+                my $r_nend = $keys[0];
+
+                if (defined($t_exon_coors->{$r_nbeg}) && defined($t_exon_coors->{$r_nbeg}->{$r_nend})){
+			# tn ?
+                }
+                else {
+                        $fn++;
+                }
+        }
+
+        my $sn = $tp/($tp + $fn);
+        my $sp = $tp/($tp + $fp);
+        my $ac = ($sn + $sp)/2;
+
+	print "EXON LEVEL\n";
+        print "SN:$sn\n";
+        print "SP:$sp\n";
+        print "AC:$ac\n";
+
+}
+#-----------------------------------------------------------------------------
+sub get_exon_coors {
+	my $cgl    = shift;
+
+	my $genes = $cgl->genes();
+
+	my %coors;
+	for my $g (@{$genes}) {
+        	my $i = 0;
+        	while (my $t = $g->transcript($i)){
+			if (defined($t->status) && $t->status eq 'Predicted'){
+				$i++;
+				next;
+			}
+
+                	my $j = 0;
+                	while (my $e = $t->exon($j)){
+                        	my $nbeg = $e->nbeg();
+                        	my $nend = $e->nend();
+
+				$coors{$nbeg}{$nend}++;
+                        	$j++;
+                	}
+                	$i++;
+        	}
+	
+	}
+
+	return \%coors;
+}
+#-----------------------------------------------------------------------------
+
