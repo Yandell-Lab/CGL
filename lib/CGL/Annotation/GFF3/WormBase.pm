@@ -357,6 +357,12 @@ sub load_transcript {
 
 	load_introns($t, $transcr, $seq);
 
+
+	my $status = $t->{f}->get_Annotations('prediction_status')->value();
+
+	$transcr->{status} = $status;
+
+
 	$transcr->{feature_id} = $t->{id};
 	$transcr->{id}         = $t->{id};
 
