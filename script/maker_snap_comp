@@ -8,11 +8,15 @@ use CGL::Annotation;
 use CGL::Annotation::GFF3::nGASP;
 use CGL::Annotation::GFF3::WormBase;
 use Iterator::Fasta;
+use compare;
 use SimpleCluster;
 use Fasta;
 use Shadower;
 use PostData;
-use Getopt::Long;
+use Getopt::Std;
+our($opt_p);
+getopt('l');
+
 $| = 1;
 
 #-----------------------------------------------------------------------------
@@ -21,7 +25,9 @@ $| = 1;
 
 my $usage = "
 
-maker_snap_comp <test_gff3 file> <ref_gff3 file > <fasta file> <snap or maker>
+maker_snap_comp -p <test_gff3 file> <ref_gff3 file > <fasta file> 
+
+OPTIONS: -p <use predicted genes> optional
 ";
 
 my $t_gff3_file = shift;
@@ -45,8 +51,13 @@ exon_level($t_exon_coors, $r_exon_coors);
 
 alt_transcript_level($t_cgl, $r_cgl);
 
+cds_ratio($t_cgl, $r_cgl);
+
 gene_level($t_cgl, $r_cgl);
 
+me($t_exon_coors, $r_exon_coors);
+
+we($t_exon_coors, $r_exon_coors);
 #-----------------------------------------------------------------------------
 #------------------------------- SUBROUTINES ---------------------------------
 #-----------------------------------------------------------------------------
@@ -480,7 +491,7 @@ sub get_gene_data {
         for my $g (@{$genes}) {
                 my $i = 0;
                 while (my $t = $g->transcript($i)){
-                        if (defined($t->status) && $t->status eq 'Predicted'){
+                        if (!$opt_p && defined($t->status) && $t->status eq 'Predicted'){
                                 $i++;
                                 next;
                         }
@@ -506,7 +517,7 @@ sub get_gene_data {
 	return \%data;
 }
 #-----------------------------------------------------------------------------
-sub exon_level {
+sub exon_level_old {
 	my $t_exon_corrs = shift;
 	my $r_exon_coors = shift;
 
@@ -550,6 +561,187 @@ sub exon_level {
 
 }
 #-----------------------------------------------------------------------------
+sub exon_level {
+        my $t_exon_corrs = shift;
+        my $r_exon_coors = shift;
+
+	my $t_total = keys %{$t_exon_coors};
+	my $r_total = keys %{$r_exon_coors};
+
+	my $t_matched = 0;
+        foreach my $t_nbeg (sort keys %{$t_exon_coors}){
+                my @keys = keys %{$t_exon_coors->{$t_nbeg}};
+                my $t_nend = $keys[0];
+
+                if (defined($r_exon_coors->{$t_nbeg}) && defined($r_exon_coors->{$t_nbeg}->{$t_nend})){
+			$t_matched++;
+                }
+                else {
+                }
+        }
+
+	my $sp = 100*($t_matched/$t_total);
+
+	my $r_matched = 0;
+        foreach my $r_nbeg (sort keys %{$r_exon_coors}){
+                my @keys = keys %{$r_exon_coors->{$r_nbeg}};
+                my $r_nend = $keys[0];
+
+                if (defined($t_exon_coors->{$r_nbeg}) && defined($t_exon_coors->{$r_nbeg}->{$r_nend})){
+			$r_matched++;
+                }
+                else {
+                }
+        }
+
+	my $sn = 100*($r_matched/$r_total);
+
+        my $ac = ($sn + $sp)/2;
+
+        print "EXON LEVEL\n";
+        print "SN:$sn\n";
+        print "SP:$sp\n";
+        print "AC:$ac\n";
+
+}
+#-----------------------------------------------------------------------------
+sub cds_ratio {
+        my $t_cgl = shift;
+        my $r_cgl = shift;
+        
+        my $t_ratio =  get_length_ratio($t_cgl);
+        my $r_ratio =  get_length_ratio($r_cgl);
+
+        
+        print "CDS/UTR RATIO (reference)\n";
+        print "$t_ratio ($r_ratio)\n";
+}               
+#-----------------------------------------------------------------------------
+sub get_length_ratio {
+        my $cgl  = shift;
+
+        my $genes = $cgl->genes();
+
+	my $total_tra_length = 0;
+	my $total_cds_length = 0;
+        for my $g (@{$genes}) {
+                my $i = 0;
+                while (my $t = $g->transcript($i)){
+                        if (!$opt_p && defined($t->status) && $t->status eq 'Predicted'){
+                                $i++;
+                                next;
+                        }
+			my $p = $t->translation(0);
+			my $beg_on_t = $p->metaPos($t, 0);
+			my $end_on_t = $p->metaPos($t, length($p->residues));
+	
+			my $cds_length = $end_on_t - $beg_on_t;
+			my $tra_length = length($t->residues);
+
+			$total_tra_length += $tra_length;
+			$total_cds_length += $cds_length;
+                        $i++;
+                }
+
+        }
+
+	return $total_cds_length/$total_tra_length;
+}
+#-----------------------------------------------------------------------------
+sub we {
+        my $t_exon_coors = shift;
+        my $r_exon_coors = shift;
+
+	my $total_overlapping = 0;
+        foreach my $t_nbeg (sort keys %{$t_exon_coors}){
+                my @keys = keys %{$t_exon_coors->{$t_nbeg}};
+                my $t_nend = $keys[0];
+
+		my $t_strand = $t_nend > $t_nbeg ? 1 : -1;
+
+		($t_nbeg, $t_nend) = ($t_nend, $t_nbeg) if $t_strand == -1;
+
+		my $found = 0;
+        	foreach my $r_nbeg (sort keys %{$r_exon_coors}){
+                	my @keys = keys %{$r_exon_coors->{$r_nbeg}};
+                	my $r_nend = $keys[0];
+
+			my $r_strand = $r_nend > $r_nbeg ? 1 : -1;
+
+			next unless $r_strand == $t_strand;
+
+			($r_nbeg, $r_nend) = ($r_nend, $r_nbeg) 
+			if $r_strand == -1;
+
+			my $class = compare::compare($t_nbeg, $t_nend, $r_nbeg, $r_nend);
+
+			$found++ if $class ne '0';
+
+			last if $class ne '0';
+		}
+
+		$total_overlapping++ if $found;
+        }
+
+
+	my $total_exons = keys %{$t_exon_coors};
+
+	my $num_missed = $total_exons - $total_overlapping;
+
+	my $we = 100*($num_missed/$total_exons);
+
+        print "XXXXXX  WE % XXXXX\n";
+	print "$we\n";
+ 
+}
+#-----------------------------------------------------------------------------
+sub me {
+        my $t_exon_coors = shift;
+        my $r_exon_coors = shift;
+
+        my $total_overlapping = 0;
+        foreach my $r_nbeg (sort keys %{$r_exon_coors}){
+                my @keys = keys %{$r_exon_coors->{$r_nbeg}};
+                my $r_nend = $keys[0];
+
+                my $r_strand = $r_nend > $r_nbeg ? 1 : -1;
+
+                ($r_nbeg, $r_nend) = ($r_nend, $r_nbeg) if $r_strand == -1;
+
+                my $found = 0;
+                foreach my $t_nbeg (sort keys %{$t_exon_coors}){
+                        my @keys = keys %{$t_exon_coors->{$t_nbeg}};
+                        my $t_nend = $keys[0];
+
+                        my $t_strand = $t_nend > $t_nbeg ? 1 : -1;
+
+                        next unless $t_strand == $r_strand;
+
+                        ($t_nbeg, $t_nend) = ($t_nend, $t_nbeg)
+                        if $t_strand == -1;
+
+                        my $class = compare::compare($t_nbeg, $t_nend, $r_nbeg, $r_nend);
+
+                        $found++ if $class ne '0';
+
+                        last if $class ne '0';
+                }
+
+                $total_overlapping++ if $found;
+        }
+
+
+        my $total_exons = keys %{$t_exon_coors};
+
+        my $num_missed = $total_exons - $total_overlapping;
+
+        my $me = 100*($num_missed/$total_exons);
+
+        print "XXXXXX  ME % XXXXX\n";
+        print "$me\n";
+
+}
+#-----------------------------------------------------------------------------
 sub alt_transcript_level {
 	my $t_cgl = shift;
 	my $r_cgl = shift;
@@ -558,8 +750,8 @@ sub alt_transcript_level {
 	my $r_alt_density = get_alt_density($r_cgl);
 
 	
-        print "ALT TRANSCRIPT DENSITY RATIO\n";
-	print $t_alt_density/$r_alt_density."\n";
+        print "ALT TRANSCRIPT DENSITY (reference)\n";
+	print "$t_alt_density ($r_alt_density)\n";
 }
 #-----------------------------------------------------------------------------
 sub get_alt_density {
@@ -577,7 +769,7 @@ sub get_alt_density {
                 while (my $t = $g->transcript($i)){
 			$tot_num_trans++;
 
-			if (defined($t->status) && $t->status eq 'Predicted') {
+			if (!$opt_p && defined($t->status) && $t->status eq 'Predicted') {
 				$num_pred_trans++;
 			}
 			else {
@@ -585,7 +777,12 @@ sub get_alt_density {
 			}
 			$i++;
                 }
-		$g_counts++ unless $num_pred_trans == $tot_num_trans;
+		if (!$opt_p){
+			$g_counts++ unless $num_pred_trans == $tot_num_trans;
+		}
+		else {
+			$g_counts++;
+		}
         }
 
 	return $t_counts/$g_counts;
@@ -600,7 +797,7 @@ sub get_exon_coors {
 	for my $g (@{$genes}) {
         	my $i = 0;
         	while (my $t = $g->transcript($i)){
-			if (defined($t->status) && $t->status eq 'Predicted'){
+			if (!$opt_p && defined($t->status) && $t->status eq 'Predicted'){
 				$i++;
 				next;
 			}
