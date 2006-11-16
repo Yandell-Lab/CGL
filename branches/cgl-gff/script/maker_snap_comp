@@ -13,6 +13,7 @@ use Fasta;
 use Shadower;
 use PostData;
 use Getopt::Long;
+$| = 1;
 
 #-----------------------------------------------------------------------------
 #----------------------------------- MAIN ------------------------------------
@@ -41,6 +42,8 @@ my $r_exon_coors = get_exon_coors($r_cgl);
 nuc_level($t_exon_coors, $r_exon_coors, $fasta_file);
 
 exon_level($t_exon_coors, $r_exon_coors);
+
+alt_transcript_level($t_cgl, $r_cgl);
 
 gene_level($t_cgl, $r_cgl);
 
@@ -545,6 +548,47 @@ sub exon_level {
         print "SP:$sp\n";
         print "AC:$ac\n";
 
+}
+#-----------------------------------------------------------------------------
+sub alt_transcript_level {
+	my $t_cgl = shift;
+	my $r_cgl = shift;
+
+	my $t_alt_density = get_alt_density($t_cgl);
+	my $r_alt_density = get_alt_density($r_cgl);
+
+	
+        print "ALT TRANSCRIPT DENSITY RATIO\n";
+	print $t_alt_density/$r_alt_density."\n";
+}
+#-----------------------------------------------------------------------------
+sub get_alt_density {
+       my $cgl = shift;
+
+        my $genes = $cgl->genes();
+
+
+	my $t_counts = 0;
+	my $g_counts = 0;
+        for my $g (@{$genes}) {
+		my $i = 0;
+		my $num_pred_trans = 0;
+		my $tot_num_trans  = 0;
+                while (my $t = $g->transcript($i)){
+			$tot_num_trans++;
+
+			if (defined($t->status) && $t->status eq 'Predicted') {
+				$num_pred_trans++;
+			}
+			else {
+				$t_counts++ 
+			}
+			$i++;
+                }
+		$g_counts++ unless $num_pred_trans == $tot_num_trans;
+        }
+
+	return $t_counts/$g_counts;
 }
 #-----------------------------------------------------------------------------
 sub get_exon_coors {
