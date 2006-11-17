@@ -62,12 +62,12 @@ DEFINE_VERSION = -D$(VERSION_MACRO)=\"$(VERSION)\"
 XS_VERSION = 0.08
 XS_VERSION_MACRO = XS_VERSION
 XS_DEFINE_VERSION = -D$(XS_VERSION_MACRO)=\"$(XS_VERSION)\"
-INST_ARCHLIB = blib/arch
-INST_SCRIPT = blib/script
-INST_BIN = blib/bin
-INST_LIB = blib/lib
-INST_MAN1DIR = blib/man1
-INST_MAN3DIR = blib/man3
+INST_ARCHLIB = ../blib/arch
+INST_SCRIPT = ../blib/script
+INST_BIN = ../blib/bin
+INST_LIB = ../blib/lib
+INST_MAN1DIR = ../blib/man1
+INST_MAN3DIR = ../blib/man3
 MAN1EXT = 1
 MAN3EXT = 3pm
 INSTALLDIRS = site
@@ -155,7 +155,6 @@ MAN1PODS = script/cgl_compare_annotations \
 	script/cgl_phat_tutorial \
 	script/cgl_so_reasoner \
 	script/cgl_tutorial \
-	script/cgl_validate \
 	script/cgl_version
 MAN3PODS = PROTO.pm \
 	lib/Bio/Search/HSP/PhatHSP.pod \
@@ -262,85 +261,85 @@ TO_INST_PM = PROTO.pm \
 PM_TO_BLIB = PROTO.pm \
 	$(INST_LIB)/PROTO.pm \
 	lib/CGL/Revcomp.pm \
-	blib/lib/CGL/Revcomp.pm \
+	../blib/lib/CGL/Revcomp.pm \
 	lib/Bio/Search/HSP/PhatHSP/blastn.pm \
-	blib/lib/Bio/Search/HSP/PhatHSP/blastn.pm \
+	../blib/lib/Bio/Search/HSP/PhatHSP/blastn.pm \
 	lib/CGL/Annotation/Feature/Intron.pm \
-	blib/lib/CGL/Annotation/Feature/Intron.pm \
+	../blib/lib/CGL/Annotation/Feature/Intron.pm \
 	lib/CGL/Annotation/Feature/Gene.pm \
-	blib/lib/CGL/Annotation/Feature/Gene.pm \
+	../blib/lib/CGL/Annotation/Feature/Gene.pm \
 	lib/CGL/Annotation.pm \
-	blib/lib/CGL/Annotation.pm \
+	../blib/lib/CGL/Annotation.pm \
 	lib/CGL/Annotation/Iterator.pm \
-	blib/lib/CGL/Annotation/Iterator.pm \
+	../blib/lib/CGL/Annotation/Iterator.pm \
 	lib/CGL/Annotation.pm_hold \
-	blib/lib/CGL/Annotation.pm_hold \
+	../blib/lib/CGL/Annotation.pm_hold \
 	lib/CGL/Clone.pm \
-	blib/lib/CGL/Clone.pm \
+	../blib/lib/CGL/Clone.pm \
 	lib/Bio/Search/HSP/PhatHSP/blastp.pm \
-	blib/lib/Bio/Search/HSP/PhatHSP/blastp.pm \
+	../blib/lib/Bio/Search/HSP/PhatHSP/blastp.pm \
 	lib/CGL/Annotation/Feature/Contig.pm \
-	blib/lib/CGL/Annotation/Feature/Contig.pm \
+	../blib/lib/CGL/Annotation/Feature/Contig.pm \
 	lib/Bio/Search/Hit/PhatHit.pod \
-	blib/lib/Bio/Search/Hit/PhatHit.pod \
+	../blib/lib/Bio/Search/Hit/PhatHit.pod \
 	lib/Bio/Search/Hit/PhatHit/tblastn.pm \
-	blib/lib/Bio/Search/Hit/PhatHit/tblastn.pm \
+	../blib/lib/Bio/Search/Hit/PhatHit/tblastn.pm \
 	lib/CGL/Annotation/FeatureRelationship.pm \
-	blib/lib/CGL/Annotation/FeatureRelationship.pm \
+	../blib/lib/CGL/Annotation/FeatureRelationship.pm \
 	lib/CGL/TranslationMachine.pm \
-	blib/lib/CGL/TranslationMachine.pm \
+	../blib/lib/CGL/TranslationMachine.pm \
 	lib/CGL/Ontology/Parser/OBO.pm \
-	blib/lib/CGL/Ontology/Parser/OBO.pm \
+	../blib/lib/CGL/Ontology/Parser/OBO.pm \
 	lib/CGL/Annotation/Feature.pm \
-	blib/lib/CGL/Annotation/Feature.pm \
+	../blib/lib/CGL/Annotation/Feature.pm \
 	lib/Bio/Search/Hit/PhatHit/blastx.pm \
-	blib/lib/Bio/Search/Hit/PhatHit/blastx.pm \
+	../blib/lib/Bio/Search/Hit/PhatHit/blastx.pm \
 	lib/CGL.pod \
-	blib/lib/CGL.pod \
+	../blib/lib/CGL.pod \
 	lib/Bio/Search/Hit/PhatHit/tblastx.pm \
-	blib/lib/Bio/Search/Hit/PhatHit/tblastx.pm \
+	../blib/lib/Bio/Search/Hit/PhatHit/tblastx.pm \
 	lib/CGL/Ontology/Trace.pm \
-	blib/lib/CGL/Ontology/Trace.pm \
+	../blib/lib/CGL/Ontology/Trace.pm \
 	lib/CGL/Annotation/Feature/Transcript.pm \
-	blib/lib/CGL/Annotation/Feature/Transcript.pm \
+	../blib/lib/CGL/Annotation/Feature/Transcript.pm \
 	lib/Bio/Search/HSP/PhatHSP/Base.pm \
-	blib/lib/Bio/Search/HSP/PhatHSP/Base.pm \
+	../blib/lib/Bio/Search/HSP/PhatHSP/Base.pm \
 	lib/Bio/Search/Hit/PhatHit/blastp.pm \
-	blib/lib/Bio/Search/Hit/PhatHit/blastp.pm \
+	../blib/lib/Bio/Search/Hit/PhatHit/blastp.pm \
 	lib/CGL/Ontology/GO.pm \
-	blib/lib/CGL/Ontology/GO.pm \
+	../blib/lib/CGL/Ontology/GO.pm \
 	lib/CGL/Version.pm \
-	blib/lib/CGL/Version.pm \
+	../blib/lib/CGL/Version.pm \
 	lib/Bio/Search/HSP/PhatHSP.pod \
-	blib/lib/Bio/Search/HSP/PhatHSP.pod \
+	../blib/lib/Bio/Search/HSP/PhatHSP.pod \
 	lib/CGL/Ontology/SO.pm \
-	blib/lib/CGL/Ontology/SO.pm \
+	../blib/lib/CGL/Ontology/SO.pm \
 	lib/CGL/Annotation/Feature/Protein.pm \
-	blib/lib/CGL/Annotation/Feature/Protein.pm \
+	../blib/lib/CGL/Annotation/Feature/Protein.pm \
 	lib/Bio/Search/Hit/PhatHit/blastn.pm \
-	blib/lib/Bio/Search/Hit/PhatHit/blastn.pm \
+	../blib/lib/Bio/Search/Hit/PhatHit/blastn.pm \
 	lib/Bio/Search/HSP/PhatHSP/tblastx.pm \
-	blib/lib/Bio/Search/HSP/PhatHSP/tblastx.pm \
+	../blib/lib/Bio/Search/HSP/PhatHSP/tblastx.pm \
 	lib/CGL/Annotation/Feature/Exon.pm \
-	blib/lib/CGL/Annotation/Feature/Exon.pm \
+	../blib/lib/CGL/Annotation/Feature/Exon.pm \
 	lib/CGL/Ontology/Ontology.pm \
-	blib/lib/CGL/Ontology/Ontology.pm \
+	../blib/lib/CGL/Ontology/Ontology.pm \
 	lib/CGL/Annotation/Trace.pm \
-	blib/lib/CGL/Annotation/Trace.pm \
+	../blib/lib/CGL/Annotation/Trace.pm \
 	lib/Bio/Search/HSP/PhatHSP/tblastn.pm \
-	blib/lib/Bio/Search/HSP/PhatHSP/tblastn.pm \
+	../blib/lib/Bio/Search/HSP/PhatHSP/tblastn.pm \
 	lib/CGL/Ontology/NodeRelationship.pm \
-	blib/lib/CGL/Ontology/NodeRelationship.pm \
+	../blib/lib/CGL/Ontology/NodeRelationship.pm \
 	lib/CGL/Annotation/Feature/Sequence_variant.pm \
-	blib/lib/CGL/Annotation/Feature/Sequence_variant.pm \
+	../blib/lib/CGL/Annotation/Feature/Sequence_variant.pm \
 	lib/CGL/Ontology/Node.pm \
-	blib/lib/CGL/Ontology/Node.pm \
+	../blib/lib/CGL/Ontology/Node.pm \
 	lib/Bio/Search/Hit/PhatHit/Base.pm \
-	blib/lib/Bio/Search/Hit/PhatHit/Base.pm \
+	../blib/lib/Bio/Search/Hit/PhatHit/Base.pm \
 	lib/Bio/Search/HSP/PhatHSP/blastx.pm \
-	blib/lib/Bio/Search/HSP/PhatHSP/blastx.pm \
+	../blib/lib/Bio/Search/HSP/PhatHSP/blastx.pm \
 	lib/CGL/Annotation/FeatureLocation.pm \
-	blib/lib/CGL/Annotation/FeatureLocation.pm
+	../blib/lib/CGL/Annotation/FeatureLocation.pm
 
 
 # --- MakeMaker platform_constants section:
@@ -387,24 +386,7 @@ makemakerdflt: all
 	$(NOECHO) $(NOOP)
 
 
-# --- MakeMaker dist section:
-TAR = tar
-TARFLAGS = cvf
-ZIP = zip
-ZIPFLAGS = -r
-COMPRESS = gzip --best
-SUFFIX = .gz
-SHAR = shar
-PREOP = $(NOECHO) $(NOOP)
-POSTOP = $(NOECHO) $(NOOP)
-TO_UNIX = $(NOECHO) $(NOOP)
-CI = ci -u
-RCS_LABEL = rcs -Nv$(VERSION_SYM): -q
-DIST_CP = best
-DIST_DEFAULT = tardist
-DISTNAME = CGL
-DISTVNAME = CGL-0.08
-
+# --- MakeMaker dist section skipped.
 
 # --- MakeMaker macro section:
 
@@ -514,7 +496,7 @@ help:
 	perldoc ExtUtils::MakeMaker
 
 
-testifypods : t/embedded-script-cgl_version.t t/embedded-script-cgl_compare_annotations.t t/embedded-script-cgl_so_reasoner.t t/embedded-script-cgl_phat_tutorial.t t/embedded-script-cgl_validate.t t/embedded-script-cgl_tutorial.t t/embedded-PROTO.t t/embedded-CGL-Revcomp.t t/embedded-Bio-Search-HSP-PhatHSP-blastn.t t/embedded-CGL-Annotation-Feature-Intron.t t/embedded-CGL-Annotation-Feature-Gene.t t/embedded-CGL-Annotation.t t/embedded-CGL-Annotation-Iterator.t t/embedded-CGL-Clone.t t/embedded-Bio-Search-HSP-PhatHSP-blastp.t t/embedded-CGL-Annotation-Feature-Contig.t t/embedded-Bio-Search-Hit-PhatHit.t t/embedded-Bio-Search-Hit-PhatHit-tblastn.t t/embedded-CGL-Annotation-FeatureRelationship.t t/embedded-CGL-TranslationMachine.t t/embedded-CGL-Ontology-Parser-OBO.t t/embedded-CGL-Annotation-Feature.t t/embedded-Bio-Search-Hit-PhatHit-blastx.t t/embedded-CGL.t t/embedded-Bio-Search-Hit-PhatHit-tblastx.t t/embedded-CGL-Ontology-Trace.t t/embedded-CGL-Annotation-Feature-Transcript.t t/embedded-Bio-Search-HSP-PhatHSP-Base.t t/embedded-Bio-Search-Hit-PhatHit-blastp.t t/embedded-CGL-Ontology-GO.t t/embedded-CGL-Version.t t/embedded-Bio-Search-HSP-PhatHSP.t t/embedded-CGL-Ontology-SO.t t/embedded-CGL-Annotation-Feature-Protein.t t/embedded-Bio-Search-Hit-PhatHit-blastn.t t/embedded-Bio-Search-HSP-PhatHSP-tblastx.t t/embedded-CGL-Annotation-Feature-Exon.t t/embedded-CGL-Ontology-Ontology.t t/embedded-CGL-Annotation-Trace.t t/embedded-Bio-Search-HSP-PhatHSP-tblastn.t t/embedded-CGL-Ontology-NodeRelationship.t t/embedded-CGL-Ontology-Node.t t/embedded-Bio-Search-Hit-PhatHit-Base.t t/embedded-Bio-Search-HSP-PhatHSP-blastx.t t/embedded-CGL-Annotation-FeatureLocation.t 
+testifypods : t/embedded-script-cgl_version.t t/embedded-script-cgl_compare_annotations.t t/embedded-script-cgl_so_reasoner.t t/embedded-script-cgl_phat_tutorial.t t/embedded-script-cgl_tutorial.t t/embedded-PROTO.t t/embedded-CGL-Revcomp.t t/embedded-Bio-Search-HSP-PhatHSP-blastn.t t/embedded-CGL-Annotation-Feature-Intron.t t/embedded-CGL-Annotation-Feature-Gene.t t/embedded-CGL-Annotation.t t/embedded-CGL-Annotation-Iterator.t t/embedded-Bio-Search-HSP-PhatHSP-blastp.t t/embedded-CGL-Clone.t t/embedded-CGL-Annotation-Feature-Contig.t t/embedded-Bio-Search-Hit-PhatHit-tblastn.t t/embedded-Bio-Search-Hit-PhatHit.t t/embedded-CGL-TranslationMachine.t t/embedded-CGL-Annotation-FeatureRelationship.t t/embedded-CGL-Ontology-Parser-OBO.t t/embedded-CGL-Annotation-Feature.t t/embedded-Bio-Search-Hit-PhatHit-blastx.t t/embedded-CGL.t t/embedded-Bio-Search-Hit-PhatHit-tblastx.t t/embedded-CGL-Ontology-Trace.t t/embedded-CGL-Annotation-Feature-Transcript.t t/embedded-Bio-Search-HSP-PhatHSP-Base.t t/embedded-Bio-Search-Hit-PhatHit-blastp.t t/embedded-CGL-Ontology-GO.t t/embedded-CGL-Version.t t/embedded-Bio-Search-HSP-PhatHSP.t t/embedded-CGL-Ontology-SO.t t/embedded-CGL-Annotation-Feature-Protein.t t/embedded-Bio-Search-Hit-PhatHit-blastn.t t/embedded-CGL-Annotation-Feature-Exon.t t/embedded-Bio-Search-HSP-PhatHSP-tblastx.t t/embedded-CGL-Ontology-Ontology.t t/embedded-CGL-Annotation-Trace.t t/embedded-Bio-Search-HSP-PhatHSP-tblastn.t t/embedded-CGL-Ontology-NodeRelationship.t t/embedded-CGL-Ontology-Node.t t/embedded-Bio-Search-Hit-PhatHit-Base.t t/embedded-Bio-Search-HSP-PhatHSP-blastx.t t/embedded-CGL-Annotation-FeatureLocation.t 
 
 t/embedded-script-cgl_version.t : script/cgl_version
 	-$(POD2TEST_EXE) script/cgl_version t/embedded-script-cgl_version.t
@@ -524,8 +506,6 @@ t/embedded-script-cgl_so_reasoner.t : script/cgl_so_reasoner
 	-$(POD2TEST_EXE) script/cgl_so_reasoner t/embedded-script-cgl_so_reasoner.t
 t/embedded-script-cgl_phat_tutorial.t : script/cgl_phat_tutorial
 	-$(POD2TEST_EXE) script/cgl_phat_tutorial t/embedded-script-cgl_phat_tutorial.t
-t/embedded-script-cgl_validate.t : script/cgl_validate
-	-$(POD2TEST_EXE) script/cgl_validate t/embedded-script-cgl_validate.t
 t/embedded-script-cgl_tutorial.t : script/cgl_tutorial
 	-$(POD2TEST_EXE) script/cgl_tutorial t/embedded-script-cgl_tutorial.t
 t/embedded-PROTO.t : PROTO.pm
@@ -542,20 +522,20 @@ t/embedded-CGL-Annotation.t : lib/CGL/Annotation.pm
 	-$(POD2TEST_EXE) lib/CGL/Annotation.pm t/embedded-CGL-Annotation.t
 t/embedded-CGL-Annotation-Iterator.t : lib/CGL/Annotation/Iterator.pm
 	-$(POD2TEST_EXE) lib/CGL/Annotation/Iterator.pm t/embedded-CGL-Annotation-Iterator.t
-t/embedded-CGL-Clone.t : lib/CGL/Clone.pm
-	-$(POD2TEST_EXE) lib/CGL/Clone.pm t/embedded-CGL-Clone.t
 t/embedded-Bio-Search-HSP-PhatHSP-blastp.t : lib/Bio/Search/HSP/PhatHSP/blastp.pm
 	-$(POD2TEST_EXE) lib/Bio/Search/HSP/PhatHSP/blastp.pm t/embedded-Bio-Search-HSP-PhatHSP-blastp.t
+t/embedded-CGL-Clone.t : lib/CGL/Clone.pm
+	-$(POD2TEST_EXE) lib/CGL/Clone.pm t/embedded-CGL-Clone.t
 t/embedded-CGL-Annotation-Feature-Contig.t : lib/CGL/Annotation/Feature/Contig.pm
 	-$(POD2TEST_EXE) lib/CGL/Annotation/Feature/Contig.pm t/embedded-CGL-Annotation-Feature-Contig.t
-t/embedded-Bio-Search-Hit-PhatHit.t : lib/Bio/Search/Hit/PhatHit.pod
-	-$(POD2TEST_EXE) lib/Bio/Search/Hit/PhatHit.pod t/embedded-Bio-Search-Hit-PhatHit.t
 t/embedded-Bio-Search-Hit-PhatHit-tblastn.t : lib/Bio/Search/Hit/PhatHit/tblastn.pm
 	-$(POD2TEST_EXE) lib/Bio/Search/Hit/PhatHit/tblastn.pm t/embedded-Bio-Search-Hit-PhatHit-tblastn.t
-t/embedded-CGL-Annotation-FeatureRelationship.t : lib/CGL/Annotation/FeatureRelationship.pm
-	-$(POD2TEST_EXE) lib/CGL/Annotation/FeatureRelationship.pm t/embedded-CGL-Annotation-FeatureRelationship.t
+t/embedded-Bio-Search-Hit-PhatHit.t : lib/Bio/Search/Hit/PhatHit.pod
+	-$(POD2TEST_EXE) lib/Bio/Search/Hit/PhatHit.pod t/embedded-Bio-Search-Hit-PhatHit.t
 t/embedded-CGL-TranslationMachine.t : lib/CGL/TranslationMachine.pm
 	-$(POD2TEST_EXE) lib/CGL/TranslationMachine.pm t/embedded-CGL-TranslationMachine.t
+t/embedded-CGL-Annotation-FeatureRelationship.t : lib/CGL/Annotation/FeatureRelationship.pm
+	-$(POD2TEST_EXE) lib/CGL/Annotation/FeatureRelationship.pm t/embedded-CGL-Annotation-FeatureRelationship.t
 t/embedded-CGL-Ontology-Parser-OBO.t : lib/CGL/Ontology/Parser/OBO.pm
 	-$(POD2TEST_EXE) lib/CGL/Ontology/Parser/OBO.pm t/embedded-CGL-Ontology-Parser-OBO.t
 t/embedded-CGL-Annotation-Feature.t : lib/CGL/Annotation/Feature.pm
@@ -586,10 +566,10 @@ t/embedded-CGL-Annotation-Feature-Protein.t : lib/CGL/Annotation/Feature/Protein
 	-$(POD2TEST_EXE) lib/CGL/Annotation/Feature/Protein.pm t/embedded-CGL-Annotation-Feature-Protein.t
 t/embedded-Bio-Search-Hit-PhatHit-blastn.t : lib/Bio/Search/Hit/PhatHit/blastn.pm
 	-$(POD2TEST_EXE) lib/Bio/Search/Hit/PhatHit/blastn.pm t/embedded-Bio-Search-Hit-PhatHit-blastn.t
-t/embedded-Bio-Search-HSP-PhatHSP-tblastx.t : lib/Bio/Search/HSP/PhatHSP/tblastx.pm
-	-$(POD2TEST_EXE) lib/Bio/Search/HSP/PhatHSP/tblastx.pm t/embedded-Bio-Search-HSP-PhatHSP-tblastx.t
 t/embedded-CGL-Annotation-Feature-Exon.t : lib/CGL/Annotation/Feature/Exon.pm
 	-$(POD2TEST_EXE) lib/CGL/Annotation/Feature/Exon.pm t/embedded-CGL-Annotation-Feature-Exon.t
+t/embedded-Bio-Search-HSP-PhatHSP-tblastx.t : lib/Bio/Search/HSP/PhatHSP/tblastx.pm
+	-$(POD2TEST_EXE) lib/Bio/Search/HSP/PhatHSP/tblastx.pm t/embedded-Bio-Search-HSP-PhatHSP-tblastx.t
 t/embedded-CGL-Ontology-Ontology.t : lib/CGL/Ontology/Ontology.pm
 	-$(POD2TEST_EXE) lib/CGL/Ontology/Ontology.pm t/embedded-CGL-Ontology-Ontology.t
 t/embedded-CGL-Annotation-Trace.t : lib/CGL/Annotation/Trace.pm
@@ -653,7 +633,6 @@ manifypods : pure_all  \
 	script/cgl_compare_annotations \
 	script/cgl_so_reasoner \
 	script/cgl_phat_tutorial \
-	script/cgl_validate \
 	script/cgl_tutorial \
 	PROTO.pm \
 	lib/CGL/Revcomp.pm \
@@ -662,13 +641,13 @@ manifypods : pure_all  \
 	lib/CGL/Annotation/Feature/Gene.pm \
 	lib/CGL/Annotation.pm \
 	lib/CGL/Annotation/Iterator.pm \
-	lib/CGL/Clone.pm \
 	lib/Bio/Search/HSP/PhatHSP/blastp.pm \
+	lib/CGL/Clone.pm \
 	lib/CGL/Annotation/Feature/Contig.pm \
-	lib/Bio/Search/Hit/PhatHit.pod \
 	lib/Bio/Search/Hit/PhatHit/tblastn.pm \
-	lib/CGL/Annotation/FeatureRelationship.pm \
+	lib/Bio/Search/Hit/PhatHit.pod \
 	lib/CGL/TranslationMachine.pm \
+	lib/CGL/Annotation/FeatureRelationship.pm \
 	lib/CGL/Ontology/Parser/OBO.pm \
 	lib/CGL/Annotation/Feature.pm \
 	lib/Bio/Search/Hit/PhatHit/blastx.pm \
@@ -684,8 +663,8 @@ manifypods : pure_all  \
 	lib/CGL/Ontology/SO.pm \
 	lib/CGL/Annotation/Feature/Protein.pm \
 	lib/Bio/Search/Hit/PhatHit/blastn.pm \
-	lib/Bio/Search/HSP/PhatHSP/tblastx.pm \
 	lib/CGL/Annotation/Feature/Exon.pm \
+	lib/Bio/Search/HSP/PhatHSP/tblastx.pm \
 	lib/CGL/Ontology/Ontology.pm \
 	lib/CGL/Annotation/Trace.pm \
 	lib/Bio/Search/HSP/PhatHSP/tblastn.pm \
@@ -701,13 +680,13 @@ manifypods : pure_all  \
 	lib/CGL/Annotation/Feature/Gene.pm \
 	lib/CGL/Annotation.pm \
 	lib/CGL/Annotation/Iterator.pm \
-	lib/CGL/Clone.pm \
 	lib/Bio/Search/HSP/PhatHSP/blastp.pm \
+	lib/CGL/Clone.pm \
 	lib/CGL/Annotation/Feature/Contig.pm \
-	lib/Bio/Search/Hit/PhatHit.pod \
 	lib/Bio/Search/Hit/PhatHit/tblastn.pm \
-	lib/CGL/Annotation/FeatureRelationship.pm \
+	lib/Bio/Search/Hit/PhatHit.pod \
 	lib/CGL/TranslationMachine.pm \
+	lib/CGL/Annotation/FeatureRelationship.pm \
 	lib/CGL/Ontology/Parser/OBO.pm \
 	lib/CGL/Annotation/Feature.pm \
 	lib/Bio/Search/Hit/PhatHit/blastx.pm \
@@ -723,8 +702,8 @@ manifypods : pure_all  \
 	lib/CGL/Ontology/SO.pm \
 	lib/CGL/Annotation/Feature/Protein.pm \
 	lib/Bio/Search/Hit/PhatHit/blastn.pm \
-	lib/Bio/Search/HSP/PhatHSP/tblastx.pm \
 	lib/CGL/Annotation/Feature/Exon.pm \
+	lib/Bio/Search/HSP/PhatHSP/tblastx.pm \
 	lib/CGL/Ontology/Ontology.pm \
 	lib/CGL/Annotation/Trace.pm \
 	lib/Bio/Search/HSP/PhatHSP/tblastn.pm \
@@ -738,7 +717,6 @@ manifypods : pure_all  \
 	  script/cgl_compare_annotations $(INST_MAN1DIR)/cgl_compare_annotations.$(MAN1EXT) \
 	  script/cgl_so_reasoner $(INST_MAN1DIR)/cgl_so_reasoner.$(MAN1EXT) \
 	  script/cgl_phat_tutorial $(INST_MAN1DIR)/cgl_phat_tutorial.$(MAN1EXT) \
-	  script/cgl_validate $(INST_MAN1DIR)/cgl_validate.$(MAN1EXT) \
 	  script/cgl_tutorial $(INST_MAN1DIR)/cgl_tutorial.$(MAN1EXT) 
 	$(NOECHO) $(POD2MAN) --section=3 --perm_rw=$(PERM_RW)\
 	  PROTO.pm $(INST_MAN3DIR)/PROTO.$(MAN3EXT) \
@@ -748,13 +726,13 @@ manifypods : pure_all  \
 	  lib/CGL/Annotation/Feature/Gene.pm $(INST_MAN3DIR)/CGL::Annotation::Feature::Gene.$(MAN3EXT) \
 	  lib/CGL/Annotation.pm $(INST_MAN3DIR)/CGL::Annotation.$(MAN3EXT) \
 	  lib/CGL/Annotation/Iterator.pm $(INST_MAN3DIR)/CGL::Annotation::Iterator.$(MAN3EXT) \
-	  lib/CGL/Clone.pm $(INST_MAN3DIR)/CGL::Clone.$(MAN3EXT) \
 	  lib/Bio/Search/HSP/PhatHSP/blastp.pm $(INST_MAN3DIR)/Bio::Search::HSP::PhatHSP::blastp.$(MAN3EXT) \
+	  lib/CGL/Clone.pm $(INST_MAN3DIR)/CGL::Clone.$(MAN3EXT) \
 	  lib/CGL/Annotation/Feature/Contig.pm $(INST_MAN3DIR)/CGL::Annotation::Feature::Contig.$(MAN3EXT) \
-	  lib/Bio/Search/Hit/PhatHit.pod $(INST_MAN3DIR)/Bio::Search::Hit::PhatHit.$(MAN3EXT) \
 	  lib/Bio/Search/Hit/PhatHit/tblastn.pm $(INST_MAN3DIR)/Bio::Search::Hit::PhatHit::tblastn.$(MAN3EXT) \
-	  lib/CGL/Annotation/FeatureRelationship.pm $(INST_MAN3DIR)/CGL::Annotation::FeatureRelationship.$(MAN3EXT) \
+	  lib/Bio/Search/Hit/PhatHit.pod $(INST_MAN3DIR)/Bio::Search::Hit::PhatHit.$(MAN3EXT) \
 	  lib/CGL/TranslationMachine.pm $(INST_MAN3DIR)/CGL::TranslationMachine.$(MAN3EXT) \
+	  lib/CGL/Annotation/FeatureRelationship.pm $(INST_MAN3DIR)/CGL::Annotation::FeatureRelationship.$(MAN3EXT) \
 	  lib/CGL/Ontology/Parser/OBO.pm $(INST_MAN3DIR)/CGL::Ontology::Parser::OBO.$(MAN3EXT) \
 	  lib/CGL/Annotation/Feature.pm $(INST_MAN3DIR)/CGL::Annotation::Feature.$(MAN3EXT) \
 	  lib/Bio/Search/Hit/PhatHit/blastx.pm $(INST_MAN3DIR)/Bio::Search::Hit::PhatHit::blastx.$(MAN3EXT) \
@@ -770,8 +748,8 @@ manifypods : pure_all  \
 	  lib/CGL/Ontology/SO.pm $(INST_MAN3DIR)/CGL::Ontology::SO.$(MAN3EXT) \
 	  lib/CGL/Annotation/Feature/Protein.pm $(INST_MAN3DIR)/CGL::Annotation::Feature::Protein.$(MAN3EXT) \
 	  lib/Bio/Search/Hit/PhatHit/blastn.pm $(INST_MAN3DIR)/Bio::Search::Hit::PhatHit::blastn.$(MAN3EXT) \
-	  lib/Bio/Search/HSP/PhatHSP/tblastx.pm $(INST_MAN3DIR)/Bio::Search::HSP::PhatHSP::tblastx.$(MAN3EXT) \
 	  lib/CGL/Annotation/Feature/Exon.pm $(INST_MAN3DIR)/CGL::Annotation::Feature::Exon.$(MAN3EXT) \
+	  lib/Bio/Search/HSP/PhatHSP/tblastx.pm $(INST_MAN3DIR)/Bio::Search::HSP::PhatHSP::tblastx.$(MAN3EXT) \
 	  lib/CGL/Ontology/Ontology.pm $(INST_MAN3DIR)/CGL::Ontology::Ontology.$(MAN3EXT) \
 	  lib/CGL/Annotation/Trace.pm $(INST_MAN3DIR)/CGL::Annotation::Trace.$(MAN3EXT) \
 	  lib/Bio/Search/HSP/PhatHSP/tblastn.pm $(INST_MAN3DIR)/Bio::Search::HSP::PhatHSP::tblastn.$(MAN3EXT) \
@@ -872,15 +850,15 @@ realclean_subdirs :
 realclean purge ::  clean realclean_subdirs
 	$(RM_RF) $(INST_AUTODIR) $(INST_ARCHAUTODIR)
 	$(RM_RF) $(DISTVNAME)
-	$(RM_F)  blib/lib/CGL/Ontology/SO.pm blib/lib/CGL/Annotation/FeatureLocation.pm blib/lib/CGL/TranslationMachine.pm blib/lib/CGL/Annotation/Feature/Protein.pm blib/lib/Bio/Search/HSP/PhatHSP/Base.pm
-	$(RM_F) blib/lib/Bio/Search/HSP/PhatHSP/blastx.pm blib/lib/CGL/Version.pm $(FIRST_MAKEFILE) blib/lib/CGL/Annotation/Iterator.pm blib/lib/CGL/Annotation/Feature/Sequence_variant.pm blib/lib/CGL/Annotation.pm
-	$(RM_F) blib/lib/CGL/Clone.pm blib/lib/CGL/Ontology/Trace.pm blib/lib/CGL/Ontology/Parser/OBO.pm blib/lib/CGL/Annotation/Feature/Gene.pm blib/lib/CGL/Annotation/Feature/Contig.pm
-	$(RM_F) blib/lib/CGL/Annotation/Feature/Intron.pm blib/lib/CGL/Annotation/Feature/Exon.pm blib/lib/CGL/Revcomp.pm $(MAKEFILE_OLD) blib/lib/Bio/Search/HSP/PhatHSP/tblastn.pm blib/lib/CGL.pod
-	$(RM_F) blib/lib/Bio/Search/Hit/PhatHit/tblastx.pm blib/lib/CGL/Annotation/Feature/Transcript.pm blib/lib/CGL/Ontology/GO.pm blib/lib/Bio/Search/Hit/PhatHit/Base.pm blib/lib/CGL/Annotation/Feature.pm
-	$(RM_F) blib/lib/CGL/Annotation.pm_hold blib/lib/Bio/Search/Hit/PhatHit/blastn.pm blib/lib/Bio/Search/Hit/PhatHit/blastp.pm blib/lib/CGL/Ontology/Ontology.pm blib/lib/Bio/Search/HSP/PhatHSP/blastn.pm
-	$(RM_F) blib/lib/Bio/Search/Hit/PhatHit/blastx.pm blib/lib/CGL/Annotation/Trace.pm $(INST_LIB)/PROTO.pm blib/lib/Bio/Search/HSP/PhatHSP/blastp.pm blib/lib/CGL/Annotation/FeatureRelationship.pm
-	$(RM_F) blib/lib/Bio/Search/Hit/PhatHit.pod blib/lib/CGL/Ontology/Node.pm blib/lib/Bio/Search/HSP/PhatHSP/tblastx.pm blib/lib/Bio/Search/Hit/PhatHit/tblastn.pm blib/lib/Bio/Search/HSP/PhatHSP.pod
-	$(RM_F) blib/lib/CGL/Ontology/NodeRelationship.pm
+	$(RM_F)  ../blib/lib/Bio/Search/HSP/PhatHSP/tblastn.pm ../blib/lib/Bio/Search/HSP/PhatHSP/blastp.pm ../blib/lib/CGL/Annotation/Feature.pm $(FIRST_MAKEFILE) ../blib/lib/Bio/Search/Hit/PhatHit.pod
+	$(RM_F) ../blib/lib/CGL/Annotation.pm ../blib/lib/CGL/Annotation/Feature/Transcript.pm ../blib/lib/CGL/Ontology/Ontology.pm ../blib/lib/Bio/Search/HSP/PhatHSP/Base.pm ../blib/lib/CGL/Annotation/Feature/Gene.pm
+	$(RM_F) ../blib/lib/CGL/Ontology/GO.pm ../blib/lib/Bio/Search/Hit/PhatHit/Base.pm ../blib/lib/CGL/Version.pm ../blib/lib/CGL/Annotation/Feature/Protein.pm ../blib/lib/Bio/Search/Hit/PhatHit/tblastn.pm
+	$(RM_F) ../blib/lib/CGL/Annotation/Trace.pm ../blib/lib/Bio/Search/HSP/PhatHSP/tblastx.pm ../blib/lib/CGL/Ontology/Parser/OBO.pm ../blib/lib/CGL/Ontology/Node.pm ../blib/lib/CGL/Ontology/NodeRelationship.pm
+	$(RM_F) ../blib/lib/Bio/Search/HSP/PhatHSP/blastn.pm ../blib/lib/CGL/Ontology/SO.pm ../blib/lib/CGL/Annotation/Feature/Intron.pm ../blib/lib/CGL/Annotation/Iterator.pm $(MAKEFILE_OLD)
+	$(RM_F) ../blib/lib/Bio/Search/Hit/PhatHit/blastn.pm ../blib/lib/CGL/Annotation/Feature/Sequence_variant.pm ../blib/lib/CGL.pod ../blib/lib/Bio/Search/Hit/PhatHit/blastp.pm
+	$(RM_F) ../blib/lib/CGL/Annotation/Feature/Contig.pm ../blib/lib/CGL/Revcomp.pm ../blib/lib/CGL/Annotation/FeatureLocation.pm ../blib/lib/Bio/Search/HSP/PhatHSP/blastx.pm ../blib/lib/Bio/Search/HSP/PhatHSP.pod
+	$(RM_F) $(INST_LIB)/PROTO.pm ../blib/lib/Bio/Search/Hit/PhatHit/tblastx.pm ../blib/lib/CGL/Annotation/Feature/Exon.pm ../blib/lib/Bio/Search/Hit/PhatHit/blastx.pm
+	$(RM_F) ../blib/lib/CGL/Annotation/FeatureRelationship.pm ../blib/lib/CGL/TranslationMachine.pm ../blib/lib/CGL/Annotation.pm_hold ../blib/lib/CGL/Clone.pm ../blib/lib/CGL/Ontology/Trace.pm
 
 
 # --- MakeMaker metafile section:
@@ -906,188 +884,17 @@ metafile_addtomanifest:
 	-e '    or print "Could not add META.yml to MANIFEST: $${'\''@'\''}\n"'
 
 
-# --- MakeMaker dist_basics section:
-distclean :: realclean distcheck
-	$(NOECHO) $(NOOP)
+# --- MakeMaker dist_basics section skipped.
 
-distcheck :
-	$(PERLRUN) "-MExtUtils::Manifest=fullcheck" -e fullcheck
+# --- MakeMaker dist_core section skipped.
 
-skipcheck :
-	$(PERLRUN) "-MExtUtils::Manifest=skipcheck" -e skipcheck
+# --- MakeMaker distdir section skipped.
 
-manifest :
-	$(PERLRUN) "-MExtUtils::Manifest=mkmanifest" -e mkmanifest
+# --- MakeMaker dist_test section skipped.
 
-veryclean : realclean
-	$(RM_F) *~ *.orig */*~ */*.orig
+# --- MakeMaker dist_ci section skipped.
 
-
-
-# --- MakeMaker dist_core section:
-
-dist : $(DIST_DEFAULT) $(FIRST_MAKEFILE)
-	$(NOECHO) $(PERLRUN) -l -e 'print '\''Warning: Makefile possibly out of date with $(VERSION_FROM)'\''' \
-	-e '    if -e '\''$(VERSION_FROM)'\'' and -M '\''$(VERSION_FROM)'\'' < -M '\''$(FIRST_MAKEFILE)'\'';'
-
-tardist : $(DISTVNAME).tar$(SUFFIX)
-	$(NOECHO) $(NOOP)
-
-uutardist : $(DISTVNAME).tar$(SUFFIX)
-	uuencode $(DISTVNAME).tar$(SUFFIX) $(DISTVNAME).tar$(SUFFIX) > $(DISTVNAME).tar$(SUFFIX)_uu
-
-$(DISTVNAME).tar$(SUFFIX) : distdir
-	$(PREOP)
-	$(TO_UNIX)
-	$(TAR) $(TARFLAGS) $(DISTVNAME).tar $(DISTVNAME)
-	$(RM_RF) $(DISTVNAME)
-	$(COMPRESS) $(DISTVNAME).tar
-	$(POSTOP)
-
-zipdist : $(DISTVNAME).zip
-	$(NOECHO) $(NOOP)
-
-$(DISTVNAME).zip : distdir
-	$(PREOP)
-	$(ZIP) $(ZIPFLAGS) $(DISTVNAME).zip $(DISTVNAME)
-	$(RM_RF) $(DISTVNAME)
-	$(POSTOP)
-
-shdist : distdir
-	$(PREOP)
-	$(SHAR) $(DISTVNAME) > $(DISTVNAME).shar
-	$(RM_RF) $(DISTVNAME)
-	$(POSTOP)
-
-
-# --- MakeMaker distdir section:
-distdir : metafile metafile_addtomanifest
-	$(RM_RF) $(DISTVNAME)
-	$(PERLRUN) "-MExtUtils::Manifest=manicopy,maniread" \
-		-e "manicopy(maniread(),'$(DISTVNAME)', '$(DIST_CP)');"
-
-
-
-# --- MakeMaker dist_test section:
-
-disttest : distdir
-	cd $(DISTVNAME) && $(ABSPERLRUN) Makefile.PL
-	cd $(DISTVNAME) && $(MAKE) $(PASTHRU)
-	cd $(DISTVNAME) && $(MAKE) test $(PASTHRU)
-
-
-# --- MakeMaker dist_ci section:
-
-ci :
-	$(PERLRUN) "-MExtUtils::Manifest=maniread" \
-	  -e "@all = keys %{ maniread() };" \
-	  -e "print(qq{Executing $(CI) @all\n}); system(qq{$(CI) @all});" \
-	  -e "print(qq{Executing $(RCS_LABEL) ...\n}); system(qq{$(RCS_LABEL) @all});"
-
-
-# --- MakeMaker install section:
-
-install :: all pure_install doc_install
-
-install_perl :: all pure_perl_install doc_perl_install
-
-install_site :: all pure_site_install doc_site_install
-
-install_vendor :: all pure_vendor_install doc_vendor_install
-
-pure_install :: pure_$(INSTALLDIRS)_install
-
-doc_install :: doc_$(INSTALLDIRS)_install
-
-pure__install : pure_site_install
-	$(NOECHO) $(ECHO) INSTALLDIRS not defined, defaulting to INSTALLDIRS=site
-
-doc__install : doc_site_install
-	$(NOECHO) $(ECHO) INSTALLDIRS not defined, defaulting to INSTALLDIRS=site
-
-pure_perl_install ::
-	$(NOECHO) $(MOD_INSTALL) \
-		read $(PERL_ARCHLIB)/auto/$(FULLEXT)/.packlist \
-		write $(DESTINSTALLARCHLIB)/auto/$(FULLEXT)/.packlist \
-		$(INST_LIB) $(DESTINSTALLPRIVLIB) \
-		$(INST_ARCHLIB) $(DESTINSTALLARCHLIB) \
-		$(INST_BIN) $(DESTINSTALLBIN) \
-		$(INST_SCRIPT) $(DESTINSTALLSCRIPT) \
-		$(INST_MAN1DIR) $(DESTINSTALLMAN1DIR) \
-		$(INST_MAN3DIR) $(DESTINSTALLMAN3DIR)
-	$(NOECHO) $(WARN_IF_OLD_PACKLIST) \
-		$(SITEARCHEXP)/auto/$(FULLEXT)
-
-
-pure_site_install ::
-	$(NOECHO) $(MOD_INSTALL) \
-		read $(SITEARCHEXP)/auto/$(FULLEXT)/.packlist \
-		write $(DESTINSTALLSITEARCH)/auto/$(FULLEXT)/.packlist \
-		$(INST_LIB) $(DESTINSTALLSITELIB) \
-		$(INST_ARCHLIB) $(DESTINSTALLSITEARCH) \
-		$(INST_BIN) $(DESTINSTALLSITEBIN) \
-		$(INST_SCRIPT) $(DESTINSTALLSCRIPT) \
-		$(INST_MAN1DIR) $(DESTINSTALLSITEMAN1DIR) \
-		$(INST_MAN3DIR) $(DESTINSTALLSITEMAN3DIR)
-	$(NOECHO) $(WARN_IF_OLD_PACKLIST) \
-		$(PERL_ARCHLIB)/auto/$(FULLEXT)
-
-pure_vendor_install ::
-	$(NOECHO) $(MOD_INSTALL) \
-		read $(VENDORARCHEXP)/auto/$(FULLEXT)/.packlist \
-		write $(DESTINSTALLVENDORARCH)/auto/$(FULLEXT)/.packlist \
-		$(INST_LIB) $(DESTINSTALLVENDORLIB) \
-		$(INST_ARCHLIB) $(DESTINSTALLVENDORARCH) \
-		$(INST_BIN) $(DESTINSTALLVENDORBIN) \
-		$(INST_SCRIPT) $(DESTINSTALLSCRIPT) \
-		$(INST_MAN1DIR) $(DESTINSTALLVENDORMAN1DIR) \
-		$(INST_MAN3DIR) $(DESTINSTALLVENDORMAN3DIR)
-
-doc_perl_install ::
-	$(NOECHO) $(ECHO) Appending installation info to $(DESTINSTALLARCHLIB)/perllocal.pod
-	-$(NOECHO) $(MKPATH) $(DESTINSTALLARCHLIB)
-	-$(NOECHO) $(DOC_INSTALL) \
-		"Module" "$(NAME)" \
-		"installed into" "$(INSTALLPRIVLIB)" \
-		LINKTYPE "$(LINKTYPE)" \
-		VERSION "$(VERSION)" \
-		EXE_FILES "$(EXE_FILES)" \
-		>> $(DESTINSTALLARCHLIB)/perllocal.pod
-
-doc_site_install ::
-	$(NOECHO) $(ECHO) Appending installation info to $(DESTINSTALLARCHLIB)/perllocal.pod
-	-$(NOECHO) $(MKPATH) $(DESTINSTALLARCHLIB)
-	-$(NOECHO) $(DOC_INSTALL) \
-		"Module" "$(NAME)" \
-		"installed into" "$(INSTALLSITELIB)" \
-		LINKTYPE "$(LINKTYPE)" \
-		VERSION "$(VERSION)" \
-		EXE_FILES "$(EXE_FILES)" \
-		>> $(DESTINSTALLARCHLIB)/perllocal.pod
-
-doc_vendor_install ::
-	$(NOECHO) $(ECHO) Appending installation info to $(DESTINSTALLARCHLIB)/perllocal.pod
-	-$(NOECHO) $(MKPATH) $(DESTINSTALLARCHLIB)
-	-$(NOECHO) $(DOC_INSTALL) \
-		"Module" "$(NAME)" \
-		"installed into" "$(INSTALLVENDORLIB)" \
-		LINKTYPE "$(LINKTYPE)" \
-		VERSION "$(VERSION)" \
-		EXE_FILES "$(EXE_FILES)" \
-		>> $(DESTINSTALLARCHLIB)/perllocal.pod
-
-
-uninstall :: uninstall_from_$(INSTALLDIRS)dirs
-
-uninstall_from_perldirs ::
-	$(NOECHO) $(UNINSTALL) $(PERL_ARCHLIB)/auto/$(FULLEXT)/.packlist
-
-uninstall_from_sitedirs ::
-	$(NOECHO) $(UNINSTALL) $(SITEARCHEXP)/auto/$(FULLEXT)/.packlist
-
-uninstall_from_vendordirs ::
-	$(NOECHO) $(UNINSTALL) $(VENDORARCHEXP)/auto/$(FULLEXT)/.packlist
-
+# --- MakeMaker install section skipped.
 
 # --- MakeMaker force section:
 # Phony target to force checking subdirectories.
@@ -1118,18 +925,8 @@ $(FIRST_MAKEFILE) : Makefile.PL $(CONFIGDEP)
 # --- MakeMaker staticmake section:
 
 # --- MakeMaker makeaperl section ---
-MAP_TARGET    = perl
+MAP_TARGET    = ../perl
 FULLPERL      = /usr/bin/perl
-
-$(MAP_TARGET) :: static $(MAKE_APERL_FILE)
-	$(MAKE) -f $(MAKE_APERL_FILE) $@
-
-$(MAKE_APERL_FILE) : $(FIRST_MAKEFILE)
-	$(NOECHO) $(ECHO) Writing \"$(MAKE_APERL_FILE)\" for this $(MAP_TARGET)
-	$(NOECHO) $(PERLRUNINST) \
-		Makefile.PL DIR= \
-		MAKEFILE=$(MAKE_APERL_FILE) LINKTYPE=static \
-		MAKEAPERL=1 NORECURS=1 CCCDLFLAGS=
 
 
 # --- MakeMaker test section:
@@ -1179,46 +976,46 @@ ppd:
 pm_to_blib: $(TO_INST_PM)
 	$(NOECHO) $(PERLRUN) -MExtUtils::Install -e 'pm_to_blib({@ARGV}, '\''$(INST_LIB)/auto'\'', '\''$(PM_FILTER)'\'')'\
 	  PROTO.pm $(INST_LIB)/PROTO.pm \
-	  lib/CGL/Revcomp.pm blib/lib/CGL/Revcomp.pm \
-	  lib/Bio/Search/HSP/PhatHSP/blastn.pm blib/lib/Bio/Search/HSP/PhatHSP/blastn.pm \
-	  lib/CGL/Annotation/Feature/Intron.pm blib/lib/CGL/Annotation/Feature/Intron.pm \
-	  lib/CGL/Annotation/Feature/Gene.pm blib/lib/CGL/Annotation/Feature/Gene.pm \
-	  lib/CGL/Annotation.pm blib/lib/CGL/Annotation.pm \
-	  lib/CGL/Annotation/Iterator.pm blib/lib/CGL/Annotation/Iterator.pm \
-	  lib/CGL/Annotation.pm_hold blib/lib/CGL/Annotation.pm_hold \
-	  lib/CGL/Clone.pm blib/lib/CGL/Clone.pm \
-	  lib/Bio/Search/HSP/PhatHSP/blastp.pm blib/lib/Bio/Search/HSP/PhatHSP/blastp.pm \
-	  lib/CGL/Annotation/Feature/Contig.pm blib/lib/CGL/Annotation/Feature/Contig.pm \
-	  lib/Bio/Search/Hit/PhatHit.pod blib/lib/Bio/Search/Hit/PhatHit.pod \
-	  lib/Bio/Search/Hit/PhatHit/tblastn.pm blib/lib/Bio/Search/Hit/PhatHit/tblastn.pm \
-	  lib/CGL/Annotation/FeatureRelationship.pm blib/lib/CGL/Annotation/FeatureRelationship.pm \
-	  lib/CGL/TranslationMachine.pm blib/lib/CGL/TranslationMachine.pm \
-	  lib/CGL/Ontology/Parser/OBO.pm blib/lib/CGL/Ontology/Parser/OBO.pm \
-	  lib/CGL/Annotation/Feature.pm blib/lib/CGL/Annotation/Feature.pm \
-	  lib/Bio/Search/Hit/PhatHit/blastx.pm blib/lib/Bio/Search/Hit/PhatHit/blastx.pm \
-	  lib/CGL.pod blib/lib/CGL.pod \
-	  lib/Bio/Search/Hit/PhatHit/tblastx.pm blib/lib/Bio/Search/Hit/PhatHit/tblastx.pm \
-	  lib/CGL/Ontology/Trace.pm blib/lib/CGL/Ontology/Trace.pm \
-	  lib/CGL/Annotation/Feature/Transcript.pm blib/lib/CGL/Annotation/Feature/Transcript.pm \
-	  lib/Bio/Search/HSP/PhatHSP/Base.pm blib/lib/Bio/Search/HSP/PhatHSP/Base.pm \
-	  lib/Bio/Search/Hit/PhatHit/blastp.pm blib/lib/Bio/Search/Hit/PhatHit/blastp.pm \
-	  lib/CGL/Ontology/GO.pm blib/lib/CGL/Ontology/GO.pm \
-	  lib/CGL/Version.pm blib/lib/CGL/Version.pm \
-	  lib/Bio/Search/HSP/PhatHSP.pod blib/lib/Bio/Search/HSP/PhatHSP.pod \
-	  lib/CGL/Ontology/SO.pm blib/lib/CGL/Ontology/SO.pm \
-	  lib/CGL/Annotation/Feature/Protein.pm blib/lib/CGL/Annotation/Feature/Protein.pm \
-	  lib/Bio/Search/Hit/PhatHit/blastn.pm blib/lib/Bio/Search/Hit/PhatHit/blastn.pm \
-	  lib/Bio/Search/HSP/PhatHSP/tblastx.pm blib/lib/Bio/Search/HSP/PhatHSP/tblastx.pm \
-	  lib/CGL/Annotation/Feature/Exon.pm blib/lib/CGL/Annotation/Feature/Exon.pm \
-	  lib/CGL/Ontology/Ontology.pm blib/lib/CGL/Ontology/Ontology.pm \
-	  lib/CGL/Annotation/Trace.pm blib/lib/CGL/Annotation/Trace.pm \
-	  lib/Bio/Search/HSP/PhatHSP/tblastn.pm blib/lib/Bio/Search/HSP/PhatHSP/tblastn.pm \
-	  lib/CGL/Ontology/NodeRelationship.pm blib/lib/CGL/Ontology/NodeRelationship.pm \
-	  lib/CGL/Annotation/Feature/Sequence_variant.pm blib/lib/CGL/Annotation/Feature/Sequence_variant.pm \
-	  lib/CGL/Ontology/Node.pm blib/lib/CGL/Ontology/Node.pm \
-	  lib/Bio/Search/Hit/PhatHit/Base.pm blib/lib/Bio/Search/Hit/PhatHit/Base.pm \
-	  lib/Bio/Search/HSP/PhatHSP/blastx.pm blib/lib/Bio/Search/HSP/PhatHSP/blastx.pm \
-	  lib/CGL/Annotation/FeatureLocation.pm blib/lib/CGL/Annotation/FeatureLocation.pm 
+	  lib/CGL/Revcomp.pm ../blib/lib/CGL/Revcomp.pm \
+	  lib/Bio/Search/HSP/PhatHSP/blastn.pm ../blib/lib/Bio/Search/HSP/PhatHSP/blastn.pm \
+	  lib/CGL/Annotation/Feature/Intron.pm ../blib/lib/CGL/Annotation/Feature/Intron.pm \
+	  lib/CGL/Annotation/Feature/Gene.pm ../blib/lib/CGL/Annotation/Feature/Gene.pm \
+	  lib/CGL/Annotation.pm ../blib/lib/CGL/Annotation.pm \
+	  lib/CGL/Annotation/Iterator.pm ../blib/lib/CGL/Annotation/Iterator.pm \
+	  lib/CGL/Annotation.pm_hold ../blib/lib/CGL/Annotation.pm_hold \
+	  lib/CGL/Clone.pm ../blib/lib/CGL/Clone.pm \
+	  lib/Bio/Search/HSP/PhatHSP/blastp.pm ../blib/lib/Bio/Search/HSP/PhatHSP/blastp.pm \
+	  lib/CGL/Annotation/Feature/Contig.pm ../blib/lib/CGL/Annotation/Feature/Contig.pm \
+	  lib/Bio/Search/Hit/PhatHit.pod ../blib/lib/Bio/Search/Hit/PhatHit.pod \
+	  lib/Bio/Search/Hit/PhatHit/tblastn.pm ../blib/lib/Bio/Search/Hit/PhatHit/tblastn.pm \
+	  lib/CGL/Annotation/FeatureRelationship.pm ../blib/lib/CGL/Annotation/FeatureRelationship.pm \
+	  lib/CGL/TranslationMachine.pm ../blib/lib/CGL/TranslationMachine.pm \
+	  lib/CGL/Ontology/Parser/OBO.pm ../blib/lib/CGL/Ontology/Parser/OBO.pm \
+	  lib/CGL/Annotation/Feature.pm ../blib/lib/CGL/Annotation/Feature.pm \
+	  lib/Bio/Search/Hit/PhatHit/blastx.pm ../blib/lib/Bio/Search/Hit/PhatHit/blastx.pm \
+	  lib/CGL.pod ../blib/lib/CGL.pod \
+	  lib/Bio/Search/Hit/PhatHit/tblastx.pm ../blib/lib/Bio/Search/Hit/PhatHit/tblastx.pm \
+	  lib/CGL/Ontology/Trace.pm ../blib/lib/CGL/Ontology/Trace.pm \
+	  lib/CGL/Annotation/Feature/Transcript.pm ../blib/lib/CGL/Annotation/Feature/Transcript.pm \
+	  lib/Bio/Search/HSP/PhatHSP/Base.pm ../blib/lib/Bio/Search/HSP/PhatHSP/Base.pm \
+	  lib/Bio/Search/Hit/PhatHit/blastp.pm ../blib/lib/Bio/Search/Hit/PhatHit/blastp.pm \
+	  lib/CGL/Ontology/GO.pm ../blib/lib/CGL/Ontology/GO.pm \
+	  lib/CGL/Version.pm ../blib/lib/CGL/Version.pm \
+	  lib/Bio/Search/HSP/PhatHSP.pod ../blib/lib/Bio/Search/HSP/PhatHSP.pod \
+	  lib/CGL/Ontology/SO.pm ../blib/lib/CGL/Ontology/SO.pm \
+	  lib/CGL/Annotation/Feature/Protein.pm ../blib/lib/CGL/Annotation/Feature/Protein.pm \
+	  lib/Bio/Search/Hit/PhatHit/blastn.pm ../blib/lib/Bio/Search/Hit/PhatHit/blastn.pm \
+	  lib/Bio/Search/HSP/PhatHSP/tblastx.pm ../blib/lib/Bio/Search/HSP/PhatHSP/tblastx.pm \
+	  lib/CGL/Annotation/Feature/Exon.pm ../blib/lib/CGL/Annotation/Feature/Exon.pm \
+	  lib/CGL/Ontology/Ontology.pm ../blib/lib/CGL/Ontology/Ontology.pm \
+	  lib/CGL/Annotation/Trace.pm ../blib/lib/CGL/Annotation/Trace.pm \
+	  lib/Bio/Search/HSP/PhatHSP/tblastn.pm ../blib/lib/Bio/Search/HSP/PhatHSP/tblastn.pm \
+	  lib/CGL/Ontology/NodeRelationship.pm ../blib/lib/CGL/Ontology/NodeRelationship.pm \
+	  lib/CGL/Annotation/Feature/Sequence_variant.pm ../blib/lib/CGL/Annotation/Feature/Sequence_variant.pm \
+	  lib/CGL/Ontology/Node.pm ../blib/lib/CGL/Ontology/Node.pm \
+	  lib/Bio/Search/Hit/PhatHit/Base.pm ../blib/lib/Bio/Search/Hit/PhatHit/Base.pm \
+	  lib/Bio/Search/HSP/PhatHSP/blastx.pm ../blib/lib/Bio/Search/HSP/PhatHSP/blastx.pm \
+	  lib/CGL/Annotation/FeatureLocation.pm ../blib/lib/CGL/Annotation/FeatureLocation.pm 
 	$(NOECHO) $(TOUCH) $@
 
 # --- MakeMaker selfdocument section:
