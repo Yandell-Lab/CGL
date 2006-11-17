@@ -41,8 +41,6 @@ my $t_cgl = new CGL::Annotation::GFF3::nGASP($t_gff3_file, $what);
 
 my $r_cgl = new CGL::Annotation::GFF3::WormBase($r_gff3_file, $fasta_file);
 
-e_gasp_trans($t_cgl, $r_cgl);
-
 my $t_exon_coors = get_exon_coors($t_cgl);
 
 my $r_exon_coors = get_exon_coors($r_cgl);
@@ -51,11 +49,11 @@ nuc_level($t_exon_coors, $r_exon_coors, $fasta_file);
 
 exon_level($t_exon_coors, $r_exon_coors);
 
+gene_level($t_cgl, $r_cgl);
+
 alt_transcript_level($t_cgl, $r_cgl);
 
 cds_ratio($t_cgl, $r_cgl);
-
-gene_level($t_cgl, $r_cgl);
 
 me($t_exon_coors, $r_exon_coors);
 
@@ -178,10 +176,10 @@ sub nuc_level {
         my $ac = ($sn + $sp)/2;
 
 	print "NUCLEOTIDE LEVEL\n";
-        print "SN:$sn\n";
-        print "SP:$sp\n";
-        print "AC:$ac\n";
-
+        print "SN:",sprintf("%.3f",$sn),"\n";
+        print "SP:",sprintf("%.3f",$sp), "\n";
+        print "AC:",sprintf("%.3f",$ac),"\n";
+	
 }
 #-----------------------------------------------------------------------------
 sub gene_level {
@@ -259,10 +257,9 @@ sub gene_level {
         my $ac = ($sn + $sp)/2;
 
         print "GENE LEVEL\n";
-
-        print "SN:$sn\n";
-        print "SP:$sp\n";
-        print "AC:$ac\n";
+	print "SN:",sprintf("%.3f",$sn),"\n";
+        print "SP:",sprintf("%.3f",$sp), "\n";
+        print "AC:",sprintf("%.3f",$ac),"\n";
 
 =cut;
 	foreach my $i (sort keys %{$r_gene_data}){
@@ -352,11 +349,11 @@ sub cluster {
         my $ac = ($sn + $sp)/2;
 
 	print "GENE LEVEL\n";
-
-        print "SN:$sn\n";
-        print "SP:$sp\n";
-        print "AC:$ac\n";
-
+	
+	print "SN:",sprintf("%.3f",$sn),"\n";
+        print "SP:",sprintf("%.3f",$sp), "\n";
+        print "AC:",sprintf("%.3f",$ac),"\n";
+	
 }
 #-----------------------------------------------------------------------------
 sub they_overlap {
@@ -560,10 +557,10 @@ sub exon_level_old {
         my $ac = ($sn + $sp)/2;
 
 	print "EXON LEVEL\n";
-        print "SN:$sn\n";
-        print "SP:$sp\n";
-        print "AC:$ac\n";
-
+	print "SN:",sprintf("%.3f",$sn),"\n";
+        print "SP:",sprintf("%.3f",$sp), "\n";
+        print "AC:",sprintf("%.3f",$ac),"\n";
+	
 }
 #-----------------------------------------------------------------------------
 sub exon_level {
@@ -604,22 +601,21 @@ sub exon_level {
         my $ac = ($sn + $sp)/2;
 
         print "EXON LEVEL\n";
-        print "SN:$sn\n";
-        print "SP:$sp\n";
-        print "AC:$ac\n";
-
+        print "SN:",sprintf("%.3f",$sn),"\n";
+        print "SP:",sprintf("%.3f",$sp), "\n";
+        print "AC:",sprintf("%.3f",$ac),"\n";
 }
 #-----------------------------------------------------------------------------
 sub cds_ratio {
-        my $t_cgl = shift;
-        my $r_cgl = shift;
-        
-        my $t_ratio =  get_length_ratio($t_cgl);
-        my $r_ratio =  get_length_ratio($r_cgl);
-
-        
-        print "CDS/UTR RATIO (reference)\n";
-        print "$t_ratio ($r_ratio)\n";
+    my $t_cgl = shift;
+    my $r_cgl = shift;
+    
+    my $t_ratio =  get_length_ratio($t_cgl);
+    my $r_ratio =  get_length_ratio($r_cgl);
+    
+    
+    print "CDS/UTR RATIO (reference)\n";
+    print sprintf("%.3f",$t_ratio)," (",sprintf("%.3f",$r_ratio),")\n";
 }               
 #-----------------------------------------------------------------------------
 sub get_length_ratio {
@@ -696,9 +692,9 @@ sub we {
 	my $we = 100*($num_missed/$total_exons);
 
         print "XXXXXX  WE % XXXXX\n";
-	print "$we\n";
- 
-}
+	print sprintf("%.3f",$we),"\n";
+	
+    }
 #-----------------------------------------------------------------------------
 sub me {
         my $t_exon_coors = shift;
@@ -741,10 +737,10 @@ sub me {
         my $num_missed = $total_exons - $total_overlapping;
 
         my $me = 100*($num_missed/$total_exons);
-
+	
         print "XXXXXX  ME % XXXXX\n";
-        print "$me\n";
-
+        print sprintf("%.3f",$me),"\n";
+	
 }
 #-----------------------------------------------------------------------------
 sub alt_transcript_level {
@@ -756,7 +752,7 @@ sub alt_transcript_level {
 
 	
         print "ALT TRANSCRIPT DENSITY (reference)\n";
-	print "$t_alt_density ($r_alt_density)\n";
+	print sprintf("%.3f",$t_alt_density)," (",sprintf("%.3f",$r_alt_density),")\n";
 }
 #-----------------------------------------------------------------------------
 sub get_alt_density {
@@ -886,15 +882,15 @@ sub e_gasp_trans {
 
 	my $ac = ($sn + $sp)/2;
 	my $ave_ac = ($ave_sn + $ave_sp)/2;
-
+	
 	print "eGASP TRANSCRIPT LEVEL\n";
-	print "SN:$sn SP:$sp AC:$ac\n";  
+	print "SN:",sprintf("%.3f",$sn)," SP:",sprintf("%.3f",$sp)," AC:",sprintf("%.3f",$ac),"\n";  
 	print "AVE TRANSCRIPT LEVEL\n";
-	print "SN:$ave_sn SP:$ave_sp AC:$ave_ac\n";
-} 
+	print "SN:",sprintf("%.3f",$ave_sn)," SP:",sprintf("%.3f",$ave_sp)," AC:",sprintf("%.3f",$ave_ac),"\n";
+    } 
 #-----------------------------------------------------------------------------
 sub get_exons_by_transcript {
-	my $cgl = shift;
+    my $cgl = shift;
 
         my $genes = $cgl->genes();
 
