@@ -41,6 +41,8 @@ my $t_cgl = new CGL::Annotation::GFF3::nGASP($t_gff3_file, $what);
 
 my $r_cgl = new CGL::Annotation::GFF3::WormBase($r_gff3_file, $fasta_file);
 
+e_gasp_trans($t_cgl, $r_cgl);
+
 my $t_exon_coors = get_exon_coors($t_cgl);
 
 my $r_exon_coors = get_exon_coors($r_cgl);
@@ -58,6 +60,9 @@ gene_level($t_cgl, $r_cgl);
 me($t_exon_coors, $r_exon_coors);
 
 we($t_exon_coors, $r_exon_coors);
+
+e_gasp_trans($t_cgl, $r_cgl);
+
 #-----------------------------------------------------------------------------
 #------------------------------- SUBROUTINES ---------------------------------
 #-----------------------------------------------------------------------------
@@ -786,6 +791,134 @@ sub get_alt_density {
         }
 
 	return $t_counts/$g_counts;
+}
+#-----------------------------------------------------------------------------
+sub get_exon_beg_end {
+	my $data = shift;
+	
+	my @pairs;
+	foreach my $n_beg (keys %{$data}){
+		my @keys = keys %{$data->{$n_beg}};
+		foreach my $n_end (@keys){
+			push(@pairs, [$n_beg, $n_end]);
+		}
+	}
+	return \@pairs;
+}
+#-----------------------------------------------------------------------------
+sub e_gasp_trans {
+	my $t_cgl = shift;
+	my $r_cgl = shift;
+
+	my $t_data = get_exons_by_transcript($t_cgl);
+	my $r_data = get_exons_by_transcript($r_cgl);
+
+	my $r_size = keys %{$r_data};
+	my $t_size = keys %{$t_data};
+
+	my %r_exon_sets;
+	foreach my $i (keys %{$r_data}){
+		my $r_trans = $r_data->{$i};
+		$r_exon_sets{$i} = get_exon_beg_end($r_trans);
+	}
+
+        my %t_exon_sets;
+        foreach my $i (keys %{$t_data}){
+                my $t_trans = $t_data->{$i};
+                $t_exon_sets{$i} = get_exon_beg_end($t_trans);
+        }
+
+	my $got_r_right = 0;
+	foreach my $i (keys %{$r_data}){
+		my $r_trans = $r_data->{$i};
+		my $r_exons = $r_exon_sets{$i};
+		foreach my $j (keys %{$t_data}){
+			my $t_exons = $t_exon_sets{$j}; 
+			my $yes = 0;
+			my $no = 0;
+			foreach my $t_pair (@{$t_exons}){
+				my $t_nbeg = $t_pair->[0];
+				my $t_nend = $t_pair->[1];
+
+				$no++ if !defined($r_trans->{$t_nbeg}->{$t_nend});
+				$yes++ if defined($r_trans->{$t_nbeg}->{$t_nend});
+			} 
+			my $num_exons = @$r_exons;
+
+			#my $frac = $yes/$num_exons;
+			#print "$frac\n" if $frac > 0;;
+
+			$got_r_right++ unless $no;
+		}
+
+	}
+
+
+
+
+        my $got_t_right = 0;
+        foreach my $i (keys %{$t_data}){
+                my $t_trans = $t_data->{$i};
+		my $t_exons = $t_exon_sets{$i};
+                foreach my $j (keys %{$r_data}){
+                        my $r_exons = $r_exon_sets{$j};
+                        my $yes = 0;
+                        my $no = 0;
+                        foreach my $r_pair (@{$r_exons}){
+                                my $r_nbeg = $r_pair->[0];
+                                my $r_nend = $r_pair->[1];
+
+                                $no++ if !defined($t_trans->{$r_nbeg}->{$r_nend});
+                                $yes++ if defined($t_trans->{$r_nbeg}->{$r_nend});
+                        }
+                        my $num_exons = @$t_exons;
+
+                        #my $frac = $yes/$num_exons;
+                        #print "$frac\n" if $frac > 0;;
+
+                        $got_t_right++ unless $no;
+                }
+
+        }
+
+
+	my $sn = 100*($got_r_right/$r_size);
+	my $sp = 100*($got_t_right/$t_size);
+
+	print "eGASP TRANSCRIPT LEVEL\n";
+	print "SN:$sn SP:$sp\n";
+} 
+#-----------------------------------------------------------------------------
+sub get_exons_by_transcript {
+	my $cgl = shift;
+
+        my $genes = $cgl->genes();
+
+        my %coors;
+	my $count = -1;
+        for my $g (@{$genes}) {
+                my $i = 0;
+                while (my $t = $g->transcript($i)){
+                        if (!$opt_p && defined($t->status) && $t->status eq 'Predicted'){
+                                $i++;
+                                next;
+                        }
+
+			$count++;
+                        my $j = 0;
+                        while (my $e = $t->exon($j)){
+                                my $nbeg = $e->nbeg();
+                                my $nend = $e->nend();
+
+                                $coors{$count}{$nbeg}{$nend}++;
+                                $j++;
+                        }
+                        $i++;
+                }
+
+        }
+
+	return \%coors;
 }
 #-----------------------------------------------------------------------------
 sub get_exon_coors {
