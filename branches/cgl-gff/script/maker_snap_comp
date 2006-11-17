@@ -810,8 +810,8 @@ sub e_gasp_trans {
 	my $t_cgl = shift;
 	my $r_cgl = shift;
 
-	my $t_data = get_exons_by_transcript($t_cgl);
-	my $r_data = get_exons_by_transcript($r_cgl);
+	my ($t_data, $t_g_count)  = get_exons_by_transcript($t_cgl);
+	my ($r_data, $r_g_count)  = get_exons_by_transcript($r_cgl);
 
 	my $r_size = keys %{$r_data};
 	my $t_size = keys %{$t_data};
@@ -828,6 +828,7 @@ sub e_gasp_trans {
                 $t_exon_sets{$i} = get_exon_beg_end($t_trans);
         }
 
+	my $sn_frac = 0;
 	my $got_r_right = 0;
 	foreach my $i (keys %{$r_data}){
 		my $r_trans = $r_data->{$i};
@@ -845,17 +846,14 @@ sub e_gasp_trans {
 			} 
 			my $num_exons = @$r_exons;
 
-			#my $frac = $yes/$num_exons;
-			#print "$frac\n" if $frac > 0;;
+			$sn_frac += $yes/$num_exons;
 
 			$got_r_right++ unless $no;
 		}
 
 	}
 
-
-
-
+	my $sp_frac = 0;
         my $got_t_right = 0;
         foreach my $i (keys %{$t_data}){
                 my $t_trans = $t_data->{$i};
@@ -873,8 +871,7 @@ sub e_gasp_trans {
                         }
                         my $num_exons = @$t_exons;
 
-                        #my $frac = $yes/$num_exons;
-                        #print "$frac\n" if $frac > 0;;
+                        $sp_frac += $yes/$num_exons;
 
                         $got_t_right++ unless $no;
                 }
@@ -882,11 +879,18 @@ sub e_gasp_trans {
         }
 
 
+	my $ave_sn = 100*($sn_frac/$r_size);
+	my $ave_sp = 100*($sp_frac/$t_size);
 	my $sn = 100*($got_r_right/$r_size);
 	my $sp = 100*($got_t_right/$t_size);
 
+	my $ac = ($sn + $sp)/2;
+	my $ave_ac = ($ave_sn + $ave_sp)/2;
+
 	print "eGASP TRANSCRIPT LEVEL\n";
-	print "SN:$sn SP:$sp\n";
+	print "SN:$sn SP:$sp AC:$ac\n";  
+	print "AVE TRANSCRIPT LEVEL\n";
+	print "SN:$ave_sn SP:$ave_sp AC:$ave_ac\n";
 } 
 #-----------------------------------------------------------------------------
 sub get_exons_by_transcript {
@@ -894,16 +898,19 @@ sub get_exons_by_transcript {
 
         my $genes = $cgl->genes();
 
+	my $adjusted_gene_count = 0;
         my %coors;
 	my $count = -1;
         for my $g (@{$genes}) {
                 my $i = 0;
+		my $not_predicted = 0;
                 while (my $t = $g->transcript($i)){
                         if (!$opt_p && defined($t->status) && $t->status eq 'Predicted'){
                                 $i++;
                                 next;
                         }
 
+			$not_predicted++;
 			$count++;
                         my $j = 0;
                         while (my $e = $t->exon($j)){
@@ -915,10 +922,10 @@ sub get_exons_by_transcript {
                         }
                         $i++;
                 }
-
+		$adjusted_gene_count++ if $not_predicted;
         }
 
-	return \%coors;
+	return (\%coors, $adjusted_gene_count);
 }
 #-----------------------------------------------------------------------------
 sub get_exon_coors {
