@@ -5,7 +5,6 @@ package CGL::Annotation::GFF3::WormBase;
 use strict;
 use vars qw(@ISA @EXPORT $VERSION);
 use Exporter;
-use PostData;
 use FileHandle;
 use Bio::DB::GFF;
 use Bio::Tools::GFF;
