@@ -13,11 +13,9 @@ use lib ('/Users/myandell/lib',
 
 $| = 1;
 use FileHandle;
-use PostData;
 use CGL::Annotation;
 use CGL::Annotation::Iterator;
 use Cwd;
-use PostData;
 
 my $usage = "
 

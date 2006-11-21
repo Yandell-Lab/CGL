@@ -5,7 +5,6 @@ package CGL::Annotation::GFF3::FlyBase;
 use strict;
 use vars qw(@ISA @EXPORT $VERSION);
 use Exporter;
-use PostData;
 use FileHandle;
 use Bio::DB::GFF;
 use Bio::Tools::GFF;
@@ -61,7 +60,9 @@ sub to_gff3_gene {
 	my $g      = shift;
 
 	my $g_id   = $g->{f}->get_Annotations('ID')->value();
-	my $g_n    = $g->{f}->get_Annotations('Name')->value();
+	my $g_n    = $g->{f}->get_Annotations('Name') 
+	    ? $g->{f}->get_Annotations('Name')->value()
+	    : $g_id;
 	my $strand = $g->{f}->strand() == 1 ? '+' : '-';
 
 	my @fields;
@@ -81,7 +82,9 @@ sub to_gff3_transcript {
 
         my $g_id   = $g->{f}->get_Annotations('ID')->value();
 	my $t_id   = $t->{f}->get_Annotations('ID')->value();
-	my $t_n    = $t->{f}->get_Annotations('Name')->value();
+	my $t_n    = $t->{f}->get_Annotations('Name')
+	    ? $t->{f}->get_Annotations('Name')->value()
+	    : $t_id;
 	my $type   = $t->{f}->primary_tag;
 
         my $strand = $t->{f}->strand() == 1 ? '+' : '-';

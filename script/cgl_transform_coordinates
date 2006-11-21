@@ -6,7 +6,6 @@ use lib "$ENV{CGL_GFF_LIB}";
 
 use CGL::Annotation;
 use CGL::Annotation::GFF3::FlyBase;
-use PostData;
 use Getopt::Long;
 
 #-----------------------------------------------------------------------------
