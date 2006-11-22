@@ -393,7 +393,7 @@ sub load_transcript {
 
 	$transcr->{residues} = $t->{seq};
 
-	my $t_offset = get_translation_offset($t);
+	my $t_offset = 0; #get_translation_offset($t);
 
 	$transcr->{translationStartInTranscript} = 
 	{$transcr->{gene}.'protein-0' => $t_offset };
@@ -453,12 +453,18 @@ sub load_translations {
         my $nbeg = $sorted->[0]->{f}->start();
         my $nend = $sorted->[0]->{f}->end();
 
-	($nbeg, $nend) = ($nend, $nbeg) if $sorted->[0]->{f}->strand() == -1;
+        my $alpha =  $sorted->[0];
+        my $omega =  $sorted->[-1];
 
-	my $src_f_id = $t->{src_f_id};
+        my $transl_offset = get_translation_offset($t);
+        my $trans_end     = $transl_offset + length($t->{cds_seq}) -3;
 
-	push(@{$transl->{locations}},
-	load_feature_location($nbeg, $nend, $src_f_id));
+        my ($a_l_beg, $a_l_end) = get_l_beg_end($alpha);
+        my ($o_l_beg, $o_l_end) = get_l_beg_end($omega);
+        my $src_f_id = $t->{src_f_id};
+
+        push(@{$transl->{locations}},
+        load_feature_location($a_l_beg, $o_l_end, $src_f_id));
 
 	my $trn = new Bio::Tools::CodonTable();
 
@@ -480,6 +486,10 @@ sub load_translations {
 
 	$transl->{properties} = \%props;
 
+	$p_seq =~ s/\*$//;
+
+	#print $p_seq."\n";
+
 	$transl->{residues} = $p_seq;
 
 	$transl->{type} = 'protein';
@@ -491,6 +501,25 @@ sub load_translations {
 
 }
 #-------------------------------------------------------------------------------
+sub get_l_beg_end {
+
+        my $feature = shift;
+
+        my $start  = $feature->{f}->start();
+        my $end    = $feature->{f}->end();
+        my $strand = $feature->{f}->strand();
+
+        if ($strand == 1){
+                return ($start, $end);
+        }
+        elsif ($strand == -1){
+                return ($end, $start);
+        }
+        else {
+                die "dead in nGASP::get_l_beg_end\n";
+        }
+}
+#-------------------------------------------------------------------------------
 sub get_translation_offset {
 	my $t = shift;
 
@@ -498,7 +527,7 @@ sub get_translation_offset {
 	my $sorted_cdss  = sort_cdss($t);
 
 	my $e_0_b = $sorted_exons->[0]->{f}->start();
-	my $c_0_b = $sorted_exons->[0]->{f}->start();
+	my $c_0_b = $sorted_cdss->[0]->{f}->start();
 
 	return abs($e_0_b - $c_0_b) + 1;
 
