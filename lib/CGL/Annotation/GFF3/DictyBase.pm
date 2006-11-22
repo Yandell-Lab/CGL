@@ -465,6 +465,8 @@ sub load_translations {
 
 	my $p_seq = $trn->translate($t->{cds_seq});
 
+	$p_seq =~ s/\*$//;
+
 	$transl->{name} = $f_id;
 
 	my $oF_id = $t->{id};
