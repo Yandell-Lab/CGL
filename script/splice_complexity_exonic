@@ -1,0 +1,625 @@
+#!/usr/bin/perl -w 
+use strict;
+
+# pod docs at end.
+
+BEGIN {
+	$ENV{'CGL_CHATTER'} = 1;
+}
+
+$| = 1;
+use lib $ENV{CGL_GFF_LIB};
+use FileHandle;
+use CGL::Annotation;
+use CGL::Annotation::GFF3::FlyBase;
+use CGL::Annotation::Iterator;
+use PostData;
+
+my $usage = "
+
+splice_complexity <gff3_file> <fasta_file>  
+
+
+\n"; 
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+
+die $usage unless $ARGV[1];
+
+my ($gff_file, $fasta_file, @ids) = @ARGV;
+
+my $ids_ref;
+scalar @ids > 0 
+    ? $ids_ref = \@ids 
+    : undef($ids_ref);
+
+my $cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file, $ids_ref);
+
+my $iterator = new CGL::Annotation::Iterator($cgl);
+
+my $c = $cgl->contig(0);
+
+print " gene id\tnum_t\tnum_t_p\tesc_m\tesc_c\tesc_u\tesc_5\tesc_3\tisc_m\tisc_c\tisc_5\tisc_3\n";
+
+while (my $g = $iterator->next_by_gene()){
+
+	my $num_t = num_transcripts($g);
+
+	next unless $num_t > 1;
+
+	my $num_p = get_number_pairs($num_t);
+
+	my $esc_m = slice_complexity_exon($g, $c, 'mRNAs');
+	my $esc_c = slice_complexity_exon($g, $c, 'CDSs');
+	my $esc_u = slice_complexity_exon($g, $c, 'utrs');
+        my $esc_5 = slice_complexity_exon($g, $c, 'utr5');
+        my $esc_3 = slice_complexity_exon($g, $c, 'utr3');
+	my $isc_m = slice_complexity_exon($g, $c, 'int_m');
+        my $isc_c = slice_complexity_exon($g, $c, 'int_c');
+        my $isc_5 = slice_complexity_exon($g, $c, 'int_5');
+        my $isc_3 = slice_complexity_exon($g, $c, 'int_3');
+
+	print $g->id()."\t".$num_t."\t".$num_p."\t".substr($esc_m, 0, 6)."\t";
+	print substr($esc_c, 0, 6)."\t".substr($esc_u, 0, 6)."\t";
+	print substr($esc_5, 0, 6)."\t".substr($esc_3, 0, 6)."\t";
+	print substr($isc_m, 0, 6)."\t".substr($isc_c, 0, 6)."\t";
+	print substr($isc_5, 0, 6)."\t".substr($isc_3, 0, 6)."\n";
+}
+
+#-----------------------------------------------------------------------------
+#------------------------------------ SUBS -----------------------------------
+#-----------------------------------------------------------------------------
+sub num_transcripts {
+	my $g = shift;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+		$i++;
+	}
+	return $i;
+}
+#-----------------------------------------------------------------------------
+sub get_number_pairs {
+	my $num_t = shift;
+
+	my $n_fac         = factoral($num_t);
+	my $n_minus_k_fac = factoral($num_t - 2);
+	my $k_fac         = 2;
+
+	my $num_pairs = $n_fac/($n_minus_k_fac*$k_fac);
+
+	return $num_pairs;
+}
+#-----------------------------------------------------------------------------
+sub factoral {
+	my $n = shift;
+
+	my $fac = $n;
+	for (my $i = $n -1; $i > 0; $i--){
+		$fac = $fac*$i;
+	}
+	return $fac;
+}
+#-----------------------------------------------------------------------------
+sub get_key_pairs {
+	my $hash = shift;
+
+	my @pairs;
+	foreach my $i (keys %{$hash}){
+		foreach my $j (keys %{$hash->{$i}}){
+			push (@pairs, [$i, $j]);
+		}
+	}
+	return \@pairs;
+}
+#-----------------------------------------------------------------------------
+sub slice_complexity_exon {
+	my $g = shift;
+	my $c = shift;
+	my $type = shift;
+
+	my $data;
+	if ($type eq 'mRNAs'){
+		$data = get_mRNA_data($g);
+	}
+	elsif ($type eq 'CDSs'){
+		$data = get_CDS_data($g, $c);
+	}
+        elsif ($type eq 'utrs'){
+                $data = get_utr_data($g, $c);
+        }
+        elsif ($type eq 'utr5'){
+                $data = get_utr5_data($g, $c);
+        }
+        elsif ($type eq 'utr3'){
+                $data = get_utr3_data($g, $c);
+        }
+        elsif ($type eq 'int_m'){
+                $data = get_int_m_data($g, $c);
+        }
+        elsif ($type eq 'int_c'){
+                $data = get_int_c_data($g, $c);
+        }
+        elsif ($type eq 'int_5'){
+                $data = get_int_5_data($g, $c);
+        }
+        elsif ($type eq 'int_3'){
+                $data = get_int_3_data($g, $c);
+        }
+	else {
+		die "unkown type!\n";
+	}
+
+	my %common;
+	my $num_transcripts = num_transcripts($g);
+	my $num_pairs       = get_number_pairs($num_transcripts);
+
+	my @keys = sort keys %{$data};
+	my %seen;
+	foreach my $i (@keys) {
+		my $exons_i = $data->{$i};
+		foreach my $j (@keys) {
+
+			next if $i == $j;
+
+			next if ($seen{$i}{$j} || $seen{$j}{$j});
+ 
+			
+
+			my $pairs = get_key_pairs($data->{$j}); 
+
+			foreach my $p (@{$pairs}){
+				if (defined ($exons_i->{$p->[0]}->{$p->[1]})){
+					$common{$i}{$j}++
+				}
+			}
+			$seen{$i}{$j}++;
+			$seen{$j}{$i}++;
+		}
+	}
+
+	my $total = 0;
+	foreach my $i (keys %common){
+		my $pairs = get_key_pairs($data->{$i});
+		 my $num_exons_i = @{$pairs};
+
+		my $max_acc;
+		foreach my $j (keys %{$common{$i}}){
+			my $num_shared  = $common{$i}{$j};
+			my $pairs = get_key_pairs($data->{$i});
+			my $num_exons_j = @{$pairs};
+
+			my $acc  = get_acc($num_shared, $num_exons_i, $num_exons_j);
+
+			$total += $acc;
+		}
+	}
+
+
+	return 1 - $total/$num_pairs;
+}
+#-----------------------------------------------------------------------------
+sub get_acc {
+	my $num_shared  = shift;
+	my $num_exons_i = shift;
+	my $num_exons_j = shift;
+
+	my $sn = $num_shared/$num_exons_j;
+	my $sp = $num_shared/$num_exons_i;
+
+	my $ac = ($sn + $sp)/2;
+
+	return $ac;
+}
+#-----------------------------------------------------------------------------
+sub get_mRNA_data {
+	my $g = shift;
+
+	my %mRNAs;
+
+	my $i = 0;
+	while (my $t = $g->transcript($i)){
+		my $j = 0;
+		while (my $e = $t->exon($j)){
+			$mRNAs{$i}{$e->nbeg()}{$e->nend}++;
+			$j++;
+		}
+                $mRNAs{$i}{'undef'}{'undef'}++ 
+                if !defined($mRNAs{$i});
+
+
+		$i++;
+	}
+
+	return \%mRNAs;
+}
+#-----------------------------------------------------------------------------
+sub get_int_m_data {
+        my $g = shift;
+
+        my %introns;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+                my $j = 0;
+                while (my $int = $t->intron($j)){
+                        $introns{$i}{$int->nbeg()}{$int->nend}++;
+                        $j++;
+                }
+                $introns{$i}{'undef'}{'undef'}++ 
+                if !defined($introns{$i});
+                $i++;
+        }
+
+        return \%introns;
+}
+#-----------------------------------------------------------------------------
+sub get_int_c_data {
+        my $g = shift;
+
+        my %introns;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+		my $p = $t->translation(0);
+
+                my $j = 0;
+                while (my $int = $t->intron($j)){
+			my $up_e = $t->exon($j);
+			my $dn_e = $t->exon($j + 1);
+
+                        my $dn_e_b_on_t = $dn_e->metaPos($t, 0);
+                        my $dn_e_b_on_p = $t->metaPos($p, $dn_e_b_on_t);
+
+                        my $up_e_e_on_t = $up_e->metaPos($t, length($up_e->residues));
+                        my $up_e_e_on_p = $t->metaPos($p, $up_e_e_on_t);
+
+			if (defined($up_e_e_on_p) && defined($dn_e_b_on_p)){
+                        	$introns{$i}{$int->nbeg()}{$int->nend}++;
+			}
+                        $j++;
+                }
+                $introns{$i}{'undef'}{'undef'}++ 
+                if !defined($introns{$i});
+
+                $i++;
+        }
+
+        return \%introns;
+}
+#-----------------------------------------------------------------------------
+sub get_int_5_data {
+        my $g = shift;
+
+        my %introns;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+                my $p = $t->translation(0);
+
+                my $p_b_on_t = $p->metaPos($t, 0);
+                my $p_e_on_t = $p->metaPos($t, length($p->residues));
+
+                my $j = 0;
+                while (my $int = $t->intron($j)){
+                        my $up_e = $t->exon($j);
+                        my $dn_e = $t->exon($j + 1);
+
+                        my $dn_e_b_on_t = $dn_e->metaPos($t, 0);
+                        my $dn_e_b_on_p = $t->metaPos($p, $dn_e_b_on_t);
+
+                        my $up_e_e_on_t = $up_e->metaPos($t, length($up_e->residues));
+                        my $up_e_e_on_p = $t->metaPos($p, $up_e_e_on_t);
+
+                        if    (defined($up_e_e_on_p) && defined($dn_e_b_on_p)){
+				# intron is in CDS 
+                        }
+			elsif ($dn_e_b_on_t < $p_b_on_t){
+				# 5-prime intron utr 
+                                $introns{$i}{$int->nbeg()}{$int->nend}++;
+			}
+                        elsif ($up_e_e_on_t >  $p_e_on_t){
+                                # 3-prime intron in utr 
+                        }
+                        $j++;
+
+                }
+                $introns{$i}{'undef'}{'undef'}++ 
+		if !defined($introns{$i});
+
+                $i++;
+        }
+
+        return \%introns;
+}
+#-----------------------------------------------------------------------------
+sub get_int_3_data {
+        my $g = shift;
+
+        my %introns;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+                my $p = $t->translation(0);
+
+                my $p_b_on_t = $p->metaPos($t, 0);
+                my $p_e_on_t = $p->metaPos($t, length($p->residues));
+
+                my $j = 0;
+                while (my $int = $t->intron($j)){
+                        my $up_e = $t->exon($j);
+                        my $dn_e = $t->exon($j + 1);
+
+                        my $dn_e_b_on_t = $dn_e->metaPos($t, 0);
+                        my $dn_e_b_on_p = $t->metaPos($p, $dn_e_b_on_t);
+
+                        my $up_e_e_on_t = $up_e->metaPos($t, length($up_e->residues));
+                        my $up_e_e_on_p = $t->metaPos($p, $up_e_e_on_t);
+
+                        if    (defined($up_e_e_on_p) && defined($dn_e_b_on_p)){
+                                # intron is in CDS
+                        }
+                        elsif ($dn_e_b_on_t < $p_b_on_t){
+                                # 5-prime intron utr
+                        }
+                        elsif ($up_e_e_on_t >  $p_e_on_t){
+                                # 3-prime intron in utr
+				$introns{$i}{$int->nbeg()}{$int->nend}++;
+                        }
+                        $j++;
+                }
+                $introns{$i}{'undef'}{'undef'}++ 
+                if !defined($introns{$i});
+
+                $i++;
+        }
+
+        return \%introns;
+}
+#-----------------------------------------------------------------------------
+sub get_utr3_data {
+        my $g = shift;
+
+        my %utrs;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+
+                my $p = $t->translation(0);
+
+                my $p_b_on_t = $p->metaPos($t, 0);
+                my $p_e_on_t = $p->metaPos($t, length($p->residues));
+
+                my $p_b_on_c = $t->metaPos($c, $p_b_on_t);
+                my $p_e_on_c = $t->metaPos($c, $p_e_on_t);
+
+                my $j = 0;
+                while (my $e = $t->exon($j)){
+                        my $e_b_on_t = $e->metaPos($t, 0);
+                        my $e_b_on_p = $t->metaPos($p, $e_b_on_t);
+
+                        my $e_e_on_t = $e->metaPos($t, length($e->residues));
+                        my $e_e_on_p = $t->metaPos($p, $e_e_on_t);
+                        if (defined($e_b_on_p) && defined($e_e_on_p)){
+                                #completely coding
+                        }
+                        elsif (!defined($e_b_on_p) && defined($e_e_on_p)){
+                                # 5-prime partial coding
+                        }
+                        elsif (defined($e_b_on_p) && !defined($e_e_on_p)){
+                                # 3-prime partial coding
+                                $utrs{$i}{$p_e_on_c}{$e->nend}++;
+                        }
+                        elsif ($e_e_on_t < $p_b_on_t){
+                                # totally 5-prime UTR
+                        }
+                        elsif ($e_b_on_t > $p_e_on_t){
+                                # totally 3-prime UTR
+                                $utrs{$i}{$e->nbeg()}{$e->nend}++;
+                        }
+                        elsif ($e_b_on_t < $p_b_on_t && $e_e_on_t > $p_e_on_t){
+                                #  single exon gene w 5 & 3 prime UTR
+                                $utrs{$i}{$p_e_on_c}{$e->nend}++;
+                        }
+                        else {
+                                die "logic error in get_utr3_data!\n";
+                        }
+
+                        $j++;
+                }
+                $utrs{$i}{'undef'}{'undef'}++ 
+                if !defined($utrs{$i});
+                $i++;
+        }
+
+        return \%utrs;
+}
+#-----------------------------------------------------------------------------
+sub get_utr5_data {
+        my $g = shift;
+
+        my %utrs;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+
+                my $p = $t->translation(0);
+
+                my $p_b_on_t = $p->metaPos($t, 0);
+                my $p_e_on_t = $p->metaPos($t, length($p->residues));
+
+                my $p_b_on_c = $t->metaPos($c, $p_b_on_t);
+                my $p_e_on_c = $t->metaPos($c, $p_e_on_t);
+
+                my $j = 0;
+                while (my $e = $t->exon($j)){
+
+                        my $e_b_on_t = $e->metaPos($t, 0);
+                        my $e_b_on_p = $t->metaPos($p, $e_b_on_t);
+
+                        my $e_e_on_t = $e->metaPos($t, length($e->residues));
+                        my $e_e_on_p = $t->metaPos($p, $e_e_on_t);
+                        if (defined($e_b_on_p) && defined($e_e_on_p)){
+                                #completely coding
+                        }
+                        elsif (!defined($e_b_on_p) && defined($e_e_on_p)){
+                                # 5-prime partial coding
+                                $utrs{$i}{$e->nbeg}{$p_b_on_c}++;
+                        }
+                        elsif (defined($e_b_on_p) && !defined($e_e_on_p)){
+                                # 3-prime partial coding
+                        }
+                        elsif ($e_e_on_t < $p_b_on_t){
+                                # totally 5-prime UTR
+                                $utrs{$i}{$e->nbeg()}{$e->nend}++;
+                        }
+                        elsif ($e_b_on_t > $p_e_on_t){
+                                # totally 3-prime UTR
+                        }
+                        elsif ($e_b_on_t < $p_b_on_t && $e_e_on_t > $p_e_on_t){
+                                #  single exon gene w 5 & 3 prime UTR
+                                $utrs{$i}{$e->nbeg()}{$p_b_on_c}++;
+                        }
+                        else {
+                                die "logic error in get_utr5_data!\n";
+                        }
+
+                        $j++;
+                }
+                $utrs{$i}{'undef'}{'undef'}++ 
+                if !defined($utrs{$i});
+
+                $i++;
+        }
+        return \%utrs;
+}
+#-----------------------------------------------------------------------------
+sub get_utr_data {
+        my $g = shift;
+
+        my %utrs;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+
+                my $p = $t->translation(0);
+
+                my $p_b_on_t = $p->metaPos($t, 0);
+                my $p_e_on_t = $p->metaPos($t, length($p->residues));
+
+                my $p_b_on_c = $t->metaPos($c, $p_b_on_t);
+                my $p_e_on_c = $t->metaPos($c, $p_e_on_t);
+
+                my $j = 0;
+                while (my $e = $t->exon($j)){
+			
+                        my $e_b_on_t = $e->metaPos($t, 0);
+                        my $e_b_on_p = $t->metaPos($p, $e_b_on_t);
+
+                        my $e_e_on_t = $e->metaPos($t, length($e->residues));
+                        my $e_e_on_p = $t->metaPos($p, $e_e_on_t);
+			if (defined($e_b_on_p) && defined($e_e_on_p)){
+				#completely coding
+			}
+			elsif (!defined($e_b_on_p) && defined($e_e_on_p)){
+				# 5-prime partial coding
+                                $utrs{$i}{$e->nbeg}{$p_b_on_c}++;
+			}
+			elsif (defined($e_b_on_p) && !defined($e_e_on_p)){
+				# 3-prime partial coding
+                                $utrs{$i}{$p_e_on_c}{$e->nend}++;
+
+			}
+                        elsif ($e_e_on_t < $p_b_on_t){
+                                # totally 5-prime UTR
+                                $utrs{$i}{$e->nbeg()}{$e->nend}++;
+                        }
+                        elsif ($e_b_on_t > $p_e_on_t){
+                                # totally 3-prime UTR
+                                $utrs{$i}{$e->nbeg()}{$e->nend}++;
+                        }
+                        elsif ($e_b_on_t < $p_b_on_t && $e_e_on_t > $p_e_on_t){
+                                #  single exon gene w 5 & 3 prime UTR 
+                                $utrs{$i}{$e->nbeg()}{$p_b_on_c}++;
+
+                                $utrs{$i}{$p_e_on_c}{$e->nend}++;
+                        }
+			else {
+				die "logic error in get_utr_data!\n";
+			}
+
+                        $j++;
+                }
+                $utrs{$i}{'undef'}{'undef'}++ 
+                if !defined($utrs{$i});
+                $i++;
+        }
+
+        return \%utrs;
+}
+#-----------------------------------------------------------------------------
+sub get_CDS_data {
+        my $g = shift;
+	my $c = shift;
+
+        my %CDSs;
+
+	my $not_included = 0;
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+		my $p = $t->translation(0);
+
+		my $p_b_on_t = $p->metaPos($t, 0);
+		my $p_e_on_t = $p->metaPos($t, length($p->residues));
+		
+		my $p_b_on_c = $t->metaPos($c, $p_b_on_t);
+		my $p_e_on_c = $t->metaPos($c, $p_e_on_t);
+
+                my $j = 0;
+                while (my $e = $t->exon($j)){
+               		my $nbeg = $e->nbeg();
+                	my $nend = $e->nend();
+
+                	my $e_b_on_t = $e->metaPos($t, 0);
+                	my $e_b_on_p = $t->metaPos($p, $e_b_on_t);
+
+                	my $e_e_on_t = $e->metaPos($t, length($e->residues));
+                	my $e_e_on_p = $t->metaPos($p, $e_e_on_t);
+
+                	if (defined($e_b_on_p) && defined($e_e_on_p)){
+				$CDSs{$i}{$e->nbeg()}{$e->nend}++;
+                	}
+                        elsif (defined($e_b_on_p) && !defined($e_e_on_p)){
+				$CDSs{$i}{$e->nbeg()}{$p_e_on_c}++;
+                        }
+			elsif (!defined($e_b_on_p) && defined($e_e_on_p)){
+                                $CDSs{$i}{$p_b_on_c}{$e->nend}++;
+                        }
+                        elsif (!defined($e_b_on_p) && !defined($e_e_on_p)){
+				$not_included++;
+                        }
+
+                	else {
+				die "logic error in get_CDS_data!\n";
+                	}
+
+                        $j++;
+                }
+                $CDSs{$i}{'undef'}{'undef'}++ 
+                if !defined($CDSs{$i});
+                $i++;
+        }
+
+        return \%CDSs;
+}
+#-----------------------------------------------------------------------------
+sub slice_complexity_nucl {
+        my $g = shift;
+        my $c = shift;
+
+	return 0;
+}
+#-----------------------------------------------------------------------------
+
