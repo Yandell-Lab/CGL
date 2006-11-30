@@ -13,6 +13,7 @@ use Bio::Tools::CodonTable;
 use CGL::Annotation;
 use Iterator::Fasta;
 use Datastore::MD5;
+use PostData;
 
 @ISA = qw(
           );
@@ -531,6 +532,25 @@ sub load_feature_location {
         return $l;
 }
 #-------------------------------------------------------------------------------
+sub get_l_beg_end {
+
+        my $feature = shift;
+
+        my $start  = $feature->{f}->start();
+        my $end    = $feature->{f}->end();
+        my $strand = $feature->{f}->strand();
+
+        if ($strand == 1){
+                return ($start, $end);
+        }
+        elsif ($strand == -1){
+                return ($end, $start);
+        }
+        else {
+                die "dead in WormBase::get_l_beg_end\n";
+        }
+}
+#-------------------------------------------------------------------------------
 sub load_translations {
 	my $t = shift;
 
@@ -544,15 +564,29 @@ sub load_translations {
  
         my $sorted = sort_cdss($t);
 
+        my $alpha =  $sorted->[0];
+        my $omega =  $sorted->[-1];
+
+        my $transl_offset = get_translation_offset($t);
+        my $trans_end     = $transl_offset + length($t->{cds_seq}) - 3;
+
+	my $hell = length($t->{seq});
+
+
+        my ($a_l_beg, $a_l_end) = get_l_beg_end($alpha);
+        my ($o_l_beg, $o_l_end) = get_l_beg_end($omega);
+
+=cut;
         my $nbeg = $sorted->[0]->{f}->start();
         my $nend = $sorted->[0]->{f}->end();
 
 	($nbeg, $nend) = ($nend, $nbeg) if $sorted->[0]->{f}->strand() == -1;
 
+=cut;
 	my $src_f_id = $t->{src_f_id};
 
 	push(@{$transl->{locations}},
-	load_feature_location($nbeg, $nend, $src_f_id));
+	load_feature_location($a_l_beg, $o_l_end, $src_f_id));
 
 	my $trn = new Bio::Tools::CodonTable();
 
@@ -594,7 +628,7 @@ sub get_translation_offset {
 	my $sorted_cdss  = sort_cdss($t);
 
 	my $e_0_b = $sorted_exons->[0]->{f}->start();
-	my $c_0_b = $sorted_exons->[0]->{f}->start();
+	my $c_0_b = $sorted_cdss->[0]->{f}->start();
 
 	return abs($e_0_b - $c_0_b) + 1;
 
@@ -1054,7 +1088,9 @@ sub get_cds_seq {
         my $sorted = sort_cdss($t);
 
         my $cds_seq;
+	my $l = 0;
         foreach my $c (@{$sorted}){
+		$l += $c->{f}->end - $c->{f}->start + 1; 
                 my $c_seq = $c->{seq} || get_exon_seq($c, $seq);
                 $cds_seq .= $c_seq;
 
