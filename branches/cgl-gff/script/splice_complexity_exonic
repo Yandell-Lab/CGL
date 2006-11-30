@@ -84,6 +84,8 @@ sub num_transcripts {
 sub get_number_pairs {
 	my $num_t = shift;
 
+	return 1 if $num_t == 2;
+
 	my $n_fac         = factoral($num_t);
 	my $n_minus_k_fac = factoral($num_t - 2);
 	my $k_fac         = 2;
