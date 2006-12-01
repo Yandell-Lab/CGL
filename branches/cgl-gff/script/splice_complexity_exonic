@@ -48,24 +48,21 @@ while (my $g = $iterator->next_by_gene()){
 	my $num_t = num_transcripts($g);
 
 	next unless $num_t > 1;
+        my $num_p = get_number_pairs($num_t);
 
-	my $num_p = get_number_pairs($num_t);
+        print $g->id()."\t".$num_t."\t".$num_p;
 
-	my $esc_m = slice_complexity_exon($g, $c, 'mRNAs');
-	my $esc_c = slice_complexity_exon($g, $c, 'CDSs');
-	my $esc_u = slice_complexity_exon($g, $c, 'utrs');
-        my $esc_5 = slice_complexity_exon($g, $c, 'utr5');
-        my $esc_3 = slice_complexity_exon($g, $c, 'utr3');
-	my $isc_m = slice_complexity_exon($g, $c, 'int_m');
-        my $isc_c = slice_complexity_exon($g, $c, 'int_c');
-        my $isc_5 = slice_complexity_exon($g, $c, 'int_5');
-        my $isc_3 = slice_complexity_exon($g, $c, 'int_3');
+        splice_complexity($g, $c, 'mRNAs');
+        splice_complexity($g, $c, 'CDSs');
+        splice_complexity($g, $c, 'utrs');
+        splice_complexity($g, $c, 'utr5');
+        splice_complexity($g, $c, 'utr3');
+        splice_complexity($g, $c, 'int_m');
+        splice_complexity($g, $c, 'int_c');
+        splice_complexity($g, $c, 'int_5');
+        splice_complexity($g, $c, 'int_3');
+        print "\n";
 
-	print $g->id()."\t".$num_t."\t".$num_p."\t".substr($esc_m, 0, 6)."\t";
-	print substr($esc_c, 0, 6)."\t".substr($esc_u, 0, 6)."\t";
-	print substr($esc_5, 0, 6)."\t".substr($esc_3, 0, 6)."\t";
-	print substr($isc_m, 0, 6)."\t".substr($isc_c, 0, 6)."\t";
-	print substr($isc_5, 0, 6)."\t".substr($isc_3, 0, 6)."\n";
 }
 
 #-----------------------------------------------------------------------------
@@ -117,7 +114,7 @@ sub get_key_pairs {
 	return \@pairs;
 }
 #-----------------------------------------------------------------------------
-sub slice_complexity_exon {
+sub splice_complexity {
 	my $g = shift;
 	my $c = shift;
 	my $type = shift;
@@ -200,7 +197,9 @@ sub slice_complexity_exon {
 	}
 
 
-	return 1 - $total/$num_pairs;
+	my $sc = 1 - $total/$num_pairs;
+
+	print "\t".substr($sc, 0, 6);
 }
 #-----------------------------------------------------------------------------
 sub get_acc {
@@ -266,6 +265,11 @@ sub get_int_c_data {
         my $i = 0;
         while (my $t = $g->transcript($i)){
 		my $p = $t->translation(0);
+                if (!defined($p)){
+                        $introns{$i}{'undef'}{'undef'}++;
+                        $i++;
+                        next;
+                }
 
                 my $j = 0;
                 while (my $int = $t->intron($j)){
@@ -300,6 +304,12 @@ sub get_int_5_data {
         my $i = 0;
         while (my $t = $g->transcript($i)){
                 my $p = $t->translation(0);
+
+                if (!defined($p)){
+                        $introns{$i}{'undef'}{'undef'}++;
+                        $i++;
+                        next;
+                }
 
                 my $p_b_on_t = $p->metaPos($t, 0);
                 my $p_e_on_t = $p->metaPos($t, length($p->residues));
@@ -346,6 +356,12 @@ sub get_int_3_data {
         while (my $t = $g->transcript($i)){
                 my $p = $t->translation(0);
 
+                if (!defined($p)){
+                        $introns{$i}{'undef'}{'undef'}++;
+                        $i++;
+                        next;
+                }
+
                 my $p_b_on_t = $p->metaPos($t, 0);
                 my $p_e_on_t = $p->metaPos($t, length($p->residues));
 
@@ -390,6 +406,12 @@ sub get_utr3_data {
         while (my $t = $g->transcript($i)){
 
                 my $p = $t->translation(0);
+
+                if (!defined($p)){
+                        $utrs{$i}{'undef'}{'undef'}++;
+                        $i++;
+                        next;
+                }
 
                 my $p_b_on_t = $p->metaPos($t, 0);
                 my $p_e_on_t = $p->metaPos($t, length($p->residues));
@@ -448,6 +470,12 @@ sub get_utr5_data {
         while (my $t = $g->transcript($i)){
 
                 my $p = $t->translation(0);
+
+                if (!defined($p)){
+                        $utrs{$i}{'undef'}{'undef'}++;
+                        $i++;
+                        next;
+                }
 
                 my $p_b_on_t = $p->metaPos($t, 0);
                 my $p_e_on_t = $p->metaPos($t, length($p->residues));
@@ -508,6 +536,11 @@ sub get_utr_data {
 
                 my $p = $t->translation(0);
 
+		if (!defined($p)){
+			$utrs{$i}{'undef'}{'undef'}++;
+			$i++;
+			next;
+		}
                 my $p_b_on_t = $p->metaPos($t, 0);
                 my $p_e_on_t = $p->metaPos($t, length($p->residues));
 
@@ -573,6 +606,11 @@ sub get_CDS_data {
         while (my $t = $g->transcript($i)){
 		my $p = $t->translation(0);
 
+		if (!defined($p)){
+			$CDSs{$i}{'undef'}{'undef'}++;
+			$i++;
+			next;
+		}
 		my $p_b_on_t = $p->metaPos($t, 0);
 		my $p_e_on_t = $p->metaPos($t, length($p->residues));
 		
