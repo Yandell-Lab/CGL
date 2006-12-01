@@ -1,0 +1,19 @@
+#!/usr/bin/perl 
+use lib "$ENV{CGL_GFF_LIB}";
+use Data::Dumper;
+use PostData;
+use CGL::Annotation::GFF3::WormBase;
+
+use CGL::Annotation;
+use Dumper::XML::Game;
+
+my $gff3_file = shift;
+my $fasta_file = shift;
+
+my $CGL = new CGL::Annotation::GFF3::FlyBase($gff3_file, $fasta_file);
+
+
+#PostData($CGL);
+
+my $IO= new Dumper::XML::Game->init(Annot=>$CGL);
+$IO->Game();
