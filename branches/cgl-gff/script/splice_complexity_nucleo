@@ -239,7 +239,7 @@ sub get_acc {
         my $tn = 0;
         my $fp = 0;
         my $fn = 0;
-        for (my $i = $alpha - 1 ; $i < $omega + 1; $i++) {
+        for (my $i = $alpha; $i < $omega - 1; $i++) {
                 my $i_b = substr($$i_masked_seq, $i, 1);
                 my $j_b = substr($$j_masked_seq, $i, 1);
 
