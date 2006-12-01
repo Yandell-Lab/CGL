@@ -962,8 +962,15 @@ sub manufacture_mRNA {
 	my $utrs_3 = shift;
 	my $exons  = shift;
 
-	my $g_id = $exons->[0]->{f}->get_Annotations('Parent')->value();
-	my $t_id = $cdss->[0]->{f}->get_Annotations('Parent')->value();
+#	my $g_id = 
+#	    $exons->[0]->{f}->get_Annotations('Parent') ?
+#	    $exons->[0]->{f}->get_Annotations('Parent')->value() :
+#	    undef;
+
+#	my $t_id = 
+#	    $cdss->[0]->{f}->get_Annotations('Parent') ?
+#	    $cdss->[0]->{f}->get_Annotations('Parent')->value() :
+#	    undef;
 
 	#print STDERR " XXXX new mRNA XXX $g_id $t_id XXXXXXXXXXXXX\n";
 

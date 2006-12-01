@@ -12,13 +12,14 @@ use lib $ENV{CGL_GFF_LIB};
 use FileHandle;
 use CGL::Annotation;
 use CGL::Annotation::GFF3::FlyBase;
+use CGL::Annotation::GFF3::WormBase;
 use CGL::Annotation::Iterator;
+use Getopt::Long;
 use PostData;
 
 my $usage = "
 
-splice_complexity <gff3_file> <fasta_file>  
-
+splice_complexity -format [FlyBase|WormBase] <gff3_file> <fasta_file>  
 
 \n"; 
 
@@ -26,16 +27,28 @@ splice_complexity <gff3_file> <fasta_file>
 #----------------------------------- MAIN ------------------------------------
 #-----------------------------------------------------------------------------
 
-die $usage unless $ARGV[1];
+my $format;
+my $opt_success = GetOptions('format=s' => \$format);
 
 my ($gff_file, $fasta_file, @ids) = @ARGV;
+
+die $usage unless ($gff_file && $fasta_file && $format);
 
 my $ids_ref;
 scalar @ids > 0 
     ? $ids_ref = \@ids 
     : undef($ids_ref);
 
-my $cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file, $ids_ref);
+my $cgl;
+if ($format =~ /^fly/i) {
+	$cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file, $ids_ref);
+}
+elsif ($format =~ /^worm/i) {
+	$cgl = new CGL::Annotation::GFF3::WormBase($gff_file, $fasta_file, $ids_ref);
+}
+else {
+	die "\n\nIncorrect format given.  Must be either FlyBase or WormBase\n\n$usage"
+}
 
 my $iterator = new CGL::Annotation::Iterator($cgl);
 
