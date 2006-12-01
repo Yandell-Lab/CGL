@@ -192,6 +192,29 @@ sub get_coors {
 	return \@coors;
 }
 #-----------------------------------------------------------------------------
+sub get_span {
+	my $i_coors = shift;
+	my $j_coors = shift;
+
+	my @total;
+	foreach my $p (@{$i_coors}){
+		push(@total, $p->[0]);
+		push(@total, $p->[1]);
+	}
+        foreach my $p (@{$j_coors}){
+                push(@total, $p->[0]);
+                push(@total, $p->[1]);
+        }
+
+	my @sorted = sort {$a <=> $b} @total;
+
+	my $alpha = shift(@sorted);
+	my $omega = pop(@sorted);
+
+	return ($alpha, $omega);
+	
+}
+#-----------------------------------------------------------------------------
 sub get_acc {
 	my $pairs_i = shift;
 	my $pairs_j = shift;
@@ -200,6 +223,8 @@ sub get_acc {
 	my $coors_i = get_coors($pairs_i);
 	my $coors_j = get_coors($pairs_j);
 		
+	my ($alpha, $omega) = get_span($coors_i, $coors_j);
+  
 	return 1 if !defined($coors_i->[0]) && !defined($coors_j->[0]);
 
 	my $seq = $c->residues();
@@ -214,7 +239,7 @@ sub get_acc {
         my $tn = 0;
         my $fp = 0;
         my $fn = 0;
-        for (my $i = 0 ; $i < length($$i_masked_seq); $i++) {
+        for (my $i = $alpha - 1 ; $i < $omega + 1; $i++) {
                 my $i_b = substr($$i_masked_seq, $i, 1);
                 my $j_b = substr($$j_masked_seq, $i, 1);
 
