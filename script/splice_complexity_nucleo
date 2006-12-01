@@ -200,6 +200,8 @@ sub get_acc {
 	my $coors_i = get_coors($pairs_i);
 	my $coors_j = get_coors($pairs_j);
 		
+	return 1 if !defined($coors_i->[0]) && !defined($coors_j->[0]);
+
 	my $seq = $c->residues();
 
         my $i_masked_seq = Shadower::maskSequence(\$seq, $coors_i, 0, '1');
@@ -501,7 +503,6 @@ sub get_utr5_data {
                         $i++;
                         next;
                 }
-
 
                 my $p_b_on_t = $p->metaPos($t, 0);
                 my $p_e_on_t = $p->metaPos($t, length($p->residues));
