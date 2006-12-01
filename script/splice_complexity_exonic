@@ -187,7 +187,7 @@ sub splice_complexity {
 		my $max_acc;
 		foreach my $j (keys %{$common{$i}}){
 			my $num_shared  = $common{$i}{$j};
-			my $pairs = get_key_pairs($data->{$i});
+			my $pairs = get_key_pairs($data->{$j});
 			my $num_exons_j = @{$pairs};
 
 			my $acc  = get_acc($num_shared, $num_exons_i, $num_exons_j);
