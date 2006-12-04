@@ -116,6 +116,17 @@ sub get_key_pairs {
 	return \@pairs;
 }
 #-----------------------------------------------------------------------------
+sub get_length {
+        my $pairs = shift;
+
+        my $length = 0;
+        foreach my $p (@{$pairs}){
+                $length += abs($p->[0] - $p->[1])
+                unless $p->[0] eq 'undef';
+        }
+        return $length;
+}
+#-----------------------------------------------------------------------------
 sub splice_complexity {
 	my $g = shift;
 	my $c = shift;
@@ -160,8 +171,11 @@ sub splice_complexity {
 	my @keys = sort keys %{$data};
 	my %seen;
 	my $total = 0;
+	my $total_length = 0;
+
 	foreach my $i (@keys) {
 		my $pairs_i = get_key_pairs($data->{$i});
+		$total_length += get_length($pairs_i);
 		foreach my $j (@keys) {
 
 			next if $i == $j;
@@ -179,7 +193,7 @@ sub splice_complexity {
 
 	my $sc = 1 - $total/$num_pairs;
 
-	print "\t".substr($sc, 0, 6);
+	print "\t($total_length) ".substr($sc, 0, 6);
 }
 #-----------------------------------------------------------------------------
 sub get_coors {
