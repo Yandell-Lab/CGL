@@ -127,6 +127,17 @@ sub get_key_pairs {
 	return \@pairs;
 }
 #-----------------------------------------------------------------------------
+sub get_length {
+        my $pairs = shift;
+
+        my $length = 0;
+        foreach my $p (@{$pairs}){
+                $length += abs($p->[0] - $p->[1])
+                unless $p->[0] eq 'undef';
+        }
+        return $length;
+}
+#-----------------------------------------------------------------------------
 sub splice_complexity {
 	my $g = shift;
 	my $c = shift;
@@ -170,19 +181,24 @@ sub splice_complexity {
 
 	my @keys = sort keys %{$data};
 	my %seen;
+	my $total_length = 0;
 	foreach my $i (@keys) {
 		my $exons_i = $data->{$i};
+		my $pairs_i = get_key_pairs($data->{$i});
+
+		$total_length += get_length($pairs_i);
+
 		foreach my $j (@keys) {
 
 			next if $i == $j;
 
 			next if ($seen{$i}{$j} || $seen{$j}{$j});
- 
-			
 
-			my $pairs = get_key_pairs($data->{$j}); 
+			my $exons_j = $data->{$j};
 
-			foreach my $p (@{$pairs}){
+			my $pairs_j = get_key_pairs($data->{$j}); 
+
+			foreach my $p (@{$pairs_j}){
 				if (defined ($exons_i->{$p->[0]}->{$p->[1]})){
 					$common{$i}{$j}++
 				}
@@ -212,7 +228,7 @@ sub splice_complexity {
 
 	my $sc = 1 - $total/$num_pairs;
 
-	print "\t".substr($sc, 0, 6);
+	print "\t($total_length) ".substr($sc, 0, 6);
 }
 #-----------------------------------------------------------------------------
 sub get_acc {
