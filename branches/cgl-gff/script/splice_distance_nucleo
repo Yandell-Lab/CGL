@@ -231,6 +231,8 @@ sub splice_distance {
 
 	my ($distance, $size_diff)  = get_distance($data_i, $data_j);
 
+	$distance = 0 if $distance < 0.00001;
+
 	print "\t"."($size_diff) ".substr($distance, 0, 6);
 }
 #-----------------------------------------------------------------------------

@@ -227,6 +227,7 @@ sub splice_complexity {
 
 
 	my $sc = 1 - $total/$num_pairs;
+	$sc = 0 if $sc < 0.0001;
 
 	print "\t($total_length) ".substr($sc, 0, 6);
 }
