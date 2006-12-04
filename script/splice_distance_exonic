@@ -44,7 +44,7 @@ print " i gene id\tnum_t\tj gene id\tnum_t\tesd_m\tesd_c\tesd_u\tesd_5\tesd_3\ti
 
 my $MIN_OVERLAP = 100;
 
-my ($I_OFFSET, $J_OFFSET) = get_offsets($c_i, $c_j);
+my ($I_OFFSET, $J_OFFSET, $REF_SEQ) = get_offsets($c_i, $c_j);
 
 my $num_t_i = num_transcripts($g_i);
 my $num_t_j = num_transcripts($g_j);
@@ -93,35 +93,40 @@ sub get_offsets {
 
         my $i;
         my $j;
+	my $ref_seq;
         if    ($seq_i eq $seq_j){
                 # unchanged;
                 $i = 0;
                 $j = 0;
+		$ref_seq = $seq_i;
         }
         elsif ($seq_i =~ /$seq_j/){
                 $i = 0;
                 $j = index($seq_i, $seq_j);
+		$ref_seq = $seq_i;
         }
         elsif ($seq_j =~ /$seq_i/){
                 # i is substring of j
                 $i = index($seq_j, $seq_i);
                 $j = 0;
+		$ref_seq = $seq_j;
         }
         elsif (perfect_overlap($seq_i, $seq_j)){
                 $i = 0;
                 $j = perfect_overlap($seq_i, $seq_j);
+		$ref_seq = substr($seq_i, 0, $j).$seq_j;
         }
         elsif (perfect_overlap($seq_j, $seq_i)){
                 $i = perfect_overlap($seq_j, $seq_i);
                 $j = 0;
+		$ref_seq = substr($seq_j, 0, $i).$seq_i;
         }
         else {
                 print "SEQ IS CHANGED!\n";
                 exit(0);
         }
 
-        return ($i, $j);
-
+	return ($i, $j, $ref_seq);
 }
 #-----------------------------------------------------------------------------
 sub num_transcripts {
