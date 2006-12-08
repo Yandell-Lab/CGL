@@ -43,7 +43,9 @@ my $c_j = $cgl_j->contig(0);
 
 print " i gene id\tnum_t\tj gene id\tnum_t\tesd_m\tesd_c\tesd_u\tesd_5\tesd_3\tisd_m\tisd_c\tisd_5\tisd_3\n";
 
+my $LOCATION;
 my $MIN_OVERLAP = 100;
+my $PERFECT = 0;
 
 my ($I_OFFSET, $J_OFFSET, $REF_SEQ) = get_offsets($c_i, $c_j);
 
@@ -61,6 +63,7 @@ splice_distance($g_i, $c_i,$g_j, $c_j, 'int_m');
 splice_distance($g_i, $c_i,$g_j, $c_j, 'int_c');
 splice_distance($g_i, $c_i,$g_j, $c_j, 'int_5');
 splice_distance($g_i, $c_i,$g_j, $c_j, 'int_3');
+print "\t$PERFECT";
 print "\n";
 
 #-----------------------------------------------------------------------------
@@ -78,11 +81,46 @@ sub perfect_overlap {
         }
 
         if ($i > $MIN_OVERLAP){
+		$LOCATION = $i;
+		$PERFECT = $i;
                 return $i;
         }
         else {
                 return 0;
         }
+}
+#-----------------------------------------------------------------------------
+sub try_it {
+        my $seq_i = shift;
+        my $seq_j = shift;
+
+        my $gain = 50;
+        my $i = 0;
+        my $str = '';
+        my $off = -1;
+        while (my $i_substr = substr($seq_i, $i, $gain)){
+
+                my $pos;
+                if ($off == -1){
+                        $pos = index($seq_j, $i_substr);
+                }
+                else {
+                        $pos  = index($seq_j, $i_substr, $off);
+                }
+                if ($pos == -1){
+                        $str .= '0';
+                }
+                else {
+                        $off = $pos;
+                        $str .= 1;
+                }
+
+                last if $i + $gain > length($seq_i);
+                $i++;
+        }
+
+        return 1 if $str =~ /10+1/;
+        return 0;
 }
 #-----------------------------------------------------------------------------
 sub get_offsets {
@@ -95,6 +133,18 @@ sub get_offsets {
         my $i;
         my $j;
 	my $ref_seq;
+
+
+        if (try_it($seq_i, $seq_j)){
+                print "SEQ IS CHANGED!\n";
+                exit(0);
+        }
+
+        if (try_it($seq_j, $seq_i)){
+                print "SEQ IS CHANGED!\n";
+                exit(0);
+        }       
+
         if    ($seq_i eq $seq_j){
                 # unchanged;
                 $i = 0;
@@ -114,11 +164,11 @@ sub get_offsets {
         }
         elsif (perfect_overlap($seq_i, $seq_j)){
                 $i = 0;
-                $j = perfect_overlap($seq_i, $seq_j);
+                $j = $LOCATION;
 		$ref_seq = substr($seq_i, 0, $j).$seq_j;
         }
         elsif (perfect_overlap($seq_j, $seq_i)){
-                $i = perfect_overlap($seq_j, $seq_i);
+                $i = $LOCATION;
                 $j = 0;
 		$ref_seq = substr($seq_j, 0, $i).$seq_i;
         }
