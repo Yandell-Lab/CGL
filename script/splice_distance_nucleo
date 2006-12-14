@@ -987,6 +987,13 @@ sub get_CDS_data {
 		my $p_b_on_c = $t->metaPos($c, $p_b_on_t);
 		my $p_e_on_c = $t->metaPos($c, $p_e_on_t);
 
+		my $num_exons = @{$t->exons};
+		if ($num_exons == 1){
+			my $e = $t->exons(0);
+			$CDSs{$i}{$p_b_on_c}{$p_e_on_c}++;
+			$i++;
+			next;
+		}
                 my $j = 0;
                 while (my $e = $t->exon($j)){
                		my $nbeg = $e->nbeg();
@@ -1017,6 +1024,7 @@ sub get_CDS_data {
 
                         $j++;
                 }
+
                 $CDSs{$i}{'undef'}{'undef'}++ 
                 if !defined($CDSs{$i});
                 $i++;
