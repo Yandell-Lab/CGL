@@ -409,7 +409,9 @@ sub load_gene {
 	push(@{$gene->{locations}}, 
 	load_feature_location($nbeg, $nend, $src_f_id));
 
-	$gene->{name} = $g->{f}->get_Annotations('Name')->value();
+	$gene->{name} = $g->{f}->get_Annotations('Name') 
+	    ? $g->{f}->get_Annotations('Name') ->value()
+	    : $g->{f}->get_Annotations('ID');
 
 	my $oF_id = $g->{f}->get_Annotations('ID')->value();
 
@@ -428,7 +430,10 @@ sub load_gene {
 
         }
 
-	$gene->{uniquename} = $g->{f}->get_Annotations('Name')->value();
+	$gene->{uniquename} = $g->{f}->get_Annotations('Name')
+	    ? $gene->{uniquename} = $g->{f}->get_Annotations('Name')->value()
+	    : $gene->{uniquename} = $g->{f}->get_Annotations('ID')->value();
+
 	$gene->{type}       = 'gene';
 
 	bless $gene, 'CGL::Annotation::Feature::Gene';
@@ -499,8 +504,13 @@ sub load_transcript {
 	#Barry
 
 
-	$transcr->{name}       = $t->{f}->get_Annotations('Name')->value();
-	$transcr->{uniquename} = $t->{f}->get_Annotations('Name')->value();
+	$transcr->{name}       = $t->{f}->get_Annotations('Name')
+	    ? $t->{f}->get_Annotations('Name')->value()
+	    : $t->{f}->get_Annotations('ID')->value();
+
+	$transcr->{uniquename} = $t->{f}->get_Annotations('Name')
+	    ? $t->{f}->get_Annotations('Name')->value()
+	    : $t->{f}->get_Annotations('ID')->value();
 
 #	$transcr->{type} = 'mRNA';
 	#Barry

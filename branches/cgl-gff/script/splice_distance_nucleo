@@ -41,7 +41,7 @@ my $g_j = $cgl_j->gene(0);
 my $c_i = $cgl_i->contig(0);
 my $c_j = $cgl_j->contig(0);
 
-print " i gene id\tnum_t\tj gene id\tnum_t\tesd_m\tesd_c\tesd_u\tesd_5\tesd_3\tisd_m\tisd_c\tisd_5\tisd_3\n";
+#print " i gene id\tnum_t\tj gene id\tnum_t\tesd_m\tesd_c\tesd_u\tesd_5\tesd_3\tisd_m\tisd_c\tisd_5\tisd_3\n";
 
 my $LOCATION;
 my $MIN_OVERLAP = 100;
