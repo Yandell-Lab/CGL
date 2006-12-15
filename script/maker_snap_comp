@@ -1452,36 +1452,49 @@ sub get_cdss {
 	my $p = $t->translation(0);
 	my $c = $cgl->contig(0);
 
-	my $strand = $t->strand();
-
-	my $first_three = substr($t->residues, 0, 3);
- 
-	my $last_three = substr($t->residues, length($t->residues) -3, 3);
-
-	my $d_d = length($t->residues) - $p->metaPos($t, length($p->residues));
-	my $d_u = $p->metaPos($t, 0);
-
 	my @cdss;
-	my $i = 0;
-	my $not_encluded = 0;
-        while (my $e = $t->exon($i)){
-		my $nbeg = $e->nbeg();
-		my $nend = $e->nend();
+         my $p_b_on_t = $p->metaPos($t, 0);
+         my $p_e_on_t = $p->metaPos($t, length($p->residues));
 
-		my $e_b_on_t = $e->metaPos($t, 0);
-		my $e_b_on_p = $t->metaPos($p, $e_b_on_t);
+         my $p_b_on_c = $t->metaPos($c, $p_b_on_t);
+         my $p_e_on_c = $t->metaPos($c, $p_e_on_t);
+
+         my $num_exons = @{$t->exons};
+         if ($num_exons == 1){
+         	my $e = $t->exons(0);
+		push(@cdss, [$p_b_on_c, $p_e_on_c]);
+		return \@cdss;
+         }
+         my $j = 0;
+         while (my $e = $t->exon($j)){
+         	my $nbeg = $e->nbeg();
+                my $nend = $e->nend();
+
+                my $e_b_on_t = $e->metaPos($t, 0);
+                my $e_b_on_p = $t->metaPos($p, $e_b_on_t);
 
                 my $e_e_on_t = $e->metaPos($t, length($e->residues));
                 my $e_e_on_p = $t->metaPos($p, $e_e_on_t);
 
-		if (defined($e_b_on_p) && defined($e_e_on_p)){
-			push (@cdss, [$nbeg, $nend]);
-		}
-		else {
-			$not_encluded++;
-		}
-		$i++;
-	}
+                if (defined($e_b_on_p) && defined($e_e_on_p)){
+			push(@cdss, [$nbeg, $nend]);
+                }
+                elsif (defined($e_b_on_p) && !defined($e_e_on_p)){
+			push(@cdss, [$nbeg, $p_e_on_c]);
+                }
+                elsif (!defined($e_b_on_p) && defined($e_e_on_p)){
+			push(@cdss, [$p_b_on_c, $nend]);
+                }
+                elsif (!defined($e_b_on_p) && !defined($e_e_on_p)){
+			# UTR EXON
+                }
+
+                else {
+                        die "logic error in get_CDS_data!\n";
+                }
+
+                $j++;
+        }
 
 	return \@cdss;
 }
