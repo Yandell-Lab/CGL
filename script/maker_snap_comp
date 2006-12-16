@@ -45,6 +45,8 @@ my $t_exon_coors = get_exon_coors($t_cgl);
 
 my $r_exon_coors = get_exon_coors($r_cgl);
 
+#protein_facts($t_cgl, $r_cgl);
+
 nuc_level($t_cgl, $r_cgl, $fasta_file, 'exon');
 nuc_level($t_cgl, $r_cgl, $fasta_file, 'cds');
 nuc_level($t_cgl, $r_cgl, $fasta_file, 'utrs');
@@ -68,6 +70,119 @@ e_gasp_cds($t_cgl, $r_cgl);
 utr_facts($t_cgl, $r_cgl);
 #-----------------------------------------------------------------------------
 #------------------------------- SUBROUTINES ---------------------------------
+#-----------------------------------------------------------------------------
+sub protein_facts {
+
+	my $t_cgl = shift;
+	my $r_cgl = shift;
+
+	my $t_proteins = get_protein_hash($t_cgl);
+	my $r_proteins = get_protein_hash($r_cgl);
+
+	my @r_seqs = keys %{$r_proteins};
+	my @t_seqs = keys %{$t_proteins};
+
+	my @crap;
+	my $r_super_t = 0;
+	foreach my $r (@r_seqs){
+		$r =~ s/\*/-/g;
+		foreach my $t (@t_seqs){
+			$t =~ s/\*/-/g;
+			if ($r eq $t){
+			}
+			elsif ($r =~ /$t/){
+				$r_super_t++;
+				push(@crap, [index($r, $t), $r, $t, $t_proteins->{$t}]);
+			}
+		}
+	}
+
+	my @hell;
+	my $t_super_r = 0;
+	my $same = 0;
+        foreach my $t (@t_seqs){
+		$t =~ s/\*/-/g;
+		foreach my $r (@r_seqs){
+			$r =~ s/\*/-/g;
+			if ($t eq $r){
+				$same++;
+			}
+			elsif ($t =~ /$r/){
+				push(@hell, [index($t, $r), $t, $r]);
+				$t_super_r++;
+			}
+
+		}
+        }
+
+
+
+	print "same:$same r_super_t:$r_super_t t_super_r:$t_super_r\n";
+	#PostData(\@hell);
+	#die;
+
+	my $tp = 0;
+	my $fp = 0;
+	my $fn = 0;
+
+	foreach my $t_p (keys %{$t_proteins}){
+		if (defined($r_proteins->{$t_p})){
+			$tp++;
+		}
+		else {
+			$fp++;
+		}
+	}
+        foreach my $r_p (keys %{$r_proteins}){
+                if (defined($t_proteins->{$r_p})){
+			
+		}
+		else {
+			$fn++;
+		}
+        }
+
+	my $total_t = keys %{$t_proteins};
+	my $total_r = keys %{$r_proteins};
+
+	my $pc = $tp/$total_r;
+
+        my $sn_d = $tp + $fn;
+        my $sp_d = $tp + $fp;
+
+        my $sn = $sn_d == 0 ? 0 : $tp/($tp + $fn);
+        my $sp = $sp_d == 0 ? 0 : $tp/($tp + $fp);
+        my $ac = ($sn + $sp)/2;
+
+print "PROTEIN FACTS:\n";
+
+print "SN:$sn SP:$sp AC:$ac PERCENT CORRECT:$pc\n";
+
+}
+#-----------------------------------------------------------------------------
+sub get_protein_hash {
+	my $cgl = shift;
+
+        my $genes = $cgl->genes();
+
+        my %data;
+        my $n = 0;
+        for my $g (@{$genes}) {
+                my $i = 0;
+                while (my $t = $g->transcript($i)){
+                        if (!$opt_p && defined($t->status) && $t->status eq 'Predicted'){
+                                $i++;
+                                next;
+                        }
+
+			my $p = $t->translation(0);
+			
+			$data{$p->residues} = $t->id;		
+			$i++;
+		}
+	}
+	return \%data;
+}
 #-----------------------------------------------------------------------------
 sub init_counts_and_source {
 	my $gene_data = shift;
@@ -1461,9 +1576,23 @@ sub get_cdss {
 
          my $num_exons = @{$t->exons};
          if ($num_exons == 1){
-         	my $e = $t->exons(0);
-		push(@cdss, [$p_b_on_c, $p_e_on_c]);
-		return \@cdss;
+                my $e = $t->exon(0);
+                my $e_b_on_t = $e->metaPos($t, 0);
+                my $e_b_on_p = $t->metaPos($p, $e_b_on_t);
+
+                my $e_e_on_t = $e->metaPos($t, length($e->residues));
+                my $e_e_on_p = $t->metaPos($p, $e_e_on_t);
+
+                my $nbeg = $e->nbeg();
+                my $nend = $e->nend();
+
+                if (defined($e_b_on_p) && defined($e_e_on_p)){
+                        push(@cdss, [$nbeg, $nend]);
+                }
+                else {
+                        push(@cdss, [$p_b_on_c, $p_e_on_c]);
+                }
+                return \@cdss;
          }
          my $j = 0;
          while (my $e = $t->exon($j)){
@@ -1485,10 +1614,15 @@ sub get_cdss {
                 elsif (!defined($e_b_on_p) && defined($e_e_on_p)){
 			push(@cdss, [$p_b_on_c, $nend]);
                 }
-                elsif (!defined($e_b_on_p) && !defined($e_e_on_p)){
-			# UTR EXON
+                elsif ($e_e_on_t < $p_b_on_t){
+			# 5-prime UTR EXON
                 }
-
+                elsif ($e_b_on_t > $p_e_on_t){
+                        # 3-prime UTR EXON
+                }
+                elsif (!defined($e_b_on_p) && !defined($e_e_on_p)){
+			push(@cdss, [$p_b_on_c, $p_e_on_c]);
+                }
                 else {
                         die "logic error in get_CDS_data!\n";
                 }
@@ -1522,6 +1656,11 @@ sub get_cds_by_transcript {
 			foreach my $p (@{$cdss}){
 				my $nbeg = $p->[0];
 				my $nend = $p->[1];
+				print "HELL:".$g->id unless defined($nbeg);
+				print "CRAP:".$g->id unless defined($nend);
+				die unless defined($nend);
+				die unless defined($nbeg);
+
 				$coors{$count}{$nbeg}{$nend}++;
 				$g_lookup{$nbeg}{$nend} = $g->id;
 			}
