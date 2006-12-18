@@ -687,8 +687,21 @@ sub get_CDS_data {
 
                 my $num_exons = @{$t->exons};
                 if ($num_exons == 1){
-                        my $e = $t->exons(0);
-                        $CDSs{$i}{$p_b_on_c}{$p_e_on_c}++;
+                        my $e = $t->exon(0);
+                        my $e_b_on_t = $e->metaPos($t, 0);
+                        my $e_b_on_p = $t->metaPos($p, $e_b_on_t);
+
+                        my $e_e_on_t = $e->metaPos($t, length($e->residues));
+                        my $e_e_on_p = $t->metaPos($p, $e_e_on_t);
+
+                        my $nbeg = $e->nbeg();
+                        my $nend = $e->nend();
+                        if (defined($e_b_on_p) && defined($e_e_on_p)){
+                                $CDSs{$i}{$nbeg}{$nend}++;
+                        }
+                        else {
+                                $CDSs{$i}{$p_b_on_c}{$p_e_on_c}++;
+                        }
                         $i++;
                         next;
                 }

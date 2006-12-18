@@ -1,0 +1,89 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use lib "$ENV{CGL_GFF_LIB}";
+
+use CGL::Annotation;
+use CGL::Annotation::GFF3::Maker;
+use CGL::Annotation::Iterator;
+use Iterator::Fasta;
+use compare;
+use SimpleCluster;
+use Fasta;
+use Shadower;
+use PostData;
+use FileHandle();
+
+$| = 1;
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+
+my $usage = "
+
+allesandro <allesandro.out> 
+
+this code sorts the ouput of allesandro so that the genes
+with the best supporting evidence are at the top of the list.
+This code also adds a a quality value as a final filed in the output file
+
+writes to STDOUT.
+
+";
+
+my $file   = shift;
+
+die $usage unless defined($file);
+
+my $data = parse($file);
+
+foreach my $d (sort {calc($b->{qi}) <=> calc($a->{qi})} @{$data}){
+	print $d->{line}."\t".calc($d->{qi})."\n";
+} 
+#-----------------------------------------------------------------------------
+#------------------------------- SUBROUTINES ---------------------------------
+#-----------------------------------------------------------------------------
+sub calc {
+	my $qi = shift;
+
+	$qi =~ s/QI://;
+
+	my @fields = split(/\|/, $qi);
+
+	my $v  = 2*  $fields[1]; # 2x the fraction of confirmed splices
+	   $v += 1.5*$fields[2]; # 1.5x the fraction of exons with protein/est2genome evidence
+           $v += 1*  $fields[3]; # 1x the fraction of exons confirmed by anything  
+	   $v += 0.5*$fields[4]; # 1x the fraction of exons  predicted by ab-inito snap  
+
+	return $v;
+}
+#-----------------------------------------------------------------------------
+sub parse {
+	my $file = shift;
+	
+	my @data;
+
+	my $fh = new FileHandle();
+	   $fh->open($file);
+	while (my $line = <$fh>){
+		chomp($line);
+		my @fields = split("\t", $line);
+		die "wrong number of fields in input file!\n"
+		unless $fields[7];
+
+		push(@data, {qi => $fields[7], line => $line });
+	}
+
+	$fh->close();
+
+	return \@data;	
+}
+#-----------------------------------------------------------------------------
+
+
+
+
+
+

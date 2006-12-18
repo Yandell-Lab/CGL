@@ -40,26 +40,76 @@ print STDERR "finished.\n";
 
 my $iterator = new CGL::Annotation::Iterator($cgl);
 
-my $c = $cgl->contig(0);
+my $c    = $cgl->contig(0);
 my $c_id = $c->id();
+
+my $length = 60;
+
+#get_expected($c, $length);
 
 while (my $g = $iterator->next_by_gene()){
 	my $i = 0;
 	while (my $t = $g->transcript($i)){
 
-		my $t_id = $t->id();
+		my $t_id   = $t->id();
 		my $strand = $t->strand();
+		my $p      = $t->translation(0);
 
-		my $length = 60;
-		my ($pos, $c_pos, $seq_up, $seq_dn, $class) = scan_class_1($c, $t, $length);
-		print "$c_id\t$t_id\t$class\t$pos\t$c_pos\t$seq_up\|$seq_dn\t$strand\n" 
-		if $pos != -1 && $class != 3;
+		my ($qi) = $t->name =~ /.*(QI\:.*)$/;
+ 
+		next unless defined($p->residues);
+	
+		if ($p->residues =~ /^M/){
+			my ($pos, $c_pos, $seq_up, $seq_dn, $class) = scan_class_1($c, $t, $length);
+			print "$c_id\t$t_id\t$class\t$pos\t$c_pos\t$seq_up\|$seq_dn\t$strand\t$qi\n"
+                	if $pos != -1 && $class == 1;
+
+		}
+		elsif (uc($t->residues) =~ /^A/){
+                        my ($pos, $c_pos, $seq_up, $seq_dn, $class) = scan_class_2($c, $t, $length);
+                        print "$c_id\t$t_id\t$class\t$pos\t$c_pos\t$seq_up\|$seq_dn\t$strand\t$qi\n"
+                        if $pos != -1 && $class == 2;
+
+		}
+		else {
+		}
 		$i++;
 	}
 }
 
 #-----------------------------------------------------------------------------
 #------------------------------- SUBROUTINES ---------------------------------
+#-----------------------------------------------------------------------------
+sub get_expected {
+	my $c      = shift;
+	my $length = shift;
+
+
+	my $anywhere = 0;
+	my $edge     = 0;
+	my $scanned  = 0;
+	my $look = 'TTTAGA';
+	my $i = 0;
+	while (my $seq = substr($c->residues, $i, $length)){
+		
+		$anywhere++ if uc($seq) =~ /$look/;
+		$edge++     if uc($seq) =~ /$look$/;
+		if (uc($seq) =~ /$look/){
+			$anywhere++;
+		}
+		$scanned++;
+		$i+= $length;
+
+	}
+
+	my $any = $anywhere/$scanned;
+	my $ede = $edge/$scanned;
+
+	print "any:$any ede:$ede\n";
+
+	die;
+
+}
 #-----------------------------------------------------------------------------
 sub scan_class_1 {
 	my $c      = shift;
@@ -74,7 +124,7 @@ sub scan_class_1 {
 	my $p_b_on_c = $t->metaPos($c, $p_b_on_t);
 
 	my $seq_tag_up = get_upstream_seq($c->residues, $p_b_on_c, $length, $strand);
-	my $seq_tag_dn = get_dnstream_seq($c->residues, $p_b_on_c, $length, $strand);
+	my $seq_tag_dn = uc substr($t->residues, 0, 100);
 
 	my $look = 'TTTAGA';
 
@@ -83,12 +133,11 @@ sub scan_class_1 {
 	   $pos = length($seq_tag_up) - $pos - length($look) + 1 unless $pos == -1;
 
 
+	my $beg_tag = uc substr($t->residues, 0, 3);
+
 	my $class;
-	if ($p->residues =~ /^M/){
+	if ($beg_tag =~ /^ATG/){
 		$class = 1;
-	}
-	elsif ($pos == 1){
-		$class = 2;
 	}
 	else {
 		$class = 3;
@@ -103,6 +152,47 @@ sub scan_class_1 {
 		$c_pos = $p_b_on_c + $pos;
 	} 
 	return ($pos, $c_pos, $seq_tag_up, $seq_tag_dn, $class);
+}
+#-----------------------------------------------------------------------------
+sub scan_class_2 {
+        my $c      = shift;
+        my $t      = shift;
+        my $length = shift;
+
+        my $strand = $t->strand();
+
+        my $p = $t->translation(0);
+
+        my $p_b_on_t = $p->metaPos($t, 0);
+        my $p_b_on_c = $t->metaPos($c, $p_b_on_t);
+
+        my $seq_tag_up = get_upstream_seq($c->residues, $p_b_on_c, $length, $strand);
+        my $seq_tag_dn = uc substr($t->residues, 0, 100);
+
+        my $look = 'TTTAG';
+
+        my $pos = index($seq_tag_up, $look);
+
+           $pos = length($seq_tag_up) - $pos - length($look) + 1 unless $pos == -1;
+
+
+        my $class;
+        if (uc($t->residues) =~ /^A/ && $pos == 1){
+                $class = 2;
+        }
+        else {
+                $class = 4;
+        }
+
+        my $c_pos;
+        if ($strand == 1){
+                $c_pos = $p_b_on_c - $pos;
+
+        }
+        else {
+                $c_pos = $p_b_on_c + $pos;
+        }
+        return ($pos, $c_pos, $seq_tag_up, $seq_tag_dn, $class);
 }
 #-----------------------------------------------------------------------------
 sub get_upstream_seq {

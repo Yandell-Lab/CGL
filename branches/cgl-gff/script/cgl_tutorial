@@ -13,6 +13,7 @@ use lib $ENV{CGL_GFF_LIB};
 use FileHandle;
 use CGL::Annotation;
 use CGL::Annotation::GFF3::FlyBase;
+use CGL::Annotation::GFF3::Maker;
 use CGL::Annotation::Iterator;
 
 my $usage = "
@@ -40,7 +41,7 @@ scalar @ids > 0
     ? $ids_ref = \@ids 
     : undef($ids_ref);
 
-my $cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file, $ids_ref);
+my $cgl = new CGL::Annotation::GFF3::Maker($gff_file, $fasta_file, $ids_ref);
 
 my $iterator = new CGL::Annotation::Iterator($cgl);
 
