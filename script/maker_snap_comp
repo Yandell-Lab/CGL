@@ -1605,26 +1605,30 @@ sub get_cdss {
                 my $e_e_on_t = $e->metaPos($t, length($e->residues));
                 my $e_e_on_p = $t->metaPos($p, $e_e_on_t);
 
-                if (defined($e_b_on_p) && defined($e_e_on_p)){
-			push(@cdss, [$nbeg, $nend]);
-                }
-                elsif (defined($e_b_on_p) && !defined($e_e_on_p)){
-			push(@cdss, [$nbeg, $p_e_on_c]);
-                }
-                elsif (!defined($e_b_on_p) && defined($e_e_on_p)){
-			push(@cdss, [$p_b_on_c, $nend]);
-                }
-                elsif ($e_e_on_t < $p_b_on_t){
-			# 5-prime UTR EXON
+                if    ($e_e_on_t < $p_b_on_t){
+                	# 5-prime entirely-utr exon
                 }
                 elsif ($e_b_on_t > $p_e_on_t){
-                        # 3-prime UTR EXON
+                        # 3-prime entirely-utr exon
                 }
-                elsif (!defined($e_b_on_p) && !defined($e_e_on_p)){
+                elsif ($e_b_on_t >= $p_b_on_t && $e_e_on_t <= $p_e_on_t){
+                        # entirely coding exon 
+			push(@cdss, [$nbeg, $nend]);
+                }
+                elsif ($e_b_on_t < $p_b_on_t && $e_e_on_t <= $p_e_on_t){
+                        # 5-prime portion of exon is UTR
+			push(@cdss, [$p_b_on_c, $nend]);
+                }
+                elsif ($p_b_on_t >= $e_b_on_t && $p_e_on_t <= $e_e_on_t ){
+                        # entireinternal portion of exon is coding
 			push(@cdss, [$p_b_on_c, $p_e_on_c]);
                 }
+                elsif ($e_b_on_t <= $p_e_on_t &&  $e_e_on_t > $p_e_on_t ){
+                        # 3-prime portion of exon is UTR
+			push(@cdss, [$nbeg, $p_e_on_c]);	
+                }
                 else {
-                        die "logic error in get_CDS_data!\n";
+                      die "logic error in get_CDS_data!\n";
                 }
 
                 $j++;
