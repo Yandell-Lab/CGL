@@ -1620,7 +1620,7 @@ sub get_cdss {
 			push(@cdss, [$p_b_on_c, $nend]);
                 }
                 elsif ($p_b_on_t >= $e_b_on_t && $p_e_on_t <= $e_e_on_t ){
-                        # entireinternal portion of exon is coding
+                        # entire internal portion of exon is coding
 			push(@cdss, [$p_b_on_c, $p_e_on_c]);
                 }
                 elsif ($e_b_on_t <= $p_e_on_t &&  $e_e_on_t > $p_e_on_t ){
