@@ -1,7 +1,7 @@
 #-------------------------------------------------------------------------------
-#------                     CGL::Annotation::GFF3::Maker                 -------
+#------                     CGL::Annotation::GFF3::nGASP2                -------
 #-------------------------------------------------------------------------------
-package CGL::Annotation::GFF3::Maker;
+package CGL::Annotation::GFF3::nGASP2;
 use strict;
 use vars qw(@ISA @EXPORT $VERSION);
 use Exporter;
@@ -10,7 +10,9 @@ use Bio::DB::GFF;
 use Bio::Tools::GFF;
 use Bio::FeatureIO::gff;
 use Bio::Tools::CodonTable;
+use Bio::SeqIO;
 use CGL::Annotation;
+use PostData;
 
 @ISA = qw(
           );
@@ -19,22 +21,25 @@ use CGL::Annotation;
 #------------------------------- FUNCTIONS -------------------------------------
 #-------------------------------------------------------------------------------
 sub new {
-	my $class = shift;
-	my $file  = shift;
+        my $class      = shift;
+        my $gff3_file  = shift;
+        my $fasta_file = shift;
+        my ($genes, $seq, $seq_id) =
 
-	my ($genes, $seq, $seq_id) = get_genes($file,'exon', 0);
+        get_genes($gff3_file, $fasta_file, 'exon', 0);
 
-	my @cgl_genes;
-	foreach my $g (@{$genes}){
-        	push(@cgl_genes, load_gene($g, $seq));
-	}
+        my @cgl_genes;
+        foreach my $g (@{$genes}){
+                push(@cgl_genes, load_gene($g, $seq));
 
-	my $contig = load_contig($seq_id, $seq);
+        }
 
-	my $cgl    = load_annotations($contig, \@cgl_genes);
+        my $contig = load_contig($seq_id, $seq);
+
+        my $cgl    = load_annotations($contig, \@cgl_genes);
 
 
-	return $cgl;
+        return $cgl;
 }
 #-------------------------------------------------------------------------------
 sub glean {
@@ -43,32 +48,21 @@ sub glean {
 
         my $fh = new FileHandle();
            $fh->open($gff3_file);
-
+        
         my $i = 0;
-        while (defined(my $line = <$fh>)){
-
-		next unless $line =~ /\S+/;
-
+        while (my $line = <$fh>){
+        
                 if ($i < 2){
                         print $line;
                         $i++;
                         next;
                 }
-
+        
                 chomp($line);
-
+        
                 my @stuff = split("\t", $line);
-
-		if ($line eq '##FASTA'){
-			print $line."\n";
-
-			while (my $fasta = <$fh>){
-				print $fasta;
-			}
-		}
-		elsif (wanted($stuff[1], $stuff[2])){
-			print $line."\n"; 
-		}
+        
+                print $line."\n" if wanted($stuff[1], $stuff[2]);
 
                 $i++;
         }
@@ -81,13 +75,10 @@ sub wanted {
 	my $s = shift;
         my $x = shift;
 
-	return 0 unless $s eq 'maker';
-
-        return 1 if $x eq 'gene';
-        return 1 if $x eq 'mRNA';
-        return 1 if $x eq 'exon';
-        return 1 if $x eq 'CDS';
-        return 1 if $x eq 'scaffold';
+        return 1 if $x eq 'gene' && $s eq 'Coding_transcript';
+        return 1 if $x eq 'mRNA' && $s eq 'Coding_transcript';
+        return 1 if $x eq 'exon' && $s eq 'Coding_transcript';
+        return 1 if $x eq 'CDS'  && $s eq 'Coding_transcript';
         return 0;
 }
 #-------------------------------------------------------------------------------
@@ -108,13 +99,13 @@ sub to_gff3_gene {
 	my $seg_id = shift;
 	my $g      = shift;
 
-	my $g_id   = $g->{f}->get_Annotations('ID')->value();
+	my $g_id   = $g->{id};
 	my $g_n    = $g->{f}->get_Annotations('Name')->value();
 	my $strand = $g->{f}->strand() == 1 ? '+' : '-';
 
 	my @fields;
 
-        push(@fields, $seg_id, 'maker', 'gene', $g->{i_start});
+        push(@fields, $seg_id, 'Coding_transcript', 'gene', $g->{i_start});
         push(@fields, $g->{i_end}, '.', $strand, '.');
         push(@fields, "ID=$g_id;Name=$g_n");
 
@@ -127,15 +118,15 @@ sub to_gff3_mRNA {
         my $g      = shift;
         my $t      = shift;
 
-        my $g_id   = $g->{f}->get_Annotations('ID')->value();
-	my $t_id   = $t->{f}->get_Annotations('ID')->value();
+        my $g_id   = $g->{id};
+	my $t_id   = $t->{id};
 	my $t_n    = $t->{f}->get_Annotations('Name')->value();
 
         my $strand = $t->{f}->strand() == 1 ? '+' : '-';
 
         my @fields;
 
-        push(@fields, $seg_id, 'maker', 'mRNA', $t->{i_start});
+        push(@fields, $seg_id, 'Coding_transcript', 'mRNA', $t->{i_start});
         push(@fields, $t->{i_end}, '.', $strand, '.');
         push(@fields, "ID=$t_id;Parent=$g_id;Name=$t_n");
 
@@ -148,16 +139,16 @@ sub to_gff3_exon {
         my $t      = shift;
         my $e      = shift;
 
-        my $t_id   = $t->{f}->get_Annotations('ID')->value();
-        my $e_id   = $e->{f}->get_Annotations('ID')->value();
-
+        my $t_id   = $t->{id};
+        my $e_id   = $e->{id};
+	my $g_id   = $t->{f}->get_Annotations('Parent')->value();
         my $strand = $e->{f}->strand() == 1 ? '+' : '-';
 
         my @fields;
 
-        push(@fields, $seg_id, 'maker', 'exon', $e->{i_start});
+        push(@fields, $seg_id, 'Coding_transcript', 'exon', $e->{i_start});
         push(@fields, $e->{i_end}, '.', $strand, '.');
-        push(@fields, "ID=$e_id;Parent=$t_id");
+        push(@fields, "ID=$e_id;Parent=$g_id");
 
         return join("\t", @fields);
 
@@ -168,14 +159,14 @@ sub to_gff3_cds {
         my $t      = shift;
         my $c      = shift;
 
-        my $t_id   = $t->{f}->get_Annotations('ID')->value();
-        my $c_id   = $c->{f}->get_Annotations('ID')->value();
+        my $t_id   = $t->{id};
+        my $c_id   = $c->{id};
 
         my $strand = $c->{f}->strand() == 1 ? '+' : '-';
 
         my @fields;
 
-        push(@fields, $seg_id, 'maker', 'CDS', $c->{i_start});
+        push(@fields, $seg_id, 'Coding_transcript', 'CDS', $c->{i_start});
         push(@fields, $c->{i_end}, '.', $strand, '.');
         push(@fields, "ID=$c_id;Parent=$t_id");
 
@@ -183,7 +174,7 @@ sub to_gff3_cds {
 
 }
 #-------------------------------------------------------------------------------
-sub to_gff3_seq {
+sub to_fasta_seq {
 	my $id  = shift;
 	my $seq = shift;
 
@@ -193,13 +184,16 @@ sub to_gff3_seq {
 }
 #-------------------------------------------------------------------------------
 sub split_file {
-	my $file = shift;
-	my $root = shift;
+	my $gff3_file  = shift;
+	my $fasta_file = shift;
+	my $root       = shift;
 
-	my ($genes, $seq, $seq_id) = get_genes($file, 'exon', 500);
+	my ($genes, $seq, $seq_id) = 
+	get_genes($gff3_file, $fasta_file, 'exon', 500);
 
+	my $i = 0;
 	foreach my $g (@{$genes}){
-		my $g_id = $g->{f}->get_Annotations('ID')->value();
+		my $g_id = $g->{id};
 
 		my $file = $root.'/'.$seq_id.'_'.$g_id.'.gff3';
 		my $fh = new FileHandle();
@@ -229,10 +223,17 @@ sub split_file {
 
 		}
 
-		print $fh "##FASTA\n";
-		print $fh to_gff3_seq($seg_id, $g->{seq})."\n";
+		#print $fh "##FASTA\n";
+		#print $fh to_gff3_seq($seg_id, $g->{seq})."\n";
 
+		my $fasta_file = $root.'/'.$seq_id.'_'.$g_id.'.fasta';
 		$fh->close();
+		$fh->open(">$fasta_file");
+		print $fh to_fasta_seq($seg_id, $g->{seq});	
+		$fh->close();	
+
+		#die if $i > 10;
+		$i++;
 	}
 
 }
@@ -248,6 +249,7 @@ sub base_to_space {
 	elsif ($nbeg >  $nend){
 		$nend--;
 	}
+
 	return ($nbeg, $nend);
 }
 #----------------------------------------------------------------------
@@ -307,8 +309,8 @@ sub load_gene {
 
 	my $gene = {};
 
-	$gene->{feature_id} = $g->{f}->get_Annotations('ID')->value();
-	$gene->{id}         = $g->{f}->get_Annotations('ID')->value();
+	$gene->{feature_id} = $g->{id};
+	$gene->{id}         = $g->{id};
 
 	my $src_f_id = $g->{src_f_id};
 
@@ -322,7 +324,7 @@ sub load_gene {
 
 	$gene->{name} = $g->{f}->get_Annotations('Name')->value();
 
-	my $oF_id = $g->{f}->get_Annotations('ID')->value();
+	my $oF_id = $g->{id};
 
         foreach my $t (@{$g->{mRNAs}}){
                 my $transcr = load_transcript($t, $seq);
@@ -356,8 +358,12 @@ sub load_transcript {
 
 	load_introns($t, $transcr, $seq);
 
-	$transcr->{feature_id} = $t->{f}->get_Annotations('ID')->value();
-	$transcr->{id}         = $t->{f}->get_Annotations('ID')->value();
+
+	$transcr->{status} = 'maker annotation'; 
+
+
+	$transcr->{feature_id} = $t->{id};
+	$transcr->{id}         = $t->{id};
 
 	$transcr->{gene} = $t->{part_of}->[0];
 	
@@ -373,11 +379,11 @@ sub load_transcript {
 
 	my %props;
 	$props{gene} = $t->{part_of}->[0];
-	$props{transcript_id} = $t->{f}->get_Annotations('ID')->value();
+	$props{transcript_id} = $t->{id};
 
 	$transcr->{properties} = \%props;
 
-	my $oF_id = $t->{f}->get_Annotations('ID')->value();;
+	my $oF_id = $t->{id};
 	foreach my $e (@{$transcr->{exons}}){
 		my $sF_id =$e->{id};
 		push(@{$transcr->{relationships}}, 
@@ -438,7 +444,7 @@ sub load_feature_location {
 sub load_translations {
 	my $t = shift;
 
-	my $f_id = 'protein:'.$t->{f}->get_Annotations('ID')->value();
+	my $f_id = 'protein:'.$t->{id};
 
 	my $transl = {};
 
@@ -448,15 +454,18 @@ sub load_translations {
  
         my $sorted = sort_cdss($t);
 
-        my $nbeg = $sorted->[0]->{f}->start();
-        my $nend = $sorted->[0]->{f}->end();
+	my $alpha =  $sorted->[0];
+	my $omega =  $sorted->[-1];
 
-	($nbeg, $nend) = ($nend, $nbeg) if $sorted->[0]->{f}->strand() == -1;
+	my $transl_offset = get_translation_offset($t);
+	my $trans_end     = $transl_offset + length($t->{cds_seq}) - 3;
 
+	my ($a_l_beg, $a_l_end) = get_l_beg_end($alpha);
+	my ($o_l_beg, $o_l_end) = get_l_beg_end($omega);
 	my $src_f_id = $t->{src_f_id};
 
 	push(@{$transl->{locations}},
-	load_feature_location($nbeg, $nend, $src_f_id));
+	load_feature_location($a_l_beg, $o_l_end, $src_f_id));
 
 	my $trn = new Bio::Tools::CodonTable();
 
@@ -466,14 +475,14 @@ sub load_translations {
 
 	$transl->{name} = $f_id;
 
-	my $oF_id = $t->{f}->get_Annotations('ID')->value();
+	my $oF_id = $t->{id};
 	my $sF_id = $transl->{id};
 
 	push(@{$transl->{relationships}},
 	load_feature_relationship( $oF_id, $sF_id, 'produced_by'));
 
 	my %props;
-	$props{codon_start} = get_translation_offset($t);
+	$props{codon_start} = $transl_offset;
 	$props{gene}        = $t->{part_of}->[0];
 	$props{product}     = $transl->{id};
 	$props{protein_id}  = $transl->{id};
@@ -493,15 +502,18 @@ sub load_translations {
 #-------------------------------------------------------------------------------
 sub get_translation_offset {
 	my $t = shift;
+	
+	return 0 unless defined($t->{utr_5});
 
-	my $sorted_exons = sort_exons($t);
-	my $sorted_cdss  = sort_cdss($t);
+	my $sorted_utrs_5 = sort_utr_5($t);
 
-	my $e_0_b = $sorted_exons->[0]->{f}->start();
-	my $c_0_b = $sorted_exons->[0]->{f}->start();
 
-	return abs($e_0_b - $c_0_b) + 1;
-
+	my $length = 0;
+	foreach my $u (@{$sorted_utrs_5}){
+		my ($l_b, $l_e) =  get_l_beg_end($u);
+		$length += abs($l_b - $l_e) + 1; 
+	}
+	return $length;
 }
 #-------------------------------------------------------------------------------
 sub load_exons {
@@ -605,8 +617,8 @@ sub load_exon {
 
 	my $exon ={};
 
-	$exon->{feature_id} = $e->{f}->get_Annotations('ID')->value();
-	$exon->{id}         = $e->{f}->get_Annotations('ID')->value();
+	$exon->{feature_id} = $e->{id};
+	$exon->{id}         = $e->{id};
 	$exon->{inScope}    = 1;
 
 
@@ -622,10 +634,10 @@ sub load_exon {
 	load_feature_location($nbeg, $nend, $scr_f_id));
 
 
-	$exon->{name} = $e->{f}->get_Annotations('ID')->value();
+	$exon->{name} = $e->{id};
 
 
-	my $sF_id = $e->{f}->get_Annotations('ID')->value();
+	my $sF_id = $e->{id};
 
 	foreach my $oF_id (@{$e->{part_of}}){
 		push(@{$exon->{relationships}},
@@ -639,7 +651,7 @@ sub load_exon {
 	$exon->{type} = 'exon';
 
 	$exon->{uniquename} = 
-	$e->{src_f_id}.':'.$e->{f}->get_Annotations('ID')->value();
+	$e->{src_f_id}.':'.$e->{id};
 
 	bless $exon, 'CGL::Annotation::Feature::Exon';
 
@@ -662,29 +674,24 @@ sub load_feature_relationship {
 }
 #-------------------------------------------------------------------------------
 sub load_seq {
-	my $file = shift;
-	
-	my $fh = new FileHandle();
-	   $fh->open($file);
+        my $file = shift;
 
-	while(my $line = <$fh>){
-		chomp($line);
-		last if $line eq '##FASTA';
-	}
-	my $def = <$fh>;
-	chomp($def);
+        my $seqio = Bio::SeqIO->new(-file   => $file,
+                                    -format => 'Fasta');
+        my $seq = $seqio->next_seq;
+        my $id  = $seq->display_id;
 
-	my $seq = '';
-        while(my $line = <$fh>){
-                chomp($line);
-		$seq .= $line;
-        }
+	my ($offset) = $id =~ /^\S\:(\d+)\.\.\d+/;
 
+	$offset--;
 
-	$fh->close();
+	die "offset not found on fasta deadline in sub nGASP2::load_seq\n"
+	unless defined $offset && $offset =~ /\d+/;
+;
+        my $sequence = $seq->seq;
 
-	return ($def, \$seq);
-}
+        return ($id, \$sequence, $offset);
+}       
 #-------------------------------------------------------------------------------
 sub grab {
 	my $type     = shift;
@@ -693,19 +700,25 @@ sub grab {
 	my $c_id     = shift;
 
         my %booty;
+	my $i = 0;
         foreach my $f (@{$features}){
                 my $tag_t = $f->primary_tag();
                 my $tag_s = $f->source_tag();
 
-                if ($tag_t eq $type && $tag_s eq  $source) {
-                        my $id = $f->get_Annotations('ID')->value();
+                if ($tag_s eq $source && $tag_t eq $type) {
+                        my $id = 
+			    $f->get_Annotations('ID') ?
+			    $f->get_Annotations('ID')->value() :
+			    $c_id.':'.$type.':'.$i;
                         my $p_ids = get_p_ids($f);
                         foreach my $p_id (@{$p_ids}){
                                 push(@{$booty{$p_id}}, {f        => $f,
+				                        id       => $id,
                                                         src_f_id => $c_id,
                                                         part_of  => $p_ids,
                                                        });
                         }
+			$i++;
                 }
         }
 	return \%booty;
@@ -723,36 +736,76 @@ sub get_p_ids {
 	return \@p_ids;
 }
 #-------------------------------------------------------------------------------
-sub get_genes {
-	my $file      = shift;
-	my $base_type = shift;
-	my $flank     = shift;
+sub subtract_offset {
+	my $features = shift;
+	my $offset   = shift;
 
-	my ($def, $seq)   = load_seq($file);
+	foreach my $f (@{$features}){
+		my $old_start = $f->start();
+		my $old_end   = $f->end();
 
-	my ($c_id) = $def =~ />(\S+)/;
+		my $new_start = $old_start - $offset;
+		my $new_end   = $old_end   - $offset;
 
-	my $features = get_features($file);
-
-	my $exons = grab($base_type, 'maker', $features, $c_id);
-	my $cdss  = grab('CDS', 'maker', $features, $c_id);
-	my $mRNAs = grab('mRNA', 'maker', $features, $c_id);
-
-	foreach my $p_id (keys %{$mRNAs}){
-		for (my $i = 0; $ i < @{$mRNAs->{$p_id}}; $i++) {
-			my $f  = $mRNAs->{$p_id}->[$i]->{f};
-			my $id = $f->get_Annotations('ID')->value(); 
-
-			$mRNAs->{$p_id}->[$i]->{exons} = $exons->{$id};
-			$mRNAs->{$p_id}->[$i]->{cdss}  = $cdss->{$id};
-		}
+		$f->start($new_start);
+		$f->end($new_end);
 	}
+
+}
+#-------------------------------------------------------------------------------
+sub get_genes {
+	my $gff3_file  = shift;
+	my $fasta_file = shift;
+	my $base_type  = shift;
+	my $flank      = shift;
+
+	my ($c_id, $seq, $offset) = load_seq($fasta_file);
+
+	print STDERR "loading features....\n";
+	my $features = get_features($gff3_file);
+	print STDERR "...finished.\n";
+
+	subtract_offset($features, $offset);
+
+	#my $source_name = 'Coding_transcript';
+	my $source_name  = 'maker';
+
+	print STDERR "loading $base_type....\n";
+	my $exons = grab($base_type, $source_name, $features, $c_id);
+	print STDERR "...finished.\n";
+
+	print STDERR "loading CDSs....\n";
+	my $cdss  = grab('CDS',$source_name, $features, $c_id);
+	print STDERR "...finished.\n";
+
+	print STDERR "loading five prime UTRs....\n";
+        my $utr_5  = grab('five_prime_UTR',$source_name, $features, $c_id);
+        print STDERR "...finished.\n";
+
+        print STDERR "loading three prime UTRs....\n";
+        my $utr_3  = grab('three_prime_UTR',$source_name, $features, $c_id);
+        print STDERR "...finished.\n";
+
+	print STDERR "loading mRNAs....\n";
+	my $mRNAs = grab('mRNA',$source_name, $features, $c_id);
+	print STDERR "...finished.\n";
+	
+        foreach my $p_id (keys %{$mRNAs}){
+                for (my $i = 0; $ i < @{$mRNAs->{$p_id}}; $i++) {
+                        my $f  = $mRNAs->{$p_id}->[$i]->{f};
+                        my $id = $f->get_Annotations('ID')->value();
+
+                        $mRNAs->{$p_id}->[$i]->{exons} = $exons->{$id};
+                        $mRNAs->{$p_id}->[$i]->{cdss}  = $cdss->{$id};
+                }
+        }
+
         my @genes;
         foreach my $f (@{$features}){
                 my $tag = $f->primary_tag();
                 my $source = $f->source_tag();
 
-                if ($tag eq 'gene' && $source eq 'maker') {
+                if ($tag eq 'gene' && $source eq $source_name) {
                         my $id = $f->get_Annotations('ID')->value();
                         push(@genes, {'f'        => $f,
                                       'mRNAs'    => $mRNAs->{$id},
@@ -762,10 +815,201 @@ sub get_genes {
                                      });
                 }
         }
-	load_seqs(\@genes, $seq, $flank);
+        load_seqs(\@genes, $seq, $flank);
 
-	return (\@genes, $seq, $c_id);
+        return (\@genes, $seq, $c_id);
+
 }
+#-------------------------------------------------------------------------------
+sub get_e_coors {
+	my $cdss   = shift;
+	my $utrs_5 = shift;
+	my $utrs_3 = shift;
+
+	my ($alpha_l_beg, $alpha_l_end, $f_exclude_beg, $f_exclude_end) = 
+	get_alpha_coors($cdss, $utrs_5);
+
+	my ($omega_l_beg, $omega_l_end, $t_exclude_beg, $t_exclude_end) = 
+	get_omega_coors($cdss, $utrs_3);
+
+	my %exclude;
+
+	if (defined($f_exclude_beg) && defined($f_exclude_end)){
+		$exclude{$f_exclude_beg}{$f_exclude_end}++;
+	}
+
+	if (defined($t_exclude_beg) && defined($t_exclude_end)){
+		$exclude{$t_exclude_beg}{$t_exclude_end}++;
+	}
+
+	my $c_size = @{$cdss};
+
+	my %exon_coors;
+	if ($c_size == 1){
+		$exon_coors{$alpha_l_beg}{$omega_l_end}++;
+	}
+	else {
+		$exon_coors{$alpha_l_beg}{$alpha_l_end}++;
+		$exon_coors{$omega_l_beg}{$omega_l_end}++;
+
+		for (my $i = 1; $i < @{$cdss} -1; $i++){
+
+			my ($l_beg, $l_end) = get_l_beg_end($cdss->[$i]);
+			$exon_coors{$l_beg}{$l_end}++;
+  		}
+	}
+
+	add_utr_exons($utrs_5, \%exon_coors, \%exclude) if defined($utrs_5);
+	add_utr_exons($utrs_3, \%exon_coors, \%exclude) if defined($utrs_3);
+	
+	return \%exon_coors;
+}
+#-------------------------------------------------------------------------------
+sub add_utr_exons {
+	my $utr_exons  = shift;
+	my $exon_coors = shift;
+	my $exclude    = shift;
+
+        for (my $i = 0; $i < @{$utr_exons}; $i++){
+                my ($l_beg, $l_end) = get_l_beg_end($utr_exons->[$i]);
+
+                next if $exclude->{$l_beg}->{$l_end};
+
+                $exon_coors->{$l_beg}->{$l_end}++;
+        }
+
+}
+#-------------------------------------------------------------------------------
+sub get_l_beg_end {
+
+	my $feature = shift;
+
+        my $start  = $feature->{f}->start();
+        my $end    = $feature->{f}->end();
+        my $strand = $feature->{f}->strand();
+
+	if ($strand == 1){
+		return ($start, $end);
+	}
+	elsif ($strand == -1){
+		return ($end, $start);
+	}
+	else {
+		die "dead in WormBase::get_l_beg_end\n";
+	}
+}
+#-------------------------------------------------------------------------------
+sub get_alpha_coors {
+	my $cdss   = shift;
+	my $utrs_5 = shift;
+
+
+	my $sorted_cdss   = sort_quick($cdss);
+        my $sorted_utrs_5 = sort_quick($utrs_5) if defined($utrs_5);
+
+        my $first_cds = $sorted_cdss->[0];
+
+	my ($c_l_beg, $c_l_end) = get_l_beg_end($first_cds);
+	
+	#warn  "no five prime UTR annotated !\n" if !defined($utrs_5);
+	return ($c_l_beg, $c_l_end) if !defined($utrs_5);
+
+	foreach my $utr_5 (@{$utrs_5}){
+		my ($u_l_beg, $u_l_end) = get_l_beg_end($utr_5);
+
+		if (abs($u_l_end - $c_l_beg) == 1){
+			my $alpha_l_beg = $u_l_beg;
+			my $alpha_l_end = $c_l_end;
+			#warn  " ** five prime UTR found !\n";
+			return ($alpha_l_beg, $alpha_l_end, $u_l_beg, $u_l_end);
+		}
+		else {
+			#warn " u_l_end:$u_l_end c_l_beg:$c_l_beg\n";
+		}
+	}
+	#warn  "no five prime UTR found !\n";
+	#sleep 1;
+
+	return ($c_l_beg, $c_l_end);
+}
+#-------------------------------------------------------------------------------
+sub get_omega_coors {
+        my $cdss   = shift;
+        my $utrs_3 = shift;
+
+
+        my $sorted_cdss   = sort_quick($cdss);
+        my $sorted_utrs_5 = sort_quick($utrs_3) if defined($utrs_3);
+
+        my $last_cds = $sorted_cdss->[-1];
+
+        my ($c_l_beg, $c_l_end) = get_l_beg_end($last_cds);
+
+	#warn  "no three  prime UTR annotated !\n" if !defined($utrs_3);
+        return ($c_l_beg, $c_l_end) if !defined($utrs_3);
+
+        foreach my $utr_3 (@{$utrs_3}){
+                my ($u_l_beg, $u_l_end) = get_l_beg_end($utr_3);
+
+                if (abs($u_l_beg - $c_l_end) == 1){
+                        my $omega_l_beg = $c_l_beg;
+                        my $omega_l_end = $u_l_end;
+			#warn  " ** three prime UTR found !\n";
+                        return ($omega_l_beg, $omega_l_end, $u_l_beg, $u_l_end);
+                }
+        }
+        #warn  "no thee prime UTR found !\n";
+        #sleep 1;
+
+	return ($c_l_beg, $c_l_end);
+
+}
+#-------------------------------------------------------------------------------
+sub manufacture_mRNA {
+	my $cdss   = shift;
+	my $utrs_5 = shift;
+	my $utrs_3 = shift;
+	my $exons  = shift;
+
+	my $g_id = $exons->[0]->{f}->get_Annotations('Parent')->value();
+	my $t_id = $cdss->[0]->{f}->get_Annotations('Parent')->value();
+
+	#print STDERR " XXXX new mRNA XXX $g_id $t_id XXXXXXXXXXXXX\n";
+
+	my $exon_coors = get_e_coors($cdss, 
+		                     $utrs_5, 
+		                     $utrs_3,
+		                     );	
+
+	my @actual_exons;
+	foreach my $e (@{$exons}){
+		my ($l_beg, $l_end) = get_l_beg_end($e);
+
+		push(@actual_exons, $e) 
+		if defined($exon_coors->{$l_beg}->{$l_end});
+	}
+
+	return \@actual_exons;
+}
+#-------------------------------------------------------------------------------
+sub debug {
+        my $genes = shift;
+
+        foreach my $g (@{$genes}) {
+                print $g->{id}."\n";
+                foreach my $t (@{$g->{mRNAs}}){
+                        print "   ".$t->{id}."\n";
+                        foreach my $e (@{$t->{exons}}){
+                                print "      ".$e->{id}."\n";
+                        } 
+                        foreach my $c (@{$t->{cdss}}){
+                                print "             ".$c->{id}."\n";
+                        }
+        
+                }
+        }
+        die "DEBUG!\n";
+}       
 #-------------------------------------------------------------------------------
 sub get_exon_seq {
 	my $e   = shift;
@@ -917,6 +1161,24 @@ sub sort_exons {
 	return \@sorted;
 }
 #-------------------------------------------------------------------------------
+sub sort_quick {
+        my $array = shift;
+
+        my @sorted;
+        if    ($array->[0]->{f}->strand() ==  1){
+                @sorted =
+                sort {$a->{f}->start <=> $b->{f}->start} @{$array};
+        }
+        elsif ($array->[0]->{f}->strand() == -1){
+                @sorted =
+                sort {$b->{f}->start <=> $a->{f}->start} @{$array};
+        }
+        else {
+                die "unknown strand in GFF3::WormBase::sort_quick!\n";
+        }
+        return \@sorted;
+}
+#-------------------------------------------------------------------------------
 sub sort_cdss {
         my $t = shift;
 
@@ -931,6 +1193,42 @@ sub sort_cdss {
         }
         else {
                 die "unknown strand in GFF3::Maker::sort_cdss!\n";
+        }
+        return \@sorted;
+}
+#-------------------------------------------------------------------------------
+sub sort_utr_5 {
+        my $t = shift;
+
+        my @sorted;
+        if    ($t->{f}->strand() ==  1){
+                @sorted =
+                sort {$a->{f}->start <=> $b->{f}->start} @{$t->{utr_5}};
+        }
+        elsif ($t->{f}->strand() == -1){
+                @sorted =
+                sort {$b->{f}->start <=> $a->{f}->start} @{$t->{utr_5}};
+        }
+        else {
+                die "unknown strand in GFF3::Maker::sort_utr_5!\n";
+        }
+        return \@sorted;
+}
+#-------------------------------------------------------------------------------
+sub sort_utr_3 {
+        my $t = shift;
+
+        my @sorted;
+        if    ($t->{f}->strand() ==  1){
+                @sorted =
+                sort {$a->{f}->start <=> $b->{f}->start} @{$t->{utr_3}};
+        }
+        elsif ($t->{f}->strand() == -1){
+                @sorted =
+                sort {$b->{f}->start <=> $a->{f}->start} @{$t->{utr_3}};
+        }
+        else {
+                die "unknown strand in GFF3::Maker::sort_utr_3!\n";
         }
         return \@sorted;
 }
