@@ -83,6 +83,7 @@ sub perfect_overlap {
         if ($i > $MIN_OVERLAP){
 		$LOCATION = $i;
 		$PERFECT = $i;
+
                 return $i;
         }
         else {
@@ -93,6 +94,11 @@ sub perfect_overlap {
 sub try_it {
         my $seq_i = shift;
         my $seq_j = shift;
+
+	my $i_Ns = $seq_i =~ tr/N/N/;
+	my $j_Ns = $seq_j =~ tr/N/N/;
+
+	return 1 if $i_Ns != $j_Ns;
 
         my $gain = 50;
         my $i = 0;
@@ -150,27 +156,37 @@ sub get_offsets {
                 $i = 0;
                 $j = 0;
 		$ref_seq = $seq_i;
+		print "AAAAAAAA\n";
+		die;
         }
         elsif ($seq_i =~ /$seq_j/){
                 $i = 0;
                 $j = index($seq_i, $seq_j);
 		$ref_seq = $seq_i;
+		print "BBBBBBBBBB\n";
+		die;
         }
         elsif ($seq_j =~ /$seq_i/){
                 # i is substring of j
                 $i = index($seq_j, $seq_i);
                 $j = 0;
 		$ref_seq = $seq_j;
+		print "CCCCCCCCCC\n";
+		die;
         }
         elsif (perfect_overlap($seq_i, $seq_j)){
                 $i = 0;
                 $j = $LOCATION;
 		$ref_seq = substr($seq_i, 0, $j).$seq_j;
+		print "DDDDDDDDD j:$j\n";
+		die;
         }
         elsif (perfect_overlap($seq_j, $seq_i)){
                 $i = $LOCATION;
                 $j = 0;
 		$ref_seq = substr($seq_j, 0, $i).$seq_i;
+		print "EEEEEEEEE\n";
+		die;
         }
         else {
                 print "SEQ IS CHANGED!\n";
@@ -1052,6 +1068,7 @@ sub get_CDS_data {
                 $i++;
         }
 
+	#PostData(\%CDSs);
         return \%CDSs;
 }
 #-----------------------------------------------------------------------------
