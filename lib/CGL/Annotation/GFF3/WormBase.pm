@@ -184,55 +184,83 @@ sub to_fasta_seq {
 sub split_file {
 	my $gff3_file  = shift;
 	my $fasta_file = shift;
-	my $root       = shift;
+	my $ds_root    = shift;
 
 	my ($genes, $seq, $seq_id) = 
 	get_genes($gff3_file, $fasta_file, 'exon', 500);
 
+        my $ds;
+        if ($ds_root) {
+                $ds = Datastore::MD5->new("root" => $ds_root, "depth" => 2);
+	}
+
 	my $i = 0;
-	foreach my $g (@{$genes}){
-		my $g_id = $g->{id};
+        foreach my $g (@{$genes}){
+                my $g_id = $g->{id};
 
-		my $file = $root.'/'.$seq_id.'_'.$g_id.'.gff3';
-		my $fh = new FileHandle();
-		   $fh->open(">$file");
+                my $file_base = "${seq_id}_${g_id}";
+                my $gff3_file;
+                if ($ds_root) {
+                        $ds->mkdir($file_base) || die "Unable to ds->mkdir() for $file_base";
+                        $gff3_file = sprintf("%s/%s.%s",
+                                        $ds->id_to_dir($file_base),
+                                        $file_base,
+                                        'gff3');
+                }
+                else {
+                        $gff3_file = sprintf("%s/%s.%s",
+                                        q{},
+                                        $file_base,
+                                        'gff3');
+                }
 
-		print $fh "##gff-version   3\n";
+                my $fh = new FileHandle();
+                   $fh->open(">$gff3_file");
 
-		my $seg_id;
-		if ($g->{f}->strand() == 1){
-			$seg_id = $seq_id.':'.$g->{src_s}.':'.$g->{src_e};
-		}
-		else {
-			$seg_id = $seq_id.':'.$g->{src_e}.':'.$g->{src_s};
-		}
+                print $fh "##gff-version   3\n";
+                my $seg_id;
+                if ($g->{f}->strand() == 1){
+                        $seg_id = $seq_id.':'.$g->{src_s}.':'.$g->{src_e};
+                }
+                else {
+                        $seg_id = $seq_id.':'.$g->{src_e}.':'.$g->{src_s};
+                }
 
-		print $fh to_gff3_contig($seg_id, length($g->{seq}))."\n";
+                print $fh to_gff3_contig($seg_id, length($g->{seq}))."\n";
 
-		print $fh to_gff3_gene($seg_id, $g)."\n";
-		foreach my $t (@{$g->{mRNAs}}){
-			print $fh to_gff3_mRNA($seg_id, $g, $t)."\n";
-			foreach my $e (@{$t->{exons}}){
-				print $fh to_gff3_exon($seg_id, $t, $e)."\n";
-			}
+                print $fh to_gff3_gene($seg_id, $g)."\n";
+                foreach my $t (@{$g->{transcripts}}){
+                        print $fh to_gff3_transcript($seg_id, $g, $t)."\n";
+                        foreach my $e (@{$t->{exons}}){
+                                print $fh to_gff3_exon($seg_id, $t, $e)."\n";
+                        }
                         foreach my $c (@{$t->{cdss}}){
                                 print $fh to_gff3_cds($seg_id, $t, $c)."\n";
                         }
 
-		}
+                }
+                $fh->close();
 
-		#print $fh "##FASTA\n";
-		#print $fh to_gff3_seq($seg_id, $g->{seq})."\n";
+                my $fasta_file;
+                if ($ds_root) {
+                        $fasta_file = sprintf("%s/%s.%s",
+                                              $ds->id_to_dir($file_base),
+                                              $file_base,
+                                              'fasta');
+                }
+                else {
+                        $fasta_file = sprintf("%s/%s.%s",
+                                              q{},
+                                              $file_base,
+                                              'fasta');
+                }
 
-		my $fasta_file = $root.'/'.$seq_id.'_'.$g_id.'.fasta';
-		$fh->close();
-		$fh->open(">$fasta_file");
-		print $fh to_fasta_seq($seg_id, $g->{seq});	
-		$fh->close();	
+                $fh->open(">$fasta_file");
+                print $fh to_fasta_seq($seg_id, $g->{seq});
+                $fh->close();
 
-		#die if $i > 10;
-		$i++;
-	}
+                $i++;
+        }
 
 }
 #-------------------------------------------------------------------------------
@@ -768,6 +796,11 @@ sub get_genes {
 		for (my $i = 0; $ i < @{$mRNAs->{$p_id}}; $i++) {
 			my $f  = $mRNAs->{$p_id}->[$i]->{f};
 			my $id = $mRNAs->{$p_id}->[$i]->{id};
+
+			if (! defined $cdss->{$id}) {
+				print STDERR "Warning: Gene $p_id has not CDS annotated!\n";
+				next;
+			}
 
 			$mRNAs->{$p_id}->[$i]->{cdss}  = $cdss->{$id};
 			$mRNAs->{$p_id}->[$i]->{utr_3} = $utr_3->{$id};

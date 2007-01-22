@@ -1,0 +1,104 @@
+#!/usr/bin/perl 
+use strict;
+use warnings;
+use Getopt::Long;
+
+#----------------------------------------------------------------------------- 
+#----------------------------------- MAIN ------------------------------------ 
+#----------------------------------------------------------------------------- 
+my $usage = "
+
+Synopsis:
+
+wrap_splice_distance -type [exonic|nucleo] master_datastore1 master_datstore2 id_map
+
+Description:
+
+Pass this script two master_datastore_indexes and an id_map.  It will
+pass correspoding genes to splice_distance_exonic.  If both datastores use
+the same ID scheme then the id_map file can be omitted.  The id_map files
+should be of the format 'id_from_ds1\\tid_from_ds2'.
+
+Options:
+
+    -type  Do exonic or nucleotide distance.  Default is exonic.
+    -out   Output file
+
+";
+
+my ($type, $out);
+my $opt_success = GetOptions('type=s' => \$type,
+			     'out=s'  => \$out);
+my ($md1_file, $md2_file, $id_map) = @ARGV;
+die $usage unless ($md1_file && $md2_file && $type); 
+
+my $md1 = parse_datastore($md1_file);
+my $md2 = parse_datastore($md2_file);
+my $map = parse_id_map($id_map) if $id_map;
+
+$out ||= "splice_distance_$type.out";
+
+#open (my $OUT, '>', $out) or die "Can't open $out for writing\n$!\n";
+
+ GENE:
+    for my $id1 (keys %{$md1}) {
+
+	    my $id2;
+
+	    if (defined $map && ! exists $map->{$id1}) {
+		    print STDERR "No matching gene for $id1\n";
+		    next GENE;
+	    }
+	    elsif (defined $map && exists $map->{$id1}) {
+		    $id2 = $map->{$id1};
+	    }
+	    elsif (! defined $map) {
+		    $id2 = $id1;
+	    }
+	    else {
+		    die "Major malfunction!  Can't assign ID2\n";
+	    }
+
+	    my $chaos_1 = $md1->{$id1};
+	    my $chaos_2 = $md2->{$id2};
+
+	    if (! -e $chaos_1 && ! -e $chaos_2) {
+		    print STDERR "Missing file names:\n$chaos_1\n$chaos_2\n";
+		    next GENE;
+	    }
+	    
+	    $type =~ /^n/
+		? print  `/home/bmoore/CGL/trunk/script/splice_distance_nucleo_chaos $chaos_1 $chaos_2`
+		: print  `/home/bmoore/CGL/trunk/script/splice_distance_exonic_chaos $chaos_1 $chaos_2`;
+
+    }
+
+#----------------------------------------------------------------------------- 
+#-------------------------------- SUBROUTINES -------------------------------- 
+#----------------------------------------------------------------------------- 
+
+sub parse_datastore {
+	my $file = shift;
+
+	open (my $IN, '<', $file) or die "Can't open $file\n";
+
+	my %md;
+	while (<$IN>) {
+		my ($valid, $id, , $synonyms, $path) = split;
+		$md{$id} = $path;
+	}
+	return \%md;
+}
+
+sub parse_id_map {
+	my $file = shift;
+
+	open (my $IN, '<', $file) or die "Can't open $file\n";
+
+	my %map;
+	while (<$IN>) {
+		my ($id1, $id2) = split;
+		$map{$id1} = $id2;
+	}
+	return \%map;
+}

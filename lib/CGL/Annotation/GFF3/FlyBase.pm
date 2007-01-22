@@ -161,7 +161,7 @@ sub to_gff3_seq {
 sub split_file {
         my $gff3_file  = shift;
         my $fasta_file = shift;
-        my $ds_root       = shift;
+        my $ds_root    = shift;
 
         my ($genes, $seq, $seq_id) =
         get_genes($gff3_file, $fasta_file, 'exon', 500);
@@ -1136,7 +1136,7 @@ sub sort_exons {
 		sort {$b->{f}->start <=> $a->{f}->start} @{$t->{exons}}; 
 	}
 	else {
-		die "unknown strand in GFF3::Maker::sort_exons!\n";
+		die "unknown strand in GFF3::FlyBase::sort_exons!\n";
 	}
 	return \@sorted;
 }

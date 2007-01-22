@@ -1,25 +1,26 @@
 #!/usr/bin/perl -w 
 use strict;
 
-# pod docs at end.
-
-BEGIN {
-	$ENV{'CGL_CHATTER'} = 1;
-}
-
-$| = 1;
-use lib $ENV{CGL_GFF_LIB};
 use FileHandle;
-use CGL::Annotation;
-use CGL::Annotation::GFF3::FlyBase;
-use CGL::Annotation::Iterator;
+use Getopt::Long;
 use Shadower;
 use PostData;
 
 my $usage = "
 
-splice_distance_exonic <gff3_file 1> <fasta_file 1> <gff3_file 2> <fasta_file 2>  
+Synopsis:
 
+splice_distance_nucleo --gff_i gff3_file --fasta_i fasta_file \
+                       --gff_j gff3_file --fasta_j fasta_file
+
+splice_distance_nucleo --chaos_i chaos_file --chaos_j chaos_file 
+
+Description:
+
+This script will take two gff3/fasta file pairs or two chaos XML files and 
+will calculate the splice distance between the two genes represented by those
+files.  The scoring algorithm will use all nucleotides to calculate the
+distance.
 
 \n"; 
 
@@ -27,13 +28,40 @@ splice_distance_exonic <gff3_file 1> <fasta_file 1> <gff3_file 2> <fasta_file 2>
 #----------------------------------- MAIN ------------------------------------
 #-----------------------------------------------------------------------------
 
-die $usage unless $ARGV[3];
+my ($gff_file_i, $fasta_file_i, $gff_file_j, 
+    $fasta_file_j, $chaos_file_i, $chaos_file_j);
 
-my ($gff_file_i, $fasta_file_i, $gff_file_j, $fasta_file_j) = @ARGV;
+my $opt_success = GetOptions('gff_i=s'   => \$gff_file_i,
+			     'gff_j=s'   => \$gff_file_j,
+			     'fasta_i=s' => \$fasta_file_i,
+			     'fasta_j=s' => \$fasta_file_j,
+			     'chaos_i=s' => \$chaos_file_i,
+			     'chaos_j=s' => \$chaos_file_j,
+			     );
 
-my $cgl_i = new CGL::Annotation::GFF3::FlyBase($gff_file_i, $fasta_file_i);
+my ($cgl_i, $cgl_j);
 
-my $cgl_j = new CGL::Annotation::GFF3::FlyBase($gff_file_j, $fasta_file_j);
+if ($gff_file_i && $fasta_file_i &&
+    $gff_file_j && $fasta_file_j) { 
+	unshift @INC, $ENV{CGL_GFF_LIB};
+	require CGL::Annotation;
+	require CGL::Annotation::GFF3::FlyBase;
+	require CGL::Annotation::Iterator;
+
+	$cgl_i = new CGL::Annotation::GFF3::FlyBase($gff_file_i, $fasta_file_i);
+	$cgl_j = new CGL::Annotation::GFF3::FlyBase($gff_file_j, $fasta_file_j);
+}
+elsif ($chaos_file_i && $chaos_file_j) {
+	unshift @INC, '/home/bmoore/CGL/trunk/lib/';
+	require CGL::Annotation;
+	require CGL::Annotation::Iterator;
+
+	$cgl_i = CGL::Annotation->new($chaos_file_i);
+	$cgl_j = CGL::Annotation->new($chaos_file_j);
+}
+else {
+	die $usage;
+}
 
 my $g_i = $cgl_i->gene(0);
 my $g_j = $cgl_j->gene(0);
@@ -142,12 +170,12 @@ sub get_offsets {
 
 
         if (try_it($seq_i, $seq_j)){
-                print "SEQ IS CHANGED!\n";
+                print STDERR "SEQ IS CHANGED! (I, J)\n";
                 exit(0);
         }
 
         if (try_it($seq_j, $seq_i)){
-                print "SEQ IS CHANGED!\n";
+                print STDERR "SEQ IS CHANGED! (J, I)\n";
                 exit(0);
         }       
 
@@ -156,41 +184,30 @@ sub get_offsets {
                 $i = 0;
                 $j = 0;
 		$ref_seq = $seq_i;
-		print "AAAAAAAA\n";
-		die;
         }
         elsif ($seq_i =~ /$seq_j/){
                 $i = 0;
                 $j = index($seq_i, $seq_j);
 		$ref_seq = $seq_i;
-		print "BBBBBBBBBB\n";
-		die;
         }
         elsif ($seq_j =~ /$seq_i/){
                 # i is substring of j
                 $i = index($seq_j, $seq_i);
                 $j = 0;
 		$ref_seq = $seq_j;
-		print "CCCCCCCCCC\n";
-		die;
         }
         elsif (perfect_overlap($seq_i, $seq_j)){
                 $i = 0;
                 $j = $LOCATION;
 		$ref_seq = substr($seq_i, 0, $j).$seq_j;
-		print "DDDDDDDDD j:$j\n";
-		die;
         }
         elsif (perfect_overlap($seq_j, $seq_i)){
                 $i = $LOCATION;
                 $j = 0;
 		$ref_seq = substr($seq_j, 0, $i).$seq_i;
-		print "EEEEEEEEE\n";
-		die;
         }
         else {
-                print "SEQ IS CHANGED!\n";
-                exit(0);
+		die "LOGIC ERROR IN GET_OFFSETS!\n";
         }
 
         return ($i, $j, $ref_seq);
@@ -297,9 +314,9 @@ sub splice_distance {
 
 	my ($distance, $size_diff)  = get_distance($data_i, $data_j);
 
-	$distance = 0 if $distance < 0.00001;
+	$distance = sprintf("%.5f", $distance);
 
-	print "\t"."($size_diff) ".substr($distance, 0, 6);
+	print "\t($size_diff) $distance";
 }
 #-----------------------------------------------------------------------------
 sub add_offsets {
