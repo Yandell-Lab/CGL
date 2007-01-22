@@ -3,58 +3,71 @@ use strict;
 
 # pod docs at end.
 
-BEGIN {
-	$ENV{'CGL_CHATTER'} = 1;
-}
-
-$| = 1;
-use lib $ENV{CGL_GFF_LIB};
+#use lib $ENV{CGL_GFF_LIB};
 use FileHandle;
-use CGL::Annotation;
-use CGL::Annotation::GFF3::FlyBase;
-use CGL::Annotation::GFF3::WormBase;
-use CGL::Annotation::Iterator;
 use Getopt::Long;
-use PostData;
 
 my $usage = "
 
-splice_complexity -format [FlyBase|WormBase] <gff3_file> <fasta_file>  
+Synopsis:
+splice_complexity_exonic --format [FlyBase|WormBase] --gff gff3_file \
+                                                     --fasta fasta_file
 
-\n"; 
+splice_complexity_exonic --chaos chaos_file
+
+Description:
+
+This script will take a gff3/fasta file pair or a chaos XML file and
+will calculate the splice complexity of all genes represented in the input
+file(s).  The scoring algorithm will only use exon juctions to calculate the
+complexity.
+
+";
 
 #-----------------------------------------------------------------------------
 #----------------------------------- MAIN ------------------------------------
 #-----------------------------------------------------------------------------
 
-my $format;
-my $opt_success = GetOptions('format=s' => \$format);
+my ($gff_file, $fasta_file, $chaos_file, $format);
 
-my ($gff_file, $fasta_file, @ids) = @ARGV;
+my $opt_success = GetOptions('gff=s'   => \$gff_file,
+                             'fasta=s' => \$fasta_file,
+                             'chaos=s' => \$chaos_file,
+			     'format=s'  => \$format,
+                             );
 
-die $usage unless ($gff_file && $fasta_file && $format);
-
-my $ids_ref;
-scalar @ids > 0 
-    ? $ids_ref = \@ids 
-    : undef($ids_ref);
+$format ||= 'FlyBase';
 
 my $cgl;
-if ($format =~ /^fly/i) {
-	$cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file, $ids_ref);
+
+if ($gff_file && $fasta_file) {
+        unshift @INC, $ENV{CGL_GFF_LIB};
+        require CGL::Annotation;
+        require CGL::Annotation::GFF3::FlyBase;
+        require CGL::Annotation::GFF3::WormBase;
+        require CGL::Annotation::Iterator;
+
+        $format =~ /FlyBase/i 
+	    ? $cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file)
+	    : $format =~ /WormBase/i
+	    ? $cgl = new CGL::Annotation::GFF3::WormBase($gff_file, $fasta_file)
+	    : die $usage;
 }
-elsif ($format =~ /^worm/i) {
-	$cgl = new CGL::Annotation::GFF3::WormBase($gff_file, $fasta_file, $ids_ref);
+elsif ($chaos_file) {
+        require CGL::Annotation;
+        require CGL::Annotation::Iterator;
+
+        $cgl = CGL::Annotation->new($chaos_file);
 }
 else {
-	die "\n\nIncorrect format given.  Must be either FlyBase or WormBase\n\n$usage"
+        die $usage;
 }
 
 my $iterator = new CGL::Annotation::Iterator($cgl);
 
 my $c = $cgl->contig(0);
 
-print " gene id\tnum_t\tnum_t_p\tesc_m\tesc_c\tesc_u\tesc_5\tesc_3\tisc_m\tisc_c\tisc_5\tisc_3\n";
+#print " gene id\tnum_t\tnum_t_p\tesc_m\tesc_c\tesc_u\tesc_5\tesc_3\tisc_m\tisc_c\tisc_5\tisc_3\n";
 
 while (my $g = $iterator->next_by_gene()){
 
@@ -226,10 +239,11 @@ sub splice_complexity {
 	}
 
 
-	my $sc = 1 - $total/$num_pairs;
-	$sc = 0 if $sc < 0.0001;
+	my $sc = 1 - ($total/$num_pairs);
 
-	print "\t($total_length) ".substr($sc, 0, 6);
+	$sc = sprintf("%.5f", $sc);
+
+	print "\t($total_length) $sc";
 }
 #-----------------------------------------------------------------------------
 sub get_acc {

@@ -1,38 +1,64 @@
 #!/usr/bin/perl -w 
 use strict;
 
-# pod docs at end.
-
-BEGIN {
-	$ENV{'CGL_CHATTER'} = 1;
-}
-
-$| = 1;
-use lib $ENV{CGL_GFF_LIB};
 use FileHandle;
-use CGL::Annotation;
-use CGL::Annotation::GFF3::FlyBase;
-use CGL::Annotation::Iterator;
 use PostData;
+use Getopt::Long;
 
 my $usage = "
 
-splice_distance_exonic <gff3_file 1> <fasta_file 1> <gff3_file 2> <fasta_file 2>  
+Synopsis:
+splice_distance_exonic --gff_i gff3_file --fasta_i fasta_file \
+                       --gff_j gff3_file --fasta_j fasta_file
 
+splice_distance_exonic --chaos_i chaos_file --chaos_j chaos_file
 
-\n"; 
+Description:
+
+This script will take two gff3/fasta file pairs or two chaos XML files and
+will calculate the splice distance between the two genes represented by those
+files.  The scoring algorithm will only use exon juctions to calculate the
+distance.
+
+\n";
 
 #-----------------------------------------------------------------------------
 #----------------------------------- MAIN ------------------------------------
 #-----------------------------------------------------------------------------
 
-die $usage unless $ARGV[3];
+my ($gff_file_i, $fasta_file_i, $gff_file_j,
+    $fasta_file_j, $chaos_file_i, $chaos_file_j);
 
-my ($gff_file_i, $fasta_file_i, $gff_file_j, $fasta_file_j) = @ARGV;
+my $opt_success = GetOptions('gff_i=s'   => \$gff_file_i,
+                             'gff_j=s'   => \$gff_file_j,
+                             'fasta_i=s' => \$fasta_file_i,
+                             'fasta_j=s' => \$fasta_file_j,
+                             'chaos_i=s' => \$chaos_file_i,
+                             'chaos_j=s' => \$chaos_file_j,
+                             );
 
-my $cgl_i = new CGL::Annotation::GFF3::FlyBase($gff_file_i, $fasta_file_i);
+my ($cgl_i, $cgl_j);
 
-my $cgl_j = new CGL::Annotation::GFF3::FlyBase($gff_file_j, $fasta_file_j);
+if ($gff_file_i && $fasta_file_i &&
+    $gff_file_j && $fasta_file_j) {
+        unshift @INC, $ENV{CGL_GFF_LIB};
+        require CGL::Annotation;
+        require CGL::Annotation::GFF3::FlyBase;
+        require CGL::Annotation::Iterator;
+
+        $cgl_i = new CGL::Annotation::GFF3::FlyBase($gff_file_i, $fasta_file_i);
+        $cgl_j = new CGL::Annotation::GFF3::FlyBase($gff_file_j, $fasta_file_j);
+}
+elsif ($chaos_file_i && $chaos_file_j) {
+        require CGL::Annotation;
+        require CGL::Annotation::Iterator;
+
+        $cgl_i = CGL::Annotation->new($chaos_file_i);
+        $cgl_j = CGL::Annotation->new($chaos_file_j);
+}
+else {
+        die $usage;
+}
 
 my $g_i = $cgl_i->gene(0);
 my $g_j = $cgl_j->gene(0);
@@ -40,7 +66,7 @@ my $g_j = $cgl_j->gene(0);
 my $c_i = $cgl_i->contig(0);
 my $c_j = $cgl_j->contig(0);
 
-print " i gene id\tnum_t\tj gene id\tnum_t\tesd_m\tesd_c\tesd_u\tesd_5\tesd_3\tisd_m\tisd_c\tisd_5\tisd_3\n";
+#print " i gene id\tnum_t\tj gene id\tnum_t\tesd_m\tesd_c\tesd_u\tesd_5\tesd_3\tisd_m\tisd_c\tisd_5\tisd_3\n";
 
 my $PERFECT = 0;
 my $MIN_OVERLAP = 100;
@@ -103,12 +129,12 @@ sub get_offsets {
 
 
         if (try_it($seq_i, $seq_j)){
-                print "SEQ IS CHANGED!\n";
+                print STDERR "SEQ IS CHANGED! (I, J)\n";
                 exit(0);
         }
 
         if (try_it($seq_j, $seq_i)){
-                print "SEQ IS CHANGED!\n";
+                print STDERR "SEQ IS CHANGED! (J, I)\n";
                 exit(0);
         }
 
@@ -285,9 +311,9 @@ sub splice_distance {
 
 	my ($distance, $size_diff)  = get_distance($data_i, $data_j);
 
-	$distance = 0 if $distance < 0.00001;
+        $distance = sprintf("%.5f", $distance);
 
-	print "\t"."($size_diff) ".substr($distance, 0, 6);
+        print "\t($size_diff) $distance";
 }
 #-----------------------------------------------------------------------------
 sub add_offsets {

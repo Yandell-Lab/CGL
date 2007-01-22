@@ -1,0 +1,117 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use lib "$ENV{CGL_GFF_LIB}";
+
+use CGL::Annotation;
+use CGL::Annotation::GFF3::FlyBase;
+use CGL::Annotation::Iterator;
+use Getopt::Long;
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+my $usage = "
+
+Synopsis:
+
+cgl2fasta [options] <master_datastore.index>
+cgl2fasta --trans <master_datastore.index>
+
+This script takes input from a datastore index and outputs a fasta file of 
+sequences.  The options control what fasta sequence to produce.
+
+
+Options:                                                                       
+  --trans  transcript sequence
+  --prot   protien sequence
+  --utr3   3' UTR sequence
+  --utr5   5' UTR sequence
+
+";
+
+my ($trans, $prot, $utr3, $utr5);
+
+GetOptions('trans' => \$trans,
+	   'prot'  => \$prot,
+	   'utr3'  => \$utr3,
+	   'utr5'  => \$utr5);
+
+my $md_file = shift;
+die $usage unless $md_file;
+
+my $md = parse_datastore($md_file);
+
+ GENE:
+    for my $id (keys %{$md}) {
+
+            unless (exists $md->{$id}) {
+                    print STDERR "Missing path for ID: $id\n";
+                    next GENE;
+            }
+
+            my $gff_file = $md->{$id} ? $md->{$id} : undef;
+	    my $fasta_file;
+	    ($fasta_file = $gff_file) =~ s/.gff3/.fasta/; 
+	    
+	    my $cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file);
+	    my $iterator = new CGL::Annotation::Iterator($cgl);
+	    while (my $g = $iterator->next_by_gene()){
+		    my $i = 0;
+		  TRANS:
+		    while (my $t = $g->transcript($i++)) {
+			    my $p = $t->translation(0);
+			    my $sequence;
+			    my $header;
+			    if ($trans) {
+				    $header   = $t->id;
+				    $sequence = $t->residues;
+			    }
+			    elsif ($prot) {
+				    next TRANS if ! $p;
+				    $header   = $p->id; 
+				    $sequence = $p->residues; 
+			    }
+			    elsif ($utr3) {
+				    next TRANS if ! $p;
+				    my $p_end_on_t = $p->metaPos($t, $p->length);
+				    my $three_length = $t->length - $p_end_on_t - 3;
+				    $header   = $t->id . " 3-prime utr";
+				    $sequence = substr($t->residues, $p_end_on_t, $three_length);
+				    next TRANS if ! $sequence;
+			    }
+			    elsif ($utr5) {
+				    next TRANS if ! $p;
+				    my $p_beg_on_t = $p->metaPos($t, 0);
+				    my $five_length  = $p_beg_on_t;
+				    $header   = $t->id . "5-prime utr";
+				    $sequence = substr($t->residues, 0, $five_length);
+				    next TRANS if ! $sequence;
+			    }
+			    print ">$header\n$sequence\n";
+		    }
+	    }
+    }
+
+#------------------------------------------------------------------------------
+#--------------------------------- Subroutines --------------------------------
+#------------------------------------------------------------------------------
+sub parse_datastore {
+        my $file = shift;
+
+        open (my $IN, '<', $file) or die "Can't open $file\n";
+
+        my %md;
+        while (<$IN>) {
+                chomp;
+                my @fields = split;
+                my ($id, $path) = ($fields[0], $fields[1]);
+                die "Incorrect format specified.  Can't parse datastore\n" 
+                    unless (defined $id && defined $path);
+
+                $md{$id} = $path;
+        }
+        return \%md;
+}
+#------------------------------------------------------------------------------
