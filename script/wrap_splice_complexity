@@ -67,8 +67,10 @@ my $type_format = "${type}_${format}";
 				 exonic_chaos  => "splice_complexity_exonic --chaos $chaos_path");
 
 	    my $command_line = $command_lines{$type_format};
+	    print STDERR "$command_line\n";
 
 	    print `$command_line`;
+	    print STDERR "$id died with errors: $?\n" if $?;
 
     }
 
