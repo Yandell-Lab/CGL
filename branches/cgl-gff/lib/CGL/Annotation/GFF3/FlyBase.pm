@@ -916,11 +916,19 @@ sub get_genes {
                 }
         }
 	print STDERR "...finished\n";
-	print STDERR " loading seqs\n";
-	load_seqs(\@genes, $seq, $flank);
+
+	print STDERR "validating genes\n";
+	my @valid_genes;
+	for my $gene (@genes) {
+		push @valid_genes, $gene if validate_gene($gene);
+	}
 	print STDERR "...finished\n";
 
-        return (\@genes, $seq, $c_id);	
+	print STDERR " loading seqs\n";
+	load_seqs(\@valid_genes, $seq, $flank);
+	print STDERR "...finished\n";
+
+        return (\@valid_genes, $seq, $c_id);	
 	
 }
 #-------------------------------------------------------------------------------
@@ -1157,6 +1165,69 @@ sub sort_cdss {
                 die "unknown strand in GFF3::Maker::sort_cdss!\n";
         }
         return \@sorted;
+}
+#-------------------------------------------------------------------------------
+sub validate_gene {
+	my $gene = shift;
+	       
+	my @strands;
+
+	#Check strand and fail if we don't get a valid strand value.
+	my $g_strand = $gene->{f}{_location}{_strand};
+	if ($g_strand != 1 && $g_strand != -1) {
+		warn "Invalid strand in gene caught at " .
+		    "FlyBase::validate_gene\n";
+		return undef;
+	}
+
+	#Push the strand onto an array so that we can check all strands for 
+	#internal consistancy at the end.
+	push @strands, $g_strand;
+
+	for my $transcript (@{$gene->{transcripts}}) {
+		#Check strand and fail if we don't get a valid strand value.
+		my $t_strand = $transcript->{f}{_location}{_strand};
+		if ($t_strand != 1 && $t_strand != -1) {
+			warn "Invalid strand in transcript caught " .
+			    "at FlyBase::validate_gene\n";
+			return undef;
+		}
+		#Push the strand onto an array so that we can check 
+		#all strands for internal consistancy at the end.
+		push @strands, $t_strand;
+		
+		for my $cds (@{$transcript->{cdss}}) {
+			#Check strand and fail if we don't get a valid strand value.
+			my $c_strand = $transcript->{f}{_location}{_strand};
+			if ($c_strand != 1 && $c_strand != -1) {
+				warn "Invalid strand in cds caught " . 
+				    "at FlyBase::validate_gene\n";
+				return undef;
+			}
+			#Push the strand onto an array so that we can check 
+			#all strands for internal consistancy at the end.
+			push @strands, $c_strand;
+		}
+
+		for my $exon (@{$transcript->{exons}}) {
+			#Check strand and fail if we don't get a valid strand value.
+			my $e_strand = $transcript->{f}{_location}{_strand};
+			if ($e_strand != 1 && $e_strand != -1) {
+				warn "Invalid strand in exon caught " . 
+				    "at FlyBase::validate_gene\n";
+				return undef;
+			}
+			#Push the strand onto an array so that we can check 
+			#all strands for internal consistancy at the end.
+			push @strands, $e_strand;
+		}
+	}
+	#Check that all strands are the same, and fail if they are not.
+	my $first = shift @strands;
+	retrun udef if grep {$first != $_} @strands;
+
+	#No failures, so return success.
+	return 1;
 }
 #-------------------------------------------------------------------------------
 sub AUTOLOAD {

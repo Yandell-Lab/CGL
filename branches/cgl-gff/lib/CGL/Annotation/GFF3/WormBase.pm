@@ -73,10 +73,14 @@ sub wanted {
 	my $s = shift;
         my $x = shift;
 
-        return 1 if $x eq 'gene' && $s eq 'Coding_transcript';
-        return 1 if $x eq 'mRNA' && $s eq 'Coding_transcript';
-        return 1 if $x eq 'exon' && $s eq 'Coding_transcript';
-        return 1 if $x eq 'CDS'  && $s eq 'Coding_transcript';
+	return 1 if 
+	    $s eq 'Coding_transcript' &&
+	    grep {$x eq $_} qw(gene mRNA exon CDS five_prime_UTR three_prime_UTR);
+
+#        return 1 if $x eq 'gene' && $s eq 'Coding_transcript';
+#        return 1 if $x eq 'mRNA' && $s eq 'Coding_transcript';
+#        return 1 if $x eq 'exon' && $s eq 'Coding_transcript';
+#        return 1 if $x eq 'CDS'  && $s eq 'Coding_transcript';
         return 0;
 }
 #-------------------------------------------------------------------------------
@@ -229,8 +233,8 @@ sub split_file {
                 print $fh to_gff3_contig($seg_id, length($g->{seq}))."\n";
 
                 print $fh to_gff3_gene($seg_id, $g)."\n";
-                foreach my $t (@{$g->{transcripts}}){
-                        print $fh to_gff3_transcript($seg_id, $g, $t)."\n";
+                foreach my $t (@{$g->{mRNAs}}){
+                        print $fh to_gff3_mRNA($seg_id, $g, $t)."\n";
                         foreach my $e (@{$t->{exons}}){
                                 print $fh to_gff3_exon($seg_id, $t, $e)."\n";
                         }
@@ -385,7 +389,9 @@ sub load_transcript {
 	load_introns($t, $transcr, $seq);
 
 
-	my $status = $t->{f}->get_Annotations('prediction_status')->value();
+	my $status = $t->{f}->get_Annotations('prediction_status')  ?
+	    $t->{f}->get_Annotations('prediction_status')->value()  :
+	    undef;
 
 	$transcr->{status} = $status;
 
@@ -798,7 +804,7 @@ sub get_genes {
 			my $id = $mRNAs->{$p_id}->[$i]->{id};
 
 			if (! defined $cdss->{$id}) {
-				print STDERR "Warning: Gene $p_id has not CDS annotated!\n";
+				print STDERR "Warning: Gene $p_id has no CDS annotated!\n";
 				next;
 			}
 
