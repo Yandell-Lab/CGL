@@ -1,6 +1,6 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 use strict;
-
+use PostData;
 $| = 1;
 
 #-----------------------------------------------------------------------------
@@ -127,6 +127,11 @@ sub mRNA {
 
 	my $parent = $lookup->{transcr_to_gene}->{$id};
 
+	if (!defined($parent)){
+		my @fields = split(/\./, $id);
+		$parent = $lookup->{transcr_to_gene}->{$fields[0].'.'.$fields[1]};
+	}
+
         my @line;
         push(@line, $fields->[0]);
         push(@line, 'Coding_transcript');
@@ -159,6 +164,11 @@ sub cds {
 
         my $parent = $id;
 	my $easy = $lookup->{transcr_to_gene}->{$id};
+        if (!defined($easy)){
+                my @fields = split(/\./, $id);
+                $easy = $lookup->{transcr_to_gene}->{$fields[0].'.'.$fields[1]};
+        }
+
 	my $c_id = id();
 
         my @line;
@@ -173,7 +183,7 @@ sub cds {
         push(@line, "ID=CDS:$id\.$c_id;Name=CDS:$id\.$c_id;Parent=Transcript:$parent;Easy=$easy");
 
 
-        if (defined($parent) && defined($lookup->{transcr_to_gene}->{$id})){
+        if (defined($parent) && defined($easy)){
                 return join("\t", @line);
         }
         else {
@@ -200,6 +210,10 @@ sub exon {
         die "bad line-no id:".$fields->[8]."\n" unless defined($id);
 
         my $parent = $lookup->{transcr_to_gene}->{$id};
+        if (!defined($parent)){
+                my @fields = split(/\./, $id);
+                $parent = $lookup->{transcr_to_gene}->{$fields[0].'.'.$fields[1]};
+        }
 
 	my $e_id = id();
 
@@ -235,6 +249,11 @@ sub utr_5 {
 
         my $parent = $id;
 	my $easy = $lookup->{transcr_to_gene}->{$id};
+        if (!defined($easy)){
+                my @fields = split(/\./, $id);
+                $easy = $lookup->{transcr_to_gene}->{$fields[0].'.'.$fields[1]};
+        }
+
 	my $u_id = id();
 
         my @line;
@@ -249,7 +268,7 @@ sub utr_5 {
         push(@line, "ID=five_prime_UTR:$id\.$u_id;Name=$id\.$u_id;Parent=Transcript:$parent;Easy=$easy");
 
 
-        if (defined($parent) && defined($lookup->{transcr_to_gene}->{$id})){
+        if (defined($parent) && defined($easy)){
                 return join("\t", @line);
         }
         else {
@@ -269,6 +288,10 @@ sub utr_3 {
 
         my $parent = $id;
 	my $easy = $lookup->{transcr_to_gene}->{$id};
+        if (!defined($easy)){
+                my @fields = split(/\./, $id);
+                $easy = $lookup->{transcr_to_gene}->{$fields[0].'.'.$fields[1]};
+        }
 
 	my $u_id   = id();
 
@@ -284,7 +307,7 @@ sub utr_3 {
         push(@line, "ID=three_prime_utr:$id\.$u_id;Name=$id\.$u_id;Parent=Transcript:$parent;Easy=$easy");
 
 
-        if (defined($parent) && defined($lookup->{transcr_to_gene}->{$id})){
+        if (defined($parent) && defined($easy)){
                 return join("\t", @line);
         }
         else {
