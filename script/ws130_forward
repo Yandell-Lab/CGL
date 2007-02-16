@@ -22,6 +22,7 @@ open (FH, $file);
 print "##gff-version 3\n";
 print "##Index-subfeatures 0\n";
 
+my %BAD;
 my %hash;
 while (my $line = <FH>){
 	chomp($line);
@@ -29,9 +30,13 @@ while (my $line = <FH>){
 	if ($fields[1] eq 'gene'){
 		my ($id) = $fields[8] =~ /Gene\s+\"(\S+)\"/;
 		next unless defined($id_lookup->{gene_to_transcr}->{$id});
+		my $bad = 0;
+ 		foreach my $t_id (@{$id_lookup->{gene_to_transcr}->{$id}}){
+			$num_transcripts++;
+		}
 
 		my $new = gene(\@fields, $id_lookup);
-		print $new."\n" if $new;
+		print $new."\n" if $new && !$bad;
 	}
 	elsif ($fields[1] eq 'Coding_transcript' && $fields[2] eq 'protein_coding_primary_transcript'){
                 my ($id) = $fields[8] =~ /Transcript\s+\"(\S+)\"/;
@@ -60,7 +65,6 @@ while (my $line = <FH>){
         elsif ($fields[1] eq 'five_prime_exon_noncoding_region' && $fields[2] eq 'exon'){
                 my ($id) = $fields[8] =~ /Transcript\s+\"(\S+)\"/;
                 next unless defined($id_lookup->{transcr_to_gene}->{$id});
-
                 my $new = utr_5(\@fields, $id_lookup);
                 print $new."\n" if $new;
                 #print $line."\n";
@@ -68,7 +72,6 @@ while (my $line = <FH>){
         elsif ($fields[1] eq 'three_prime_exon_noncoding_region' && $fields[2] eq 'exon'){
                 my ($id) = $fields[8] =~ /Transcript\s+\"(\S+)\"/;
                 next unless defined($id_lookup->{transcr_to_gene}->{$id});
-
                 my $new = utr_3(\@fields, $id_lookup);
                 print $new."\n" if $new;
                 #print $line."\n";
@@ -76,7 +79,6 @@ while (my $line = <FH>){
         elsif ($fields[1] eq 'five_prime_noncoding_exon' && $fields[2] eq 'exon'){
                 my ($id) = $fields[8] =~ /Transcript\s+\"(\S+)\"/;
                 next unless defined($id_lookup->{transcr_to_gene}->{$id});
-
                 my $new = utr_3(\@fields, $id_lookup);
                 print $new."\n" if $new;
                 #print $line."\n";
@@ -85,7 +87,6 @@ while (my $line = <FH>){
         elsif ($fields[1] eq 'three_prime_noncoding_exon' && $fields[2] eq 'exon'){
                 my ($id) = $fields[8] =~ /Transcript\s+\"(\S+)\"/;
                 next unless defined($id_lookup->{transcr_to_gene}->{$id});
-
                 my $new = utr_3(\@fields, $id_lookup);
                 print $new."\n" if $new;
                 #print $line."\n";
@@ -98,6 +99,37 @@ close(FH);
 
 #-----------------------------------------------------------------------------
 #------------------------------- SUBROUTINES ---------------------------------
+#-----------------------------------------------------------------------------
+sub index_cdss {
+        open(FH, $file);
+
+        my %index;
+        while (my $line = <FH>){
+                next unless $line =~ /curated/;
+                my @fields = split(/\t/, $line);
+
+		my $transcr_id;
+		if ($fields[2] eq 'CDS'){
+			($transcr_id) = $fields[8] =~ /CDS\s+\"(\S+)\"$/;
+		}
+		elsif ($fields[2] eq 'coding_exon'){
+			($transcr_id) = $fields[8] =~ /CDS\s+\"(\S+)\"$/;
+		}
+		else {
+			next;
+		}
+		
+
+                die "dead in get_primary_transcript_coors:$line\n" unless defined($transcr_id);
+
+		$index{$transcr_id}++;
+
+	}
+
+	close(FH);
+
+	return \%index;
+}
 #-----------------------------------------------------------------------------
 sub get_primary_transcript_coors {
 	my $file = shift;
