@@ -125,12 +125,7 @@ sub mRNA {
 
         die "bad line-no id:".$fields->[8]."\n" unless defined($id);
 
-	my $parent = $lookup->{transcr_to_gene}->{$id};
-
-	if (!defined($parent)){
-		my @fields = split(/\./, $id);
-		$parent = $lookup->{transcr_to_gene}->{$fields[0].'.'.$fields[1]};
-	}
+	my $parent = find_parent($lookup, $id);
 
         my @line;
         push(@line, $fields->[0]);
@@ -154,6 +149,28 @@ sub mRNA {
 	}
 }
 #-----------------------------------------------------------------------------
+sub find_parent {
+        my $lookup = shift;
+        my $id     = shift;
+
+        my @fields = split(/\./, $id);
+
+        my $a = $id;
+        my $b = $fields[0].'.'.$fields[1];
+
+        my ($clean) = $fields[1] =~ /^(\d+)[A-z]*/;
+
+        my $c = $fields[0].'.'.$clean;
+
+        my $parent = $lookup->{transcr_to_gene}->{$a};
+           $parent = $lookup->{transcr_to_gene}->{$b} if ! $parent;
+           $parent = $lookup->{transcr_to_gene}->{$c} if ! $parent;
+
+        print STDERR "NO PARENT for $id a:$a b:$b c:$c\n" unless $parent;
+
+        return $parent;
+}
+#-----------------------------------------------------------------------------
 sub cds {
         my $fields = shift;
         my $lookup = shift;
@@ -163,12 +180,7 @@ sub cds {
         die "bad line-no id:".$fields->[8]."\n" unless defined($id);
 
         my $parent = $id;
-	my $easy = $lookup->{transcr_to_gene}->{$id};
-        if (!defined($easy)){
-                my @fields = split(/\./, $id);
-                $easy = $lookup->{transcr_to_gene}->{$fields[0].'.'.$fields[1]};
-        }
-
+	my $easy = find_parent($lookup, $id);
 	my $c_id = id();
 
         my @line;
@@ -209,11 +221,7 @@ sub exon {
 
         die "bad line-no id:".$fields->[8]."\n" unless defined($id);
 
-        my $parent = $lookup->{transcr_to_gene}->{$id};
-        if (!defined($parent)){
-                my @fields = split(/\./, $id);
-                $parent = $lookup->{transcr_to_gene}->{$fields[0].'.'.$fields[1]};
-        }
+	my $parent = find_parent($lookup, $id);
 
 	my $e_id = id();
 
@@ -248,11 +256,7 @@ sub utr_5 {
         die "bad line-no id:".$fields->[8]."\n" unless defined($id);
 
         my $parent = $id;
-	my $easy = $lookup->{transcr_to_gene}->{$id};
-        if (!defined($easy)){
-                my @fields = split(/\./, $id);
-                $easy = $lookup->{transcr_to_gene}->{$fields[0].'.'.$fields[1]};
-        }
+	my $easy = find_parent($lookup, $id);
 
 	my $u_id = id();
 
@@ -287,11 +291,7 @@ sub utr_3 {
         die "bad line-no id:".$fields->[8]."\n" unless defined($id);
 
         my $parent = $id;
-	my $easy = $lookup->{transcr_to_gene}->{$id};
-        if (!defined($easy)){
-                my @fields = split(/\./, $id);
-                $easy = $lookup->{transcr_to_gene}->{$fields[0].'.'.$fields[1]};
-        }
+	my $easy = find_parent($lookup, $id);
 
 	my $u_id   = id();
 
