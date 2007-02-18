@@ -5,7 +5,7 @@ use warnings;
 use lib "$ENV{CGL_GFF_LIB}";
 
 use CGL::Annotation;
-use CGL::Annotation::GFF3::FlyBase;
+use CGL::Annotation::GFF3::Maker;
 use CGL::Annotation::Iterator;
 use Getopt::Long;
 

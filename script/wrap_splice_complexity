@@ -70,8 +70,10 @@ my $type_format = "${type}_${format}";
 	    print STDERR "$command_line\n";
 
 	    print `$command_line`;
-	    print STDERR "$id died with errors: $?\n" if $?;
-
+	    if ($?) {
+		    print "\n";
+		    print STDERR "$id died with errors: $?\n";
+	    }
     }
 
 #----------------------------------------------------------------------------- 

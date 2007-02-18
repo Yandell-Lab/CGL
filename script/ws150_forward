@@ -9,10 +9,6 @@ $| = 1;
 
 my $file = shift;
 
-#shorten($file);
-
-#print_keys($file);
-
 my $id_lookup = get_id_lookup($file);
 
 open (FH, $file); 
@@ -32,27 +28,22 @@ while (my $line = <FH>){
 	elsif ($fields[1] eq 'Coding_transcript' && $fields[2] eq 'protein_coding_primary_transcript'){
 		my $new = mRNA(\@fields, $id_lookup);
 		print $new."\n" if $new;
-		
 	}
         elsif ($fields[1] eq 'Coding_transcript' && $fields[2] eq 'exon'){
                 my $new = exon(\@fields, $id_lookup);
                 print $new."\n" if $new;
-                #print $line."\n";
         }
 	elsif ($fields[1] eq 'Coding_transcript' && $fields[2] eq 'coding_exon'){
 		my $new = cds(\@fields, $id_lookup);
 		print $new."\n" if $new;
-		#print $line."\n";
 	}
         elsif ($fields[1] eq 'Coding_transcript' && $fields[2] eq 'five_prime_UTR'){
                 my $new = utr_5(\@fields, $id_lookup);
                 print $new."\n" if $new;
-                #print $line."\n";
         }
         elsif ($fields[1] eq 'Coding_transcript' && $fields[2] eq 'three_prime_UTR'){
                 my $new = utr_3(\@fields, $id_lookup);
                 print $new."\n" if $new;
-                #print $line."\n";
         }
 
 
@@ -71,7 +62,6 @@ sub get_id_lookup {
 	while (my $line = <FH>){
 		my @fields = split("\t", $line);
 	        if ($fields[1] eq 'curated' && $fields[2] eq 'CDS'){
-                	#print $line."\n";
 		        my ($cds_id) = $fields[8] =~ /CDS\s+\"(\S+)\"/;
 			my ($gen_id) = $fields[8] =~ /Gene\s+\"(\S+)\"/;
 
@@ -143,8 +133,7 @@ sub mRNA {
 		return join("\t", @line);
 	}
 	else {
-		print STDERR "no parent for ID=Transcript:$id;Name=$id\n";
-		#sleep 2;
+		print STDERR "no parent for mRNA ID=Transcript:$id;Name=$id\n";
 		return undef;
 	}
 }
@@ -199,8 +188,7 @@ sub cds {
                 return join("\t", @line);
         }
         else {
-                print STDERR "no parent for ID=Transcript:$id;Name=$id\n";
-                #sleep 2;
+                print STDERR "no parent for CDS ID=Transcript:$id;Name=$id\n";
                 return undef;
         }
 }
@@ -241,8 +229,7 @@ sub exon {
                 return join("\t", @line);
         }
         else {
-                print STDERR "no parent for ID=Gene:$id;Name=$id\n";
-                #sleep 2;
+                print STDERR "no parent for exon ID=Gene:$id;Name=$id\n";
                 return undef;
         }
 }
@@ -276,8 +263,7 @@ sub utr_5 {
                 return join("\t", @line);
         }
         else {
-                print STDERR "no parent for ID=Transcript:$id;Name=$id\n";
-                #sleep 2;
+                print STDERR "no parent for 5' UTR ID=Transcript:$id;Name=$id\n";
                 return undef;
         }
 }
@@ -311,8 +297,7 @@ sub utr_3 {
                 return join("\t", @line);
         }
         else {
-                print STDERR "no parent for ID=Transcript:$id;Name=$id\n";
-                #sleep 2;
+                print STDERR "no parent for 3' UTR ID=Transcript:$id;Name=$id\n";
                 return undef;
         }
 }
