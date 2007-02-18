@@ -176,6 +176,46 @@ sub to_gff3_cds {
 
 }
 #-------------------------------------------------------------------------------
+sub to_gff3_utr_5 {
+        my $seg_id = shift;
+        my $t      = shift;
+        my $u      = shift;
+
+        my $t_id   = $t->{id};
+        my $u_id   = $u->{id};
+
+        my $strand = $u->{f}->strand() == 1 ? '+' : '-';
+
+        my @fields;
+
+        push(@fields, $seg_id, 'Coding_transcript', 'five_prime_UTR', $u->{i_start});
+        push(@fields, $u->{i_end}, '.', $strand, '.');
+        push(@fields, "ID=$u_id;Parent=$t_id");
+
+        return join("\t", @fields);
+
+}
+#-------------------------------------------------------------------------------
+sub to_gff3_utr_3 {
+        my $seg_id = shift;
+        my $t      = shift;
+        my $u      = shift;
+
+        my $t_id   = $t->{id};
+        my $u_id   = $u->{id};
+
+        my $strand = $u->{f}->strand() == 1 ? '+' : '-';
+
+        my @fields;
+
+        push(@fields, $seg_id, 'Coding_transcript', 'three_prime_UTR', $u->{i_start});
+        push(@fields, $u->{i_end}, '.', $strand, '.');
+        push(@fields, "ID=$u_id;Parent=$t_id");
+
+        return join("\t", @fields);
+
+}
+#-------------------------------------------------------------------------------
 sub to_fasta_seq {
 	my $id  = shift;
 	my $seq = shift;
@@ -241,7 +281,12 @@ sub split_file {
                         foreach my $c (@{$t->{cdss}}){
                                 print $fh to_gff3_cds($seg_id, $t, $c)."\n";
                         }
-
+                        foreach my $u (@{$t->{utr_3}}){
+                                print $fh to_gff3_utr_3($seg_id, $t, $u)."\n";
+                        }
+                        foreach my $u (@{$t->{utr_5}}){
+                                print $fh to_gff3_utr_5($seg_id, $t, $u)."\n";
+                        }
                 }
                 $fh->close();
 
@@ -1132,6 +1177,26 @@ sub load_seqs {
 
                                	$c->{i_end}   =
                                	$c->{f}->end() - $g->{src_s} + 1;
+                        }
+                        foreach my $u (@{$t->{utr_5}}){
+                                my $u_seq = get_exon_seq($u, $seq);
+
+				$u->{seq} = $u_seq;
+                               	$u->{i_start} =
+                               	$u->{f}->start() - $g->{src_s} + 1;
+
+                               	$u->{i_end}   =
+                               	$u->{f}->end() - $g->{src_s} + 1;
+                        }
+                        foreach my $u (@{$t->{utr_3}}){
+                                my $u_seq = get_exon_seq($u, $seq);
+
+				$u->{seq} = $u_seq;
+                               	$u->{i_start} =
+                               	$u->{f}->start() - $g->{src_s} + 1;
+
+                               	$u->{i_end}   =
+                               	$u->{f}->end() - $g->{src_s} + 1;
                         }
 
 			my $t_seq   = get_mRNA_seq($t, $seq); 

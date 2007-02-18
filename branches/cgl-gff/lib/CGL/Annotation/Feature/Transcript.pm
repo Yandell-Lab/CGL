@@ -1551,6 +1551,11 @@ sub exons {
 sub _bubbleSort {
 
 	my $array = shift;
+
+	if (! defined $array || scalar @{$array} ==0) {
+		die "\nEmpty or undef array passed to CGL::Annotation::" . 
+		    "Feature::Transcript::_bubbleSort\n\n";
+	}
 	
 	my $i;
 	my $j;

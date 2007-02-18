@@ -95,6 +95,10 @@ my $type_format = "${type}_${format}";
 	    my $command_line = $command_lines{$type_format};
 
 	    print `$command_line`;
+            if ($?) {
+                    print "\n";
+                    print STDERR "$id $id2 pair died with errors: $?\n";
+            }
 
     }
 
