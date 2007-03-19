@@ -11,6 +11,9 @@ my $file = shift;
 
 open (FH, $file); 
 
+print "##gff-version 3\n";
+print "##Index-subfeatures 0\n";
+
 my %genes;
 while (my $line = <FH>){
 	next if $line =~ /^##/;
