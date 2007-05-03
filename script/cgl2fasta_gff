@@ -8,6 +8,7 @@ use CGL::Annotation;
 use CGL::Annotation::GFF3::Maker;
 use CGL::Annotation::Iterator;
 use Getopt::Long;
+use Text::Wrap qw(wrap);
 
 #-----------------------------------------------------------------------------
 #----------------------------------- MAIN ------------------------------------
@@ -24,20 +25,28 @@ sequences.  The options control what fasta sequence to produce.
 
 
 Options:                                                                       
-  --trans  transcript sequence
-  --prot   protien sequence
-  --utr3   3' UTR sequence
-  --utr5   5' UTR sequence
+  --trans      transcript sequence
+  --prot       protien sequence
+  --utr3       3' UTR sequence
+  --utr5       5' UTR sequence
+  --columns    Colmns to wrap sequences at [80].
+  --gene_name  Use gene_name-mRNA-1 or gene_name-CDS-1 naming convention.  
+               This is useful for making RBH mappings.  Only works for 
+               transcript and protein sequences.
 
 ";
 
-my ($trans, $prot, $utr3, $utr5);
+my ($trans, $prot, $utr3, $utr5, $column, $gene_name);
 
-GetOptions('trans' => \$trans,
-	   'prot'  => \$prot,
-	   'utr3'  => \$utr3,
-	   'utr5'  => \$utr5);
+GetOptions('trans'     => \$trans,
+	   'prot'      => \$prot,
+	   'utr3'      => \$utr3,
+	   'utr5'      => \$utr5,
+	   'col=i'     => \$column,
+	   'gene_name' => \$gene_name,
+	   );
 
+local($Text::Wrap::column = $column || 80);
 my $md_file = shift;
 die $usage unless $md_file;
 
@@ -54,49 +63,28 @@ my $md = parse_datastore($md_file);
             my $gff_file = $md->{$id} ? $md->{$id} : undef;
 	    my $fasta_file;
 	    ($fasta_file = $gff_file) =~ s/.gff3/.fasta/; 
+
+	    print STDERR "$gff_file\n";
 	    
-	    my $cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file);
+	    my $cgl;
+	    eval {$cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file)};
+
+	    print "$@\n" if $@;
+	    next GENE unless $cgl;
+
 	    my $iterator = new CGL::Annotation::Iterator($cgl);
 	    while (my $g = $iterator->next_by_gene()){
 		    my $i = 0;
-		  TRANS:
-		    while (my $t = $g->transcript($i++)) {
-			    my $p = $t->translation(0);
-			    my $sequence;
-			    my $header;
-			    if ($trans) {
-				    $header   = $t->id;
-				    $sequence = $t->residues;
-			    }
-			    elsif ($prot) {
-				    next TRANS if ! $p;
-				    $header   = $p->id; 
-				    $sequence = $p->residues; 
-			    }
-			    elsif ($utr3) {
-				    next TRANS if ! $p;
-				    my $p_end_on_t = $p->metaPos($t, $p->length);
-				    my $three_length = $t->length - $p_end_on_t - 3;
-				    $header   = $t->id . " 3-prime utr";
-				    $sequence = substr($t->residues, $p_end_on_t, $three_length);
-				    next TRANS if ! $sequence;
-			    }
-			    elsif ($utr5) {
-				    next TRANS if ! $p;
-				    my $p_beg_on_t = $p->metaPos($t, 0);
-				    my $five_length  = $p_beg_on_t;
-				    $header   = $t->id . "5-prime utr";
-				    $sequence = substr($t->residues, 0, $five_length);
-				    next TRANS if ! $sequence;
-			    }
-			    print ">$header\n$sequence\n";
-		    }
+		    
+		    eval {print get_fasta_seq($g, $i)};
+		    print STDERR "$@\n" if $@;
 	    }
     }
 
 #------------------------------------------------------------------------------
 #--------------------------------- Subroutines --------------------------------
 #------------------------------------------------------------------------------
+
 sub parse_datastore {
         my $file = shift;
 
@@ -115,3 +103,52 @@ sub parse_datastore {
         return \%md;
 }
 #------------------------------------------------------------------------------
+sub get_fasta_seq {
+
+	my ($g, $i) = @_;
+
+      TRANS:
+	while (my $t = $g->transcript($i++)) {
+		my $p = $t->translation(0);
+		my $sequence;
+		my $header;
+		if ($trans) {
+			print STDERR "Getting ID\n";
+			$header   = $t->id;
+			if ($gene_name) {
+				$header = $g->id . "-mRNA-$i";
+			}
+			$sequence = $t->residues;
+		}
+		elsif ($prot) {
+			next TRANS if ! $p;
+			$header   = $p->id;
+			if ($gene_name) {
+				$header = $g->id . "-CDS-$i";
+			}
+			$sequence = $p->residues; 
+		}
+		elsif ($utr3) {
+			next TRANS if ! $p;
+			my $p_end_on_t = $p->metaPos($t, $p->length);
+			my $three_length = $t->length - $p_end_on_t - 3;
+			$header   = $t->id . " 3-prime utr";
+			$sequence = substr($t->residues, $p_end_on_t, $three_length);
+			next TRANS if ! $sequence;
+		}
+		elsif ($utr5) {
+			next TRANS if ! $p;
+			my $p_beg_on_t = $p->metaPos($t, 0);
+			my $five_length  = $p_beg_on_t;
+			$header   = $t->id . "5-prime utr";
+			$sequence = substr($t->residues, 0, $five_length);
+			next TRANS if ! $sequence;
+		}
+
+		my $fasta = ">$header\n";
+		$fasta   .= wrap('', '', $sequence);
+		$fasta   .= "\n";
+
+		return $fasta;
+	}
+}

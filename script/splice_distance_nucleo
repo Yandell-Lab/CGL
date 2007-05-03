@@ -6,7 +6,7 @@ use Getopt::Long;
 use Shadower;
 use PostData;
 
-my $usage = "
+my $usage = '
 
 Synopsis:
 
@@ -22,7 +22,45 @@ will calculate the splice distance between the two genes represented by those
 files.  The scoring algorithm will use all nucleotides to calculate the
 distance.
 
-\n"; 
+Output is the following columns:
+
+Gene_id  Gene ID
+num_t    Number of transcripts
+num_t_p  ??
+esc_m    Exon splice distance of the entire mRNA
+esc_m_x  ??
+esc_c    Exon splice distance of the CDS
+esc_c_x  ??
+esc_u    Exon splice distance of the UTRs
+esc_u_x  ??
+esc_5    Exon splice distance of the 5\' UTR
+esc_5_x  ??
+esc_3    Exon splice distance of the 3\' UTR
+esc_3_x  ??
+isc_m    Intron splice distance of the entire mRNA
+isc_m_x  ??
+isc_c    Intron splice distance of the CDS
+isc_c_x  ??
+isc_5    Intron splice distance of the 5\' UTR
+isc_5_x  ??
+isc_3    Intron splice distance of the 3\' UTR
+isc_3_x  ??
+
+my ($gene_id, $num_t, $num_t_p, $esc_m_x, $esc_m, $esc_c_x, $esc_c, $esc_u_x,
+    $esc_u, $esc_5_x, $esc_5, $esc_3_x, $esc_3, $isc_m_x, $isc_m, $isc_c_x,
+    $isc_c, $isc_5_x, $isc_5, $isc_3_x, $isc_3) = split;
+
+Options:
+  --format  [Flybase|Wormbase]  Is the annotation in FlyBase GFF or 
+            Wormbase GFF?  Wormbase is the default.
+  --gff_i   The name of the first GFF3 file.
+  --gff_j   The name of the second GFF3 file.
+  --fasta_i The name of the first fasta file.
+  --fasta_j The name of the second fasta file.
+  --chaos_i The name of the first chaos file.
+  --chaos_j The name of the second chaos file.
+
+'; 
 
 #-----------------------------------------------------------------------------
 #----------------------------------- MAIN ------------------------------------

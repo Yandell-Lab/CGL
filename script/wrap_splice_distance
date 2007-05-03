@@ -94,10 +94,11 @@ my $type_format = "${type}_${format}";
 
 	    my $command_line = $command_lines{$type_format};
 
+#	    print "$command_line\n";
 	    print `$command_line`;
             if ($?) {
                     print "\n";
-                    print STDERR "$id $id2 pair died with errors: $?\n";
+                    print STDERR "$id1 $id2 pair died with errors: $?\n";
             }
 
     }
@@ -122,6 +123,9 @@ sub parse_datastore {
 		die "Incorrect format specified.  Can't parse datastore\n" 
 		    unless (defined $id && defined $path);
 
+#		$id =~ s/:no_locus_tag$//;
+		$id =~ s/:(no_locus_tag)?$//;
+
 		$md{$id} = $path;
 	}
 	return \%md;
@@ -135,6 +139,8 @@ sub parse_id_map {
 	my %map;
 	while (<$IN>) {
 		my ($id1, $id2) = split;
+		$id1 =~ s/:no_locus_tag$//;
+		$id2 =~ s/:no_locus_tag$//;
 		$map{$id1} = $id2;
 	}
 	return \%map;

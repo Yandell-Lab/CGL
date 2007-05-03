@@ -22,6 +22,41 @@ will calculate the splice complexity of all genes represented in the input
 file(s).  The scoring algorithm will only use exon juctions to calculate the
 complexity.
 
+Output is the following columns:
+
+gene_id  Gene ID
+num_t    Number of transcripts
+num_t_p  ??
+esc_m    Exon splice complexity of the entire mRNA
+esc_m_x  ??
+esc_c    Exon splice complexity of the CDS
+esc_c_x  ??
+esc_u    Exon splice complexity of the UTRs
+esc_u_x  ??
+esc_5    Exon splice complexity of the 5' UTR
+esc_5_x  ??
+esc_3    Exon splice complexity of the 3' UTR
+esc_3_x  ??
+isc_m    Intron splice complexity of the entire mRNA
+isc_m_x  ??
+isc_c    Intron splice complexity of the CDS
+isc_c_x  ??
+isc_5    Intron splice complexity of the 5' UTR
+isc_5_x  ??
+isc_3    Intron splice complexity of the 3' UTR
+isc_3_x  ??
+
+my ($gene_id, $num_t, $num_t_p, $esc_m_x, $esc_m, $esc_c_x, $esc_c, $esc_u_x, 
+    $esc_u, $esc_5_x, $esc_5, $esc_3_x, $esc_3, $isc_m_x, $isc_m, $isc_c_x, 
+    $isc_c, $isc_5_x, $isc_5, $isc_3_x, $isc_3) = split;
+
+Options:
+  --format [Flybase|Wormbase]  Is the annotation in FlyBase GFF or 
+           Wormbase GFF?  Wormbase is the default.
+  --gff    The name of the GFF3 file.
+  --fasta  The name of the fasta file.
+  --chaos  The name of the chaos file.
+
 ";
 
 #-----------------------------------------------------------------------------
@@ -66,8 +101,6 @@ else {
 my $iterator = new CGL::Annotation::Iterator($cgl);
 
 my $c = $cgl->contig(0);
-
-#print " gene id\tnum_t\tnum_t_p\tesc_m\tesc_c\tesc_u\tesc_5\tesc_3\tisc_m\tisc_c\tisc_5\tisc_3\n";
 
 while (my $g = $iterator->next_by_gene()){
 
