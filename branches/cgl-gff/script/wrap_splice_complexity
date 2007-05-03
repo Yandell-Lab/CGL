@@ -23,14 +23,18 @@ Options:
     --type    Do exonic or nucleotide distance.  Default is exonic.
     --format  What is the input format, chaos or gff?
     --org     What organism database, FlyBase or WormBase?
+    --debug   Just print the splice_complexity_nucleo command line
+              but don't actually run it.
 
 ";
 
-my ($type, $out, $format, $org);
+my ($type, $out, $format, $org, $debug);
 my $opt_success = GetOptions('type=s'   => \$type,
 			     'out=s'    => \$out,
 			     'format=s' => \$format,
-			     'org=s'    => \$org);
+			     'org=s'    => \$org,
+			     'debug'     => \$debug,
+			     );
 
 my $md_file = shift;
 
@@ -69,7 +73,14 @@ my $type_format = "${type}_${format}";
 	    my $command_line = $command_lines{$type_format};
 	    print STDERR "$command_line\n";
 
-	    print `$command_line`;
+	    
+	    if ($debug) {
+		    print "$command_line\n";
+	    }
+	    else {
+		    print `$command_line`;
+	    }
+
 	    if ($?) {
 		    print "\n";
 		    print STDERR "$id died with errors: $?\n";
@@ -88,7 +99,7 @@ sub parse_datastore {
 	my %md;
 	while (<$IN>) {
 		chomp;
-		my @fields = split;
+		my @fields = split /\t/, $_;
 		my ($id, $path) = 
 		      $format =~ /gff/i   ?  ($fields[0], $fields[1])
 		    : $format =~ /chaos/i ?  ($fields[1], $fields[3])

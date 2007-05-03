@@ -546,9 +546,9 @@ sub get_l_beg_end {
 
         my $feature = shift;
 
-        my $start  = $feature->{f}->start();
-        my $end    = $feature->{f}->end();
-        my $strand = $feature->{f}->strand();
+        my $start  = $feature->{f} ? $feature->{f}->start()  : undef;
+        my $end    = $feature->{f} ? $feature->{f}->end()    : undef;
+        my $strand = $feature->{f} ? $feature->{f}->strand() : undef;
 
         if ($strand == 1){
                 return ($start, $end);
@@ -637,8 +637,14 @@ sub get_translation_offset {
 	my $sorted_exons = sort_exons($t);
 	my $sorted_cdss  = sort_cdss($t);
 
-	my $e_0_b = $sorted_exons->[0]->{f}->start();
-	my $c_0_b = $sorted_cdss->[0]->{f}->start();
+	my $e_0_b = 
+	    $sorted_exons->[0]->{f} ? 
+	    $sorted_exons->[0]->{f}->start() : 
+	    undef;
+	my $c_0_b = 
+	    $sorted_cdss->[0]->{f}  ? 
+	    $sorted_cdss->[0]->{f}->start() : 
+	    undef;
 
 	return abs($e_0_b - $c_0_b) + 1;
 
@@ -1224,7 +1230,7 @@ sub validate_gene {
 	}
 	#Check that all strands are the same, and fail if they are not.
 	my $first = shift @strands;
-	retrun udef if grep {$first != $_} @strands;
+	return undef if grep {$first != $_} @strands;
 
 	#No failures, so return success.
 	return 1;
