@@ -8,11 +8,22 @@ $| = 1;
 #----------------------------------- MAIN ------------------------------------
 #-----------------------------------------------------------------------------
 
+my $usage = "
+
+Synopsis:
+
+ws100_forward gff_file
+
+Description:
+
+This script will convert gff files from C. elegans release WS100 into gff3
+compatible files that can by used by CGL GFF.
+
+";
+
 my $file = shift;
 
-#shorten($file);
-
-#print_keys($file);
+die $usage unless $file;
 
 my ($gene_spans, $mrna_spans) = get_primary_transcript_coors($file);
 
@@ -92,7 +103,7 @@ sub exons {
 			$type = 'utr_3';
                 }
                 else {
-                        die "bug in get_primary_transcript_coors\n";
+                        die "bug in exons:$line\n";
                 }
                 die "dead in exons:$line\n" unless defined($transcr_id);
 
@@ -106,7 +117,7 @@ sub exons {
                                                            });
 
         }
-        close(FH);     
+        close(FH);
 
 	fix_exons(\%features);
 
@@ -119,7 +130,7 @@ sub print_exons {
 	my $lookup   = shift;
 
         foreach my $t_id (keys %{$features}){
-		
+
                 my $new_exons = $features->{$t_id}->{new_exons};
                 my $dna       = $features->{$t_id}->{DNA_SEQ};
 
@@ -158,7 +169,7 @@ sub fix_exons {
 		my $new_exons = sow($exons, $utr_5, $utr_3);
 
 		$features->{$t_id}->{new_exons} = $new_exons
-	}	
+	}
 
 }
 
@@ -172,7 +183,7 @@ sub sow {
 
 	my @sorted_e = sort {$a->{start} <=> $b->{start}} @{$exons};
 	my @sorted_5 = sort {$a->{start} <=> $b->{start}} @{$utr_5} if defined($utr_5);
-	my @sorted_3 = sort {$a->{start} <=> $b->{start}} @{$utr_3} if defined($utr_3); 
+	my @sorted_3 = sort {$a->{start} <=> $b->{start}} @{$utr_3} if defined($utr_3);
 
 
 	my $num_exons = @sorted_e;
@@ -195,7 +206,7 @@ sub sow {
 					$new_alpha{start}  = $alpha_e->{start};
                                         $new_alpha{end}    = $u->{end};
 				}
-			
+
 			}
 			else {
 				push(@new_exons, $u);
@@ -272,12 +283,12 @@ sub abuts_5 {
 		return 1 if $e->{start} - $u->{end} == 1;
 	}
 	elsif ($u->{strand} eq '-'){
-		return 1 if $u->{start} - $e->{end}   == 1;	
+		return 1 if $u->{start} - $e->{end}   == 1;
 	}
 	else {
-		return 0; 
+		return 0;
 	}
-	
+
 }
 #-----------------------------------------------------------------------------
 sub abuts_3 {
@@ -307,7 +318,7 @@ sub get_primary_transcript_coors {
 		next unless $line =~ /curated/ || $line =~ /UTR/;
 		my @fields = split(/\t/, $line);
 
-		next unless ($fields[1] eq 'curated' && $fields[2] eq 'Sequence' 
+		next unless ($fields[1] eq 'curated' && $fields[2] eq 'Sequence'
 		         || $fields[1] eq 'UTR' && $fields[2] eq 'UTR');
 
 		my $transcr_id;
@@ -330,7 +341,7 @@ sub get_primary_transcript_coors {
 		my $cosmid  = $stuff[0];
 		my ($gene, $isoform)  = $stuff[1] =~ /(\d+)([A-z]*)/;
 		my $splice_form = $stuff[2];
-		
+
 
 		$mrna_coors{$transcr_id}{'DNA_SEQ'} = $fields[0];
 		$gene_coors{$cosmid.'.'.$gene}{'DNA_SEQ'} = $fields[0];
@@ -340,7 +351,7 @@ sub get_primary_transcript_coors {
 		                                                      'strand'  => $fields[6],
 							              'transcr' => $transcr_id,
 		                                                      'what'    => $line,
-		                                                     }); 	
+		                                                     });
 
 		push(@{$mrna_coors{$transcr_id}{features}}, {          'start'   => $fields[3],
                                                                       'end'     => $fields[4],
@@ -350,13 +361,13 @@ sub get_primary_transcript_coors {
                                                                      });
 
 	}
-	close(FH);	
+	close(FH);
 
 	add_gene_coors(\%gene_coors);
 	add_mrna_coors(\%mrna_coors);
 
 	return (\%gene_coors, \%mrna_coors);
-} 
+}
 #-----------------------------------------------------------------------------
 sub add_mrna_coors {
         my $hash = shift;
@@ -390,7 +401,7 @@ sub add_mrna_coors {
                                                   'end'    => $greatest_end,
                                                   'strand' => $all_strand,
                                                 };
-        }      
+        }
 }
 #-----------------------------------------------------------------------------
 sub add_gene_coors {
@@ -410,9 +421,9 @@ sub add_gene_coors {
 			my $t_id   = $t->{transcr};
 			my $what   = $t->{what};
 			$least_start  = $start if !defined($least_start) || $start < $least_start;
-			$greatest_end = $end   if !defined($greatest_end)|| $end > $greatest_end;	
-			
-			
+			$greatest_end = $end   if !defined($greatest_end)|| $end > $greatest_end;
+
+
 			if (defined($all_strand) && $strand ne $all_strand){
 				warn "MESSED  UP STRAND GENE!:$gene_id\n";
 				#sleep 1;
@@ -426,7 +437,7 @@ sub add_gene_coors {
 		                                  'end'    => $greatest_end,
 		                                  'strand' => $all_strand,
 						};
-	}	
+	}
 }
 #-----------------------------------------------------------------------------
 sub get_id_lookup {
@@ -495,7 +506,7 @@ sub gene {
         	push(@line, "ID=Gene:$gene_id;Name=$gene_id;Easy=$gene_id");
 
 		print join("\t", @line)."\n";
-		
+
 	}
 }
 #-----------------------------------------------------------------------------
@@ -509,15 +520,15 @@ sub find_parent {
         my $b = $fields[0].'.'.$fields[1];
 
         my ($clean) = $fields[1] =~ /^(\d+)[A-z]*/;
-        
+
         my $c = $fields[0].'.'.$clean;
-        
+
         my $parent = $lookup->{transcr_to_gene}->{$a};
            $parent = $lookup->{transcr_to_gene}->{$b} if ! $parent;
            $parent = $lookup->{transcr_to_gene}->{$c} if ! $parent;
-                
+
         print STDERR "NO PARENT for $id a:$a b:$b c:$c\n" unless $parent;
-        
+
         return $parent;
 }
 #-----------------------------------------------------------------------------
@@ -562,7 +573,7 @@ my $id = -1;
 sub id {
 	$id++;
 	return $id;
-} 
+}
 }
 #-----------------------------------------------------------------------------
 sub exon {
@@ -760,7 +771,7 @@ sub shorten {
                         print $line."\n";
                 }
 	}
-	
+
 	close(FH);
 }
 #-----------------------------------------------------------------------------

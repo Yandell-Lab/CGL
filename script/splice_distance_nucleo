@@ -83,14 +83,14 @@ if ($gff_file_i && $fasta_file_i &&
     $gff_file_j && $fasta_file_j) { 
 	unshift @INC, $ENV{CGL_GFF_LIB};
 	require CGL::Annotation;
-	require CGL::Annotation::GFF3::FlyBase;
+	require CGL::Annotation::GFF3::WormBase;
 	require CGL::Annotation::Iterator;
 
-	$cgl_i = new CGL::Annotation::GFF3::FlyBase($gff_file_i, $fasta_file_i);
-	$cgl_j = new CGL::Annotation::GFF3::FlyBase($gff_file_j, $fasta_file_j);
+	$cgl_i = new CGL::Annotation::GFF3::WormBase($gff_file_i, $fasta_file_i);
+	$cgl_j = new CGL::Annotation::GFF3::WormBase($gff_file_j, $fasta_file_j);
 }
 elsif ($chaos_file_i && $chaos_file_j) {
-	unshift @INC, '/home/bmoore/CGL/trunk/lib/';
+	unshift @INC, "$ENV{HOME}/CGL/trunk/lib/";
 	require CGL::Annotation;
 	require CGL::Annotation::Iterator;
 

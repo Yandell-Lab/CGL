@@ -1,0 +1,80 @@
+#!/usr/bin/perl 
+use strict;
+use warnings;
+
+
+use lib "$ENV{CGL_GFF_LIB}";
+
+use CGL::Annotation;
+use CGL::Annotation::GFF3::Maker;
+use CGL::Annotation::GFF3::FlyBase;
+use CGL::Annotation::GFF3::WormBase;
+use CGL::Annotation::Iterator;
+
+#----------------------------------------------------------------------------- 
+#----------------------------------- MAIN ------------------------------------ 
+#----------------------------------------------------------------------------- 
+my $usage = '
+
+Synopsis:
+
+id2name master_datastore.index
+
+Description:
+
+Given a master_datastore.index, print a mapping of $cgl->id to $cgl->unique_name
+
+';
+
+my $md_file = shift;
+die $usage unless $md_file;
+
+my $md = parse_datastore($md_file);
+
+ GENE:
+    for my $id (keys %{$md}) {
+	    
+            unless (-e $md->{$id}) {
+                    print STDERR "Missing path for ID: $id\n";
+                    next GENE;
+            }
+	    
+            my $gff_file = $md->{$id} ? $md->{$id} : undef;
+            my $fasta_file;
+            ($fasta_file = $gff_file) =~ s/.gff3/.fasta/;
+	    
+            print STDERR "$gff_file\n";
+	    
+            my $cgl;
+            eval {$cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file)};
+	    
+            print "$@\n" if $@;
+            next GENE unless $cgl;
+	    
+	    my $iterator = new CGL::Annotation::Iterator($cgl);
+	    while (my $g = $iterator->next_by_gene()){
+		    print $g->id . "\t" . $g->uniquename . ":no_locus_tag\n";
+	    }
+    }
+
+#------------------------------------------------------------------------------
+#--------------------------------- Subroutines --------------------------------
+#------------------------------------------------------------------------------
+sub parse_datastore {
+        my $file = shift;
+
+        open (my $IN, '<', $file) or die "Can't open $file\n";
+
+        my %md;
+        while (<$IN>) {
+                chomp;
+                my @fields = split;
+                my ($id, $path) = ($fields[0], $fields[1]);
+                die "Incorrect format specified.  Can't parse datastore\n"
+                    unless (defined $id && defined $path);
+
+                $md{$id} = $path;
+        }
+        return \%md;
+}
+

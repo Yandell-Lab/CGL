@@ -7,9 +7,24 @@ $| = 1;
 #----------------------------------- MAIN ------------------------------------
 #-----------------------------------------------------------------------------
 
+my $usage = "
+
+Synopsis:
+
+ws_forward_cleaner gff_file
+
+Description:
+
+This script will check a file that has been created by one of the ws1XX_forward
+series of scripts and delete any genes that got mangled.
+
+";
+
 my $file = shift;
 
-open (FH, $file); 
+die $usage unless $file;
+
+open (FH, $file);
 
 print "##gff-version 3\n";
 print "##Index-subfeatures 0\n";
@@ -28,21 +43,21 @@ while (my $line = <FH>){
 	my $end    = $fields[4];
 	my $strand = $fields[6];
 
-	warn "missing fields 3, 4, or 6:$line\n" 
+	warn "missing fields 3, 4, or 6:$line\n"
 	unless defined($start) && defined($end) && $strand;
 
 	my ($id)     = $fields[8] =~ /^ID=([^;]+)\;.*/;
-	
+
 	die "no id:$line\n" unless defined($id);
 
 	my ($parent) = $fields[8] =~ /.*\;Parent=(\S+)\;.*/;
-	
+
 	$parent = 'NONE' if $fields[2] eq 'gene';
 
 	die "no parent:$line\n" unless defined($parent);
 
 	if ($fields[2] eq 'gene'){
-		push(@{$genes{$easy_id}{$fields[2]}}, 
+		push(@{$genes{$easy_id}{$fields[2]}},
 		{id => $id, start => $start, end => $end, strand => $strand, parent => $parent, line => $line});
 	}
 	elsif ($fields[2] eq 'mRNA'){

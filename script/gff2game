@@ -1,19 +1,61 @@
 #!/usr/bin/perl 
-use lib "$ENV{CGL_GFF_LIB}";
-use Data::Dumper;
-use PostData;
-use CGL::Annotation::GFF3::WormBase;
+use strict;
+use warnings;
 
+use lib "$ENV{CGL_GFF_LIB}";
+
+use Getopt::Long;
 use CGL::Annotation;
+use CGL::Annotation::GFF3::WormBase;
+use CGL::Annotation::GFF3::FlyBase;
 use Dumper::XML::Game;
+
+
+#----------------------------------------------------------------------------- 
+#----------------------------------- MAIN ------------------------------------ 
+#----------------------------------------------------------------------------- 
+my $usage = "
+
+Synopsis:
+
+gff2game --org Fly gff3_file [fasta_file]
+
+Description:
+
+This script will build a GAME XML file from associated gff and fasta
+files. If no fasta file is give then it defaults to the name of the
+gff3 file with the extension changed from gff or gff3 to fasta.
+
+Options:
+
+  --org  FlyBase or WormBase.  FlyBase is default.
+
+";
+
+my ($help, $org);
+my $opt_success = GetOptions('help'  => \$help,
+			     'org=s' => \$org,
+			      );
+
+die $usage if $help || ! $opt_success;
+
+$org ||= 'FlyBase';
 
 my $gff3_file = shift;
 my $fasta_file = shift;
 
-my $CGL = new CGL::Annotation::GFF3::FlyBase($gff3_file, $fasta_file);
+if (! defined $fasta_file) {
+	($fasta_file = $gff3_file) =~ s/gff3?$/fasta/;
+}
 
+die $usage unless $gff3_file && $fasta_file;
 
-#PostData($CGL);
+my $cgl;
+$org =~ /^fly/i
+    ? $cgl = new CGL::Annotation::GFF3::FlyBase($gff3_file, $fasta_file)
+    : $org =~ /^worm/i
+    ? $cgl = new CGL::Annotation::GFF3::WormBase($gff3_file, $fasta_file)
+    : die $usage;
 
-my $IO= new Dumper::XML::Game->init(Annot=>$CGL);
-$IO->Game();
+my $game_io = new Dumper::XML::Game->init(Annot => $cgl);
+$game_io->Game();
