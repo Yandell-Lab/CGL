@@ -7,7 +7,22 @@ $| = 1;
 #----------------------------------- MAIN ------------------------------------
 #-----------------------------------------------------------------------------
 
+my $usage = "
+
+Synopsis:
+
+ws150_forward gff_file
+
+Description:
+
+This script will convert gff files from C. elegans release WS150 into gff3 
+compatible files that can by used by CGL GFF.
+
+";
+
 my $file = shift;
+
+die $usage unless $file;
 
 my $id_lookup = get_id_lookup($file);
 
@@ -20,6 +35,7 @@ print "##Index-subfeatures 0\n";
 my %hash;
 while (my $line = <FH>){
 	chomp($line);
+	next if $line =~ /^\#/;
 	my @fields = split("\t", $line);
 	if ($fields[1] eq 'gene'){
 		my $new = gene(\@fields, $id_lookup);
@@ -60,12 +76,13 @@ sub get_id_lookup {
 
 	my %lookup;
 	while (my $line = <FH>){
+		next if $line =~ /^\#/;
 		my @fields = split("\t", $line);
 	        if ($fields[1] eq 'curated' && $fields[2] eq 'CDS'){
 		        my ($cds_id) = $fields[8] =~ /CDS\s+\"(\S+)\"/;
 			my ($gen_id) = $fields[8] =~ /Gene\s+\"(\S+)\"/;
 
-        		die "bad line-no id:".$fields[8]."\n" 
+        		die "bad line - no ID:".$fields[8]."\n" 
 			unless defined($cds_id) && defined($gen_id);
 
 			push(@{$lookup{gene_to_cds}{$gen_id}}, $cds_id);

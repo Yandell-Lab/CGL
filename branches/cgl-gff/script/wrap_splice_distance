@@ -94,7 +94,7 @@ my $type_format = "${type}_${format}";
 
 	    my $command_line = $command_lines{$type_format};
 
-#	    print "$command_line\n";
+	    print STDERR "$command_line\n";
 	    print `$command_line`;
             if ($?) {
                     print "\n";

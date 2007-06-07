@@ -6,6 +6,8 @@ use lib "$ENV{CGL_GFF_LIB}";
 
 use CGL::Annotation;
 use CGL::Annotation::GFF3::Maker;
+use CGL::Annotation::GFF3::FlyBase;
+use CGL::Annotation::GFF3::WormBase;
 use CGL::Annotation::Iterator;
 use Getopt::Long;
 use Text::Wrap qw(wrap);
@@ -17,8 +19,10 @@ my $usage = "
 
 Synopsis:
 
-cgl2fasta [options] <master_datastore.index>
-cgl2fasta --trans <master_datastore.index>
+cgl2fasta_gff [options] <master_datastore.index>
+cgl2fasta_gff --trans <master_datastore.index>
+cgl2fasta_gff --utr3 --col 70 <master_datastore.index>
+cgl2fasta_gff --prot --gene_name <master_datastore.index>
 
 This script takes input from a datastore index and outputs a fasta file of 
 sequences.  The options control what fasta sequence to produce.
@@ -29,7 +33,7 @@ Options:
   --prot       protien sequence
   --utr3       3' UTR sequence
   --utr5       5' UTR sequence
-  --columns    Colmns to wrap sequences at [80].
+  --col        Number of colmns to wrap sequences at [80].
   --gene_name  Use gene_name-mRNA-1 or gene_name-CDS-1 naming convention.  
                This is useful for making RBH mappings.  Only works for 
                transcript and protein sequences.
@@ -55,7 +59,7 @@ my $md = parse_datastore($md_file);
  GENE:
     for my $id (keys %{$md}) {
 
-            unless (exists $md->{$id}) {
+            unless (-e $md->{$id}) {
                     print STDERR "Missing path for ID: $id\n";
                     next GENE;
             }
@@ -67,7 +71,7 @@ my $md = parse_datastore($md_file);
 	    print STDERR "$gff_file\n";
 	    
 	    my $cgl;
-	    eval {$cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file)};
+	    eval {$cgl = new CGL::Annotation::GFF3::WormBase($gff_file, $fasta_file)};
 
 	    print "$@\n" if $@;
 	    next GENE unless $cgl;

@@ -8,16 +8,27 @@ $| = 1;
 #----------------------------------- MAIN ------------------------------------
 #-----------------------------------------------------------------------------
 
+my $usage = "
+
+Synopsis:
+
+ws130_forward gff_file
+
+Description:
+
+This script will convert gff files from C. elegans release WS130 into gff3
+compatible files that can by used by CGL GFF.
+
+";
+
 my $file = shift;
 
-#shorten($file);
-
-#print_keys($file);
+die $usage unless $file;
 
 my $spans     = get_primary_transcript_coors($file);
 my $id_lookup = get_id_lookup($file, $spans);
 
-open (FH, $file); 
+open (FH, $file);
 
 print "##gff-version 3\n";
 print "##Index-subfeatures 0\n";
@@ -37,7 +48,7 @@ while (my $line = <FH>){
                 my ($id) = $fields[8] =~ /Transcript\s+\"(\S+)\"/;
 		my $new = mRNA(\@fields, $id_lookup);
 		print $new."\n" if $new;
-		
+
 	}
         elsif ($fields[1] eq 'Coding_transcript' && $fields[2] eq 'exon'){
                 my ($id) = $fields[8] =~ /Transcript\s+\"(\S+)\"/;
@@ -103,7 +114,7 @@ sub index_cdss {
 		else {
 			next;
 		}
-		
+
 
                 die "dead in get_primary_transcript_coors:$line\n" unless defined($transcr_id);
 
@@ -137,15 +148,15 @@ sub get_primary_transcript_coors {
 		my $cosmid  = $stuff[0];
 		my ($gene, $isoform)  = $stuff[1] =~ /(\d+)([A-z]*)/;
 		my $splice_form = $stuff[2];
-		
+
 
 		push(@{$gene_coors{$cosmid.'.'.$gene}}, {'start'   => $fields[3],
 		                                         'end'     => $fields[4],
 		                                         'strand'  => $fields[6],
 							 'transcr' => $transcr_id,
-		                                         }); 	
+		                                         });
 	}
-	close(FH);	
+	close(FH);
 
 	my $spans = get_gene_coors(\%gene_coors);
 
@@ -169,14 +180,14 @@ sub get_gene_coors {
 			my $t_id   = $t->{transcr};
 
 			$least_start  = $start if !defined($least_start) || $start < $least_start;
-			$greatest_end = $end   if !defined($greatest_end)|| $end > $greatest_end;	
-			
+			$greatest_end = $end   if !defined($greatest_end)|| $end > $greatest_end;
+
 			push(@t_ids, $t_id);
 
 			$all_strand = $strand;
 		}
 		push(@{$spans{$all_strand}{$least_start}{$greatest_end}}, @t_ids);
-	}	
+	}
 
 
 	return \%spans;
@@ -229,14 +240,14 @@ sub gene {
 
 	my @line;
 	push(@line, $fields->[0]);
-	push(@line, 'Coding_transcript'); 
+	push(@line, 'Coding_transcript');
 	push(@line, $fields->[2]);
 	push(@line, $fields->[3]);
 	push(@line, $fields->[4]);
 	push(@line, $fields->[5]);
 	push(@line, $fields->[6]);
 	push(@line, $fields->[7]);
-	push(@line, "ID=Gene:$id;Name=$id;Easy=$id");	
+	push(@line, "ID=Gene:$id;Name=$id;Easy=$id");
 
 	if (defined($lookup->{gene_to_transcr}->{$id})){
 		return join("\t", @line);
@@ -254,7 +265,7 @@ sub mRNA {
 
         die "bad line-no id:".$fields->[8]."\n" unless defined($id);
 
-	my $parent = find_parent($lookup, $id); 
+	my $parent = find_parent($lookup, $id);
 
         my @line;
         push(@line, $fields->[0]);
@@ -293,7 +304,7 @@ sub find_parent {
 
 	my $parent = $lookup->{transcr_to_gene}->{$a};
 	   $parent = $lookup->{transcr_to_gene}->{$b} if ! $parent;
-	   $parent = $lookup->{transcr_to_gene}->{$c} if ! $parent;	
+	   $parent = $lookup->{transcr_to_gene}->{$c} if ! $parent;
 
 	print STDERR "NO PARENT for $id a:$a b:$b c:$c\n" unless $parent;
 
@@ -340,7 +351,7 @@ my $id = -1;
 sub id {
 	$id++;
 	return $id;
-} 
+}
 }
 #-----------------------------------------------------------------------------
 sub exon {
@@ -476,7 +487,7 @@ sub shorten {
                         print $line."\n";
                 }
 	}
-	
+
 	close(FH);
 }
 #-----------------------------------------------------------------------------
