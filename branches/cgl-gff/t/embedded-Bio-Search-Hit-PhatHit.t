@@ -31,94 +31,81 @@ $SIG{__WARN__} = sub { $main::_STDERR_ .= join '', @_; };
 tie *STDOUT, 'Catch', '_STDOUT_' or die $!;
 tie *STDERR, 'Catch', '_STDERR_' or die $!;
 
-    undef $main::_STDOUT_;
-    undef $main::_STDERR_;
+undef $main::_STDOUT_;
+undef $main::_STDERR_;
+
 eval q{
-  my $example = sub {
-    local $^W = 0;
-
-#line 10 lib/Bio/Search/Hit/PhatHit.pod
-  use UNIVERSAL qw( isa );
-
-
-
-  use PROTO;
-  my $foo = new PROTO;
-
-
-
-
-;
-
-  }
+	my $example = sub {
+		local $^W = 0;
+		
+		#line 10 lib/Bio/Search/Hit/PhatHit.pod
+		use UNIVERSAL qw( isa );
+		
+		use PROTO;
+		my $foo = new PROTO;
+	}
 };
+
 is($@, '', "example from line 10");
 
 {
-    undef $main::_STDOUT_;
-    undef $main::_STDERR_;
-#line 10 lib/Bio/Search/Hit/PhatHit.pod
-  use UNIVERSAL qw( isa );
+	undef $main::_STDOUT_;
+	undef $main::_STDERR_;
 
-
-
-  use PROTO;
-  my $foo = new PROTO;
-
-
-
-
-  isa_ok($foo, "PROTO", "Check if it's the right type.");
-
-    undef $main::_STDOUT_;
-    undef $main::_STDERR_;
+	#line 10 lib/Bio/Search/Hit/PhatHit.pod
+	use UNIVERSAL qw( isa );
+	
+	use PROTO;
+	my $foo = new PROTO;
+	
+	isa_ok($foo, "PROTO", "Check if it's the right type.");
+	
+	undef $main::_STDOUT_;
+	undef $main::_STDERR_;
 }
 
-    undef $main::_STDOUT_;
-    undef $main::_STDERR_;
+undef $main::_STDOUT_;
+undef $main::_STDERR_;
 
-    undef $main::_STDOUT_;
-    undef $main::_STDERR_;
+undef $main::_STDOUT_;
+undef $main::_STDERR_;
+
 eval q{
-  my $example = sub {
-    local $^W = 0;
-
-#line 98 lib/Bio/Search/Hit/PhatHit.pod
-
-  use PROTO;
-  my $foo = new PROTO;
-
-;
-
-  }
+	my $example = sub {
+		local $^W = 0;
+		
+		#line 98 lib/Bio/Search/Hit/PhatHit.pod
+		use PROTO;
+		my $foo = new PROTO;
+	}
 };
+
 is($@, '', "example from line 98");
 
-    undef $main::_STDOUT_;
-    undef $main::_STDERR_;
+undef $main::_STDOUT_;
+undef $main::_STDERR_;
 
-    undef $main::_STDOUT_;
-    undef $main::_STDERR_;
+undef $main::_STDOUT_;
+undef $main::_STDERR_;
+
 eval q{
-  my $example = sub {
-    local $^W = 0;
-
+	my $example = sub {
+		local $^W = 0;
+		
 #line 135 lib/Bio/Search/Hit/PhatHit.pod
-
-  use PROTO;
-  my $foo;
-  my $attribute;
-
-  $foo = new PROTO;
-  $foo->attr("testing");
-  $attribute = $foo->attr();
-
-;
-
-  }
+		
+		use PROTO;
+		my $foo;
+		my $attribute;
+		
+		$foo = new PROTO;
+		$foo->attr("testing");
+		$attribute = $foo->attr();
+	}
 };
+
 is($@, '', "example from line 135");
 
-    undef $main::_STDOUT_;
-    undef $main::_STDERR_;
+undef $main::_STDOUT_;
+undef $main::_STDERR_;
 

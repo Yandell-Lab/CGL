@@ -49,6 +49,7 @@ my $md = parse_ds_index($ds_index_file);
  GENE:
     for my $id (keys %{$md}) {
 
+	    print STDERR "\n\n";
             unless (-e $md->{$id}) {
                     print STDERR "Missing path for ID: $id\n";
                     next GENE;
@@ -68,14 +69,20 @@ my $md = parse_ds_index($ds_index_file);
 		    eval {$cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file)};
 	    }
 
-            print "$@\n" if $@;
-            next GENE unless $cgl;
+	    print "ERROR: Can't create CGL object.\n$@\n" if $@;
+	    next GENE unless $cgl;
 
             my $iterator = new CGL::Annotation::Iterator($cgl);
             while (my $gene = $iterator->next_by_gene()){
 
 		#Skip single transcript genes
-		my $trnsc_count = scalar @{$gene->transcripts};
+		my $trnsc_count;
+		eval{$trnsc_count = scalar @{$gene->transcripts}};
+		if ($@) {
+			print STDERR "ERROR: Can't count transcripts\n$@\n";
+			next GENE;
+		}
+
 		if ($trnsc_count <= 1) {
 			print STDERR "ERROR: single transcript gene" .
 				  "($id)";
