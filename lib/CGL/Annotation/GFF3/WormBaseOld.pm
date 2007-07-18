@@ -1,7 +1,7 @@
 #-------------------------------------------------------------------------------
 #------                     CGL::Annotation::GFF3::WormBase              -------
 #-------------------------------------------------------------------------------
-package CGL::Annotation::GFF3::WormBase;
+package CGL::Annotation::GFF3::WormBaseOld;
 use strict;
 use vars qw(@ISA @EXPORT $VERSION);
 use Exporter;
@@ -12,6 +12,7 @@ use Bio::FeatureIO::gff;
 use Bio::Tools::CodonTable;
 use Bio::SeqIO;
 use CGL::Annotation;
+use PostData;
 
 @ISA = qw(
           );
@@ -283,7 +284,6 @@ sub split_file {
                         }
                 }
                 $fh->close();
-
                 my $fasta_file;
                 if ($ds_root) {
                         $fasta_file = sprintf("%s/%s.%s",
@@ -851,10 +851,11 @@ sub get_genes {
 			$mRNAs->{$p_id}->[$i]->{utr_5} = $utr_5->{$id};
 
 			$mRNAs->{$p_id}->[$i]->{exons} = manufacture_mRNA($cdss->{$id}, 
-			                                                  $utr_5->{$id}, 
+									  $utr_5->{$id}, 
 									  $utr_3->{$id},
 									  $exons->{$id} || $exons->{$p_id},
-			                                                  );
+									  );
+			
 		}
 	}
 
