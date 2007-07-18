@@ -211,7 +211,7 @@ sub split_file {
                         foreach my $e (@{$t->{exons}}){
                                 print $fh to_gff3_exon($seg_id, $t, $e)."\n";
                         }
-                        foreach my $c (@{$t->{cdss}}){
+			foreach my $c (@{$t->{cdss}}){
                                 print $fh to_gff3_cds($seg_id, $t, $c)."\n";
                         }
 
@@ -819,9 +819,7 @@ sub load_seq {
 }
 #-------------------------------------------------------------------------------
 sub grab {
-	#Barry
 	my $types    = shift;
-#	my $type     = shift;
 	my $source   = shift;
 	my $features = shift;
 	my $c_id     = shift;
@@ -829,18 +827,33 @@ sub grab {
         my %booty;
 	my $i = 0;
 
+	my %feature_hash;
+	my $feature_counter = 1;
+
 	for my $type (@{$types}) {
 		foreach my $f (@{$features}){
 			my $tag_t = $f->primary_tag();
 			my $tag_s = $f->source_tag();
 			
 			if ($tag_t eq $type && $tag_s eq  $source) {
-				my $id = 
-				    ($f->get_Annotations('ID')
-			     ? $f->get_Annotations('ID')->value()
-				     : $c_id.':'.$type.':'.$i
-				     );
-				
+
+				# Here we will set the ID.  If an ID already exists then we'll use it
+				# If not, we'll increment a coordinate based hash of 
+				# $feature_coordinates{$source}{$c_id}{$start}{$end}
+				my $id; 
+				if ($f->get_Annotations('ID')) {
+					$id = $f->get_Annotations('ID')->value();
+				}
+				else {
+					my $start  = $f->start;
+					my $end    = $f->end;
+					my $strand = $f->strand || '.';
+					$feature_hash{$source}{$c_id}{$strand}{$start}{$end} ||= $feature_counter++;
+					$id = join ":", ($c_id,
+							 $type,
+							 $feature_hash{$source}{$c_id}{$strand}{$start}{$end});
+				}
+
 				my $p_ids = get_p_ids($f);
 				foreach my $p_id (@{$p_ids}){
 					push(@{$booty{$p_id}}, {f        => $f,
@@ -886,7 +899,7 @@ sub get_genes {
 	print STDERR "...finished\n";
 
 	print STDERR "grabbing exons...\n";
-	my $exons = grab([$base_type], 'Coding_transcript', $features, $c_id); #WormBase
+	my $exons = grab([$base_type, 'five_prime_UTR', 'three_prime_UTR'], 'Coding_transcript', $features, $c_id); #WormBase
 	print STDERR "grabbing CDSs...\n";
 	my $cdss  = grab(['CDS'], 'Coding_transcript', $features, $c_id); #WormBase
 	 print STDERR "grabbing transcripts...\n";
@@ -980,6 +993,7 @@ sub wanted {
 	return 1 if $x eq 'tRNA';
         return 1 if $x eq 'exon';
         return 1 if $x eq 'CDS';
+	return 1 if $x =~ /_UTR$/;
         return 1 if $x eq 'scaffold';
         return 0;
 }
