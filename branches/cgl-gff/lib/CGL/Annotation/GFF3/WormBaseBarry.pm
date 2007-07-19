@@ -1,7 +1,7 @@
 #-------------------------------------------------------------------------------
 #------                     CGL::Annotation::GFF3::WormBase              -------
 #-------------------------------------------------------------------------------
-package CGL::Annotation::GFF3::WormBaseOld;
+package CGL::Annotation::GFF3::WormBaseBarry;
 use strict;
 use vars qw(@ISA @EXPORT $VERSION);
 use Exporter;
@@ -834,28 +834,37 @@ sub get_genes {
 	print STDERR "...finished.\n";
 	
 			
-
+      GENE:
 	foreach my $p_id (keys %{$mRNAs}){
+		my $build_exons;
 
+	      RNA:
 		for (my $i = 0; $ i < @{$mRNAs->{$p_id}}; $i++) {
 			my $f  = $mRNAs->{$p_id}->[$i]->{f};
 			my $id = $mRNAs->{$p_id}->[$i]->{id};
 
 			if (! defined $cdss->{$id}) {
-				print STDERR "Warning: Gene $p_id has no CDS annotated!\n";
-				next;
+				warn "Error: Transcript $id on gene $p_id has no CDS annotated!\n";
+				next RNA;
 			}
 
 			$mRNAs->{$p_id}->[$i]->{cdss}  = $cdss->{$id};
 			$mRNAs->{$p_id}->[$i]->{utr_3} = $utr_3->{$id};
 			$mRNAs->{$p_id}->[$i]->{utr_5} = $utr_5->{$id};
 
-			$mRNAs->{$p_id}->[$i]->{exons} = manufacture_mRNA($cdss->{$id}, 
-									  $utr_5->{$id}, 
-									  $utr_3->{$id},
-									  $exons->{$id} || $exons->{$p_id},
-									  );
-			
+			$build_exons = $exons->{$id} || $exons->{$p_id};
+
+			$mRNAs->{$p_id}->[$i]->{exons} = get_valid_exons($cdss->{$id}, 
+									 $utr_5->{$id}, 
+									 $utr_3->{$id},
+									 $build_exons,
+									 );
+			}	
+		for my $exon (@{$build_exons}) {
+			if (! $exon->{used}) {
+				warn "Error: Orphaned exons in gene: $p_id\n";
+				next GENE;
+			}
 		}
 	}
 
@@ -913,25 +922,25 @@ sub get_e_coors {
 
 	my $c_size = @{$cdss};
 
-	my %exon_coors;
+	my @exon_coors;
 	if ($c_size == 1){
-		$exon_coors{$alpha_l_beg}{$omega_l_end}++;
+		push @exon_coors, [$alpha_l_beg, $omega_l_end];
 	}
 	else {
-		$exon_coors{$alpha_l_beg}{$alpha_l_end}++;
-		$exon_coors{$omega_l_beg}{$omega_l_end}++;
+		push @exon_coors, [$alpha_l_beg, $alpha_l_end];
+		push @exon_coors, [$omega_l_beg, $omega_l_end];
 
 		for (my $i = 1; $i < @{$cdss} -1; $i++){
 
 			my ($l_beg, $l_end) = get_l_beg_end($cdss->[$i]);
-			$exon_coors{$l_beg}{$l_end}++;
-  		}
+			push @exon_coors, [$l_beg, $l_end];
+ 		}
 	}
 
-	add_utr_exons($utrs_5, \%exon_coors, \%exclude) if defined($utrs_5);
-	add_utr_exons($utrs_3, \%exon_coors, \%exclude) if defined($utrs_3);
+	add_utr_exons($utrs_5, \@exon_coors, \%exclude) if defined($utrs_5);
+	add_utr_exons($utrs_3, \@exon_coors, \%exclude) if defined($utrs_3);
 	
-	return \%exon_coors;
+	return \@exon_coors;
 }
 #-------------------------------------------------------------------------------
 sub add_utr_exons {
@@ -944,7 +953,7 @@ sub add_utr_exons {
 
                 next if $exclude->{$l_beg}->{$l_end};
 
-                $exon_coors->{$l_beg}->{$l_end}++;
+                push @{$exon_coors}, [$l_beg, $l_end];
         }
 
 }
@@ -1034,7 +1043,7 @@ sub get_omega_coors {
 
 }
 #-------------------------------------------------------------------------------
-sub manufacture_mRNA {
+sub get_valid_exons {
 	my $cdss   = shift;
 	my $utrs_5 = shift;
 	my $utrs_3 = shift;
@@ -1050,28 +1059,33 @@ sub manufacture_mRNA {
 	    $cdss->[0]->{f}->get_Annotations('Parent')->value() :
 	    undef;
 
-	#print STDERR " XXXX new mRNA XXX $g_id $t_id XXXXXXXXXXXXX\n";
+	my $cds_utr_coordinates = get_e_coors($cdss, 
+					      $utrs_5, 
+					      $utrs_3,
+					      );	
 
-	my $exon_coors = get_e_coors($cdss, 
-		                     $utrs_5, 
-		                     $utrs_3,
-		                     );	
-
-	my @actual_exons;
+	my @valid_exons;
 	foreach my $e (@{$exons}){
-		my ($l_beg, $l_end) = get_l_beg_end($e);
 
-		if    (defined($exon_coors->{$l_beg}->{$l_end})){
-			push(@actual_exons, $e);
-		}
-		# hack to deal with unannotated 3 prine utrs in ws 130
-		elsif (!defined($utrs_3->[0]) && defined($exon_coors->{$l_beg})){
-			warn "3 prime utr not annotated but implied $g_id $t_id\n";
-			push(@actual_exons, $e);
+		if ( exon_is_contained($e, $cds_utr_coordinates) ) {
+			push(@valid_exons, $e);
+			$e->{used}++
 		}
 	}
-
-	return \@actual_exons;
+	return \@valid_exons;
+}
+#-------------------------------------------------------------------------------
+sub exon_is_contained {
+	my ($e, $cds_utr_coordinates) = @_;
+	
+	for my $coordinate_pair (@{$cds_utr_coordinates}) {
+		my ($exon_begin, $exon_end) = get_l_beg_end($e);
+		my ($valid_begin, $valid_end) = @{$coordinate_pair};
+		if ($exon_begin == $valid_begin || $exon_end == $valid_end) {
+			return 1;
+		}
+	}
+	return undef;
 }
 #-------------------------------------------------------------------------------
 sub debug {
