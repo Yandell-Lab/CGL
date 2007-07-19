@@ -10,7 +10,8 @@ my $usage = "
 
 Synopsis:
 
-wrap_splice_distance -type [exonic|nucleo] master_datastore1 master_datstore2 id_map
+wrap_splice_distance -type [exonic|nucleo] --format [choas|gff] \
+     master_datastore1 master_datstore2 id_map
 
 Description:
 
