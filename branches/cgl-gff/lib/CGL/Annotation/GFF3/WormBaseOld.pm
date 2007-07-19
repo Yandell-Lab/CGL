@@ -1,7 +1,7 @@
 #-------------------------------------------------------------------------------
 #------                     CGL::Annotation::GFF3::WormBase              -------
 #-------------------------------------------------------------------------------
-package CGL::Annotation::GFF3::WormBaseBarry;
+package CGL::Annotation::GFF3::WormBaseOld;
 use strict;
 use vars qw(@ISA @EXPORT $VERSION);
 use Exporter;
