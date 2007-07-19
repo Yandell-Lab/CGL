@@ -8,6 +8,7 @@ use CGL::Annotation;
 use CGL::Annotation::GFF3::Maker;
 use CGL::Annotation::GFF3::FlyBase;
 use CGL::Annotation::GFF3::WormBase;
+use CGL::Annotation::GFF3::WormBaseOld;
 use CGL::Annotation::Iterator;
 use Getopt::Long;
 use Text::Wrap qw(wrap);
@@ -50,7 +51,7 @@ GetOptions('trans'     => \$trans,
 	   'gene_name' => \$gene_name,
 	   );
 
-local($Text::Wrap::column = $column || 80);
+local ($Text::Wrap::column) = $column || 80;
 my $md_file = shift;
 die $usage unless $md_file;
 
@@ -71,16 +72,14 @@ my $md = parse_datastore($md_file);
 	    print STDERR "$gff_file\n";
 	    
 	    my $cgl;
-	    eval {$cgl = new CGL::Annotation::GFF3::WormBase($gff_file, $fasta_file)};
+	    eval {$cgl = new CGL::Annotation::GFF3::WormBaseOld($gff_file, $fasta_file)};
 
 	    print "$@\n" if $@;
 	    next GENE unless $cgl;
 
 	    my $iterator = new CGL::Annotation::Iterator($cgl);
 	    while (my $g = $iterator->next_by_gene()){
-		    my $i = 0;
-		    
-		    eval {print get_fasta_seq($g, $i)};
+		    eval {print get_fasta_seq($g)};
 		    print STDERR "$@\n" if $@;
 	    }
     }
@@ -109,7 +108,10 @@ sub parse_datastore {
 #------------------------------------------------------------------------------
 sub get_fasta_seq {
 
-	my ($g, $i) = @_;
+	my $g = shift;
+
+	my $i = 0;
+	my $fasta;
 
       TRANS:
 	while (my $t = $g->transcript($i++)) {
@@ -120,7 +122,7 @@ sub get_fasta_seq {
 			print STDERR "Getting ID\n";
 			$header   = $t->id;
 			if ($gene_name) {
-				$header = $g->id . "-mRNA-$i";
+				$header = $g->id . "-mRNA-" . $i;
 			}
 			$sequence = $t->residues;
 		}
@@ -149,10 +151,10 @@ sub get_fasta_seq {
 			next TRANS if ! $sequence;
 		}
 
-		my $fasta = ">$header\n";
-		$fasta   .= wrap('', '', $sequence);
-		$fasta   .= "\n";
+		$fasta .= ">$header\n";
+		$fasta .= wrap('', '', $sequence);
+		$fasta .= "\n";
 
-		return $fasta;
 	}
+	return $fasta;
 }

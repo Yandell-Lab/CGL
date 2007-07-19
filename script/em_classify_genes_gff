@@ -192,12 +192,6 @@ sub em_classify_trnsc_pair {
 		my $exon1 = shift @$exon_pair;
 		my $exon2 = shift @$exon_pair;
 		
-		#If any exons align
-		if ($exon1->id eq $exon2->id) {
-			$trnsc_pair_class = 'aligned';
-			return $trnsc_pair_class;
-		}
-
 		#Get natural begin and end for exons
 		my $ex1_beg = $exon1->nbeg;
 		my $ex1_end = $exon1->nend;
@@ -209,8 +203,18 @@ sub em_classify_trnsc_pair {
 		#begining to be numerically before the end.
 		($ex1_beg, $ex1_end) = ($ex1_end, $ex1_beg) 
 		    if $ex1_beg > $ex1_end;
-		($ex1_beg, $ex1_end) = ($ex1_end, $ex1_beg) 
-		    if $ex1_beg > $ex1_end;
+		($ex2_beg, $ex2_end) = ($ex2_end, $ex2_beg) 
+		    if $ex2_beg > $ex2_end;
+
+		#If any exons align
+#		if ($exon1->id eq $exon2->id) {
+		# You could use either the ID comparison or the coordinate 
+		# comparison.  The coordinate comparison seems a bit more robust.
+		if ($ex1_beg == $ex2_beg &&
+		    $ex1_end == $ex2_end ) {
+			$trnsc_pair_class = 'aligned';
+			return $trnsc_pair_class;
+		}
 
 		if (
                     #Check if the exons share even on nt in common

@@ -54,39 +54,31 @@ while (my $line = <FH>){
                 my ($id) = $fields[8] =~ /Transcript\s+\"(\S+)\"/;
                 my $new = exon(\@fields, $id_lookup);
                 print $new."\n" if $new;
-                #print $line."\n";
         }
 	elsif ($fields[1] eq 'curated' && $fields[2] eq 'coding_exon'){
                 my ($id) = $fields[8] =~ /CDS\s+\"(\S+)\"/;
 		my $new = cds(\@fields, $id_lookup);
 		print $new."\n" if $new;
-		#print $line."\n";
 	}
         elsif ($fields[1] eq 'five_prime_exon_noncoding_region' && $fields[2] eq 'exon'){
                 my ($id) = $fields[8] =~ /Transcript\s+\"(\S+)\"/;
                 my $new = utr_5(\@fields, $id_lookup);
                 print $new."\n" if $new;
-                #print $line."\n";
         }
         elsif ($fields[1] eq 'three_prime_exon_noncoding_region' && $fields[2] eq 'exon'){
                 my ($id) = $fields[8] =~ /Transcript\s+\"(\S+)\"/;
                 my $new = utr_3(\@fields, $id_lookup);
                 print $new."\n" if $new;
-                #print $line."\n";
         }
         elsif ($fields[1] eq 'five_prime_noncoding_exon' && $fields[2] eq 'exon'){
                 my ($id) = $fields[8] =~ /Transcript\s+\"(\S+)\"/;
-                my $new = utr_3(\@fields, $id_lookup);
+                my $new = utr_5(\@fields, $id_lookup);
                 print $new."\n" if $new;
-                #print $line."\n";
-
         }
         elsif ($fields[1] eq 'three_prime_noncoding_exon' && $fields[2] eq 'exon'){
                 my ($id) = $fields[8] =~ /Transcript\s+\"(\S+)\"/;
                 my $new = utr_3(\@fields, $id_lookup);
                 print $new."\n" if $new;
-                #print $line."\n";
-
         }
 
 }
@@ -442,7 +434,7 @@ sub utr_3 {
         push(@line, $fields->[5]);
         push(@line, $fields->[6]);
         push(@line, $fields->[7]);
-        push(@line, "ID=three_prime_utr:$id\.$u_id;Name=$id\.$u_id;Parent=Transcript:$parent;Easy=$easy");
+        push(@line, "ID=three_prime_UTR:$id\.$u_id;Name=$id\.$u_id;Parent=Transcript:$parent;Easy=$easy");
 
 
         if (defined($parent) && defined($easy)){
