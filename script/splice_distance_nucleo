@@ -4,7 +4,6 @@ use strict;
 use FileHandle;
 use Getopt::Long;
 use Shadower;
-use PostData;
 
 my $usage = '
 
@@ -12,6 +11,7 @@ Synopsis:
 
 splice_distance_nucleo --gff_i gff3_file --fasta_i fasta_file \
                        --gff_j gff3_file --fasta_j fasta_file
+                       --format_i WormBase --format_j WormBaseOld
 
 splice_distance_nucleo --chaos_i chaos_file --chaos_j chaos_file 
 
@@ -51,14 +51,14 @@ my ($gene_id, $num_t, $num_t_p, $esc_m_x, $esc_m, $esc_c_x, $esc_c, $esc_u_x,
     $isc_c, $isc_5_x, $isc_5, $isc_3_x, $isc_3) = split;
 
 Options:
-  --format  [Flybase|Wormbase]  Is the annotation in FlyBase GFF or 
-            Wormbase GFF?  Wormbase is the default.
-  --gff_i   The name of the first GFF3 file.
-  --gff_j   The name of the second GFF3 file.
-  --fasta_i The name of the first fasta file.
-  --fasta_j The name of the second fasta file.
-  --chaos_i The name of the first chaos file.
-  --chaos_j The name of the second chaos file.
+  --format_i [Flybase|Wormbase|WormbaseOld]
+  --format_j [Flybase|Wormbase|WormbaseOld]. Optional, defaults to format_i.
+  --gff_i    The name of the first GFF3 file.
+  --gff_j    The name of the second GFF3 file.
+  --fasta_i  The name of the first fasta file.
+  --fasta_j  The name of the second fasta file.
+  --chaos_i  The name of the first chaos file.
+  --chaos_j  The name of the second chaos file.
 
 '; 
 
@@ -67,28 +67,66 @@ Options:
 #-----------------------------------------------------------------------------
 
 my ($gff_file_i, $fasta_file_i, $gff_file_j, 
-    $fasta_file_j, $chaos_file_i, $chaos_file_j);
+    $fasta_file_j, $chaos_file_i, $chaos_file_j, $format_i, $format_j);
 
-my $opt_success = GetOptions('gff_i=s'   => \$gff_file_i,
-			     'gff_j=s'   => \$gff_file_j,
-			     'fasta_i=s' => \$fasta_file_i,
-			     'fasta_j=s' => \$fasta_file_j,
-			     'chaos_i=s' => \$chaos_file_i,
-			     'chaos_j=s' => \$chaos_file_j,
+my $opt_success = GetOptions('gff_i=s'    => \$gff_file_i,
+			     'gff_j=s'    => \$gff_file_j,
+			     'fasta_i=s'  => \$fasta_file_i,
+			     'fasta_j=s'  => \$fasta_file_j,
+			     'chaos_i=s'  => \$chaos_file_i,
+			     'chaos_j=s'  => \$chaos_file_j,
+			     'format_i=s' => \$format_i,
+			     'format_j=s' => \$format_j,
 			     );
 
 my ($cgl_i, $cgl_j);
+
+$format_j ||= $format_i;
+
+die "--format_i and --format_j options must be WormBase WormBaseOld or FlyBase"
+    unless grep {$_ =~ /WormBase|WormBaseOld|FlyBase/} ($format_i, $format_j);
 
 if ($gff_file_i && $fasta_file_i &&
     $gff_file_j && $fasta_file_j) { 
 	unshift @INC, $ENV{CGL_GFF_LIB};
 	require CGL::Annotation;
+
+###########################
+# Why doesn't this work?? #
+###########################
+#	eval {require CGL::Annotation::GFF3::$format_i};
+#	eval {require CGL::Annotation::GFF3::$format_j unless $format_i eq $format_j};
+
 	require CGL::Annotation::GFF3::WormBase;
 	require CGL::Annotation::GFF3::WormBaseOld;
+	require CGL::Annotation::GFF3::FlyBase;
 	require CGL::Annotation::Iterator;
 
-	$cgl_i = new CGL::Annotation::GFF3::WormBaseOld($gff_file_i, $fasta_file_i);
-	$cgl_j = new CGL::Annotation::GFF3::WormBaseOld($gff_file_j, $fasta_file_j);
+	if ($format_i eq 'FlyBase') {
+		$cgl_i = new CGL::Annotation::GFF3::FlyBase($gff_file_i, $fasta_file_i);
+	}
+	elsif ($format_i eq 'WormBase') {
+		$cgl_i = new CGL::Annotation::GFF3::WormBase($gff_file_i, $fasta_file_i);
+	}
+	elsif ($format_i eq 'WormBaseOld') {
+		$cgl_i = new CGL::Annotation::GFF3::WormBaseOld($gff_file_i, $fasta_file_i);
+	}
+	else {
+		die "Bad --format_i parameter: $format_i must match [WormBase|WormBaseOld|FlyBase]\n";
+	}
+
+	if ($format_j eq 'FlyBase') {
+		$cgl_j = new CGL::Annotation::GFF3::FlyBase($gff_file_j, $fasta_file_j);
+	}
+	elsif ($format_j eq 'WormBase') {
+		$cgl_j = new CGL::Annotation::GFF3::WormBase($gff_file_j, $fasta_file_j);
+	}
+	elsif ($format_j eq 'WormBaseOld') {
+		$cgl_j = new CGL::Annotation::GFF3::WormBaseOld($gff_file_j, $fasta_file_j);
+	}
+	else {
+		die "Bad --format_j parameter: $format_j must match [WormBase|WormBaseOld|FlyBase]\n";
+	}
 }
 elsif ($chaos_file_i && $chaos_file_j) {
 	unshift @INC, "$ENV{HOME}/CGL/trunk/lib/";
@@ -1124,7 +1162,6 @@ sub get_CDS_data {
                 $i++;
         }
 
-	#PostData(\%CDSs);
         return \%CDSs;
 }
 #-----------------------------------------------------------------------------
