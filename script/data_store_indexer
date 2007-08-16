@@ -49,7 +49,7 @@ die $usage unless $ARGV[0];
 
 my $file  = $ARGV[0];
 
-my $return = system("/home/bmoore/CGL/script/cgl_validate $file");
+my $return = system("cgl_validate $file");
 
 unless ($return ==0 ){
 	print "DOC_INVALID"."\t"."-"."\t"."-"."\t"."-"."\t".$file."\n";
