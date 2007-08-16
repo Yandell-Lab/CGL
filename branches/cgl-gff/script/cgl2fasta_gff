@@ -74,7 +74,7 @@ my $md = parse_datastore($md_file);
 	    my $cgl;
 	    eval {$cgl = new CGL::Annotation::GFF3::WormBaseOld($gff_file, $fasta_file)};
 
-	    print "$@\n" if $@;
+	    print STDERR "Gene: $id died with errors:\n$@\n" if $@;
 	    next GENE unless $cgl;
 
 	    my $iterator = new CGL::Annotation::Iterator($cgl);

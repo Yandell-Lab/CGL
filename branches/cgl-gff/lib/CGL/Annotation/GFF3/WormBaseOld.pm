@@ -842,6 +842,23 @@ sub get_genes {
 		for (my $i = 0; $ i < @{$mRNAs->{$p_id}}; $i++) {
 			my $f  = $mRNAs->{$p_id}->[$i]->{f};
 			my $id = $mRNAs->{$p_id}->[$i]->{id};
+			
+=head1
+			# Hack to deal with this:
+			# (http://www.wormbase.org/wiki/index.php/FAQs#Gene_Model_Naming)
+			# In cases of alt splicing where the only the UTRs change the CDS
+			# IDs are not incremented.  Transcripts ACE.5.1 and ACE.5.2 have
+			# different UTRs, but share the CDS with ID ACE.5.  Below we
+			# truncate the Transcript ID (only for CDS purposes) if it's longer 
+			# than 3 sections.
+
+			my @id_chunks = split /\./, $id;
+			my $cds_id = $id;
+			if (scalar @id_chunks > 2) {
+				$cds_id = join '.', @id_chunks[0, 1];
+			}
+
+=cut
 
 			if (! defined $cdss->{$id}) {
 				warn "Error: Transcript $id on gene $p_id has no CDS annotated!\n";

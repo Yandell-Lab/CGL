@@ -11,7 +11,7 @@ my $usage = "
 Synopsis:
 
 wrap_splice_distance -type [exonic|nucleo] --format [choas|gff] \
-     master_datastore1 master_datstore2 id_map
+     --org FlyBase master_datastore1 master_datstore2 id_map
 
 Description:
 
@@ -25,10 +25,12 @@ Options:
 
 ";
 
-my ($type, $out, $format);
+my ($type, $out, $format, $org);
 my $opt_success = GetOptions('type=s'   => \$type,
 			     'out=s'    => \$out,
-			     'format=s' => \$format);
+			     'format=s' => \$format,
+			     'org=s'    => \$org,
+			     );
 
 my ($md1_file, $md2_file, $id_map) = @ARGV;
 
@@ -37,6 +39,8 @@ die "-type flag must be either nucleo or exonic, not $type\n\n$usage"
     unless ($type =~ /nucleo|exonic/);
 die "-format flag must be either gff or chaos, not $format\n\n$usage" 
     unless ($format =~ /gff|chaos/); 
+die "-org flag must match [FlyBase|WormBase|WormBaseOld]"
+    unless $org =~ /FlyBase|WormBase|WormBaseOld/;
 
 my $md1 = parse_datastore($md1_file);
 my $md2 = parse_datastore($md2_file);
@@ -87,7 +91,8 @@ my $type_format = "${type}_${format}";
 	    ($fasta_path2 = $gff_path2) =~ s/.gff3/.fasta/;
 
 	    my %command_lines = (nucleo_gff   => "splice_distance_nucleo --gff_i $gff_path1 --fasta_i " . 
-				                 "$fasta_path1 --gff_j $gff_path2 --fasta_j $fasta_path2",
+				                 "$fasta_path1 --gff_j $gff_path2 --fasta_j $fasta_path2 " .
+				                 "--format_i $org",
 				 exonic_gff   => "splice_distance_exonic --gff_i $gff_path1 --fasta_i " . 
 				                 "$fasta_path1 --gff_j $gff_path2 --fasta_j $fasta_path2",
 				 nucleo_chaos => "splice_distance_nucleo --chaos_i $chaos_path1 --chaos_j $chaos_path2",

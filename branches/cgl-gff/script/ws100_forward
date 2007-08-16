@@ -51,20 +51,17 @@ while (my $line = <FH>){
 
 		my $new = cds(\@fields, $id_lookup);
 		print $new."\n" if $new;
-		#print $line."\n";
 	}
         elsif ($fields[1] eq 'UTR' && $fields[8] =~ /UTR\s+\"5_UTR:\S+\"/){
                 my ($id) = $fields[8] =~ /UTR\s+\"5\_UTR:(\S+)\"/;
                 my $new = utr_5(\@fields, $id_lookup);
                 print $new."\n" if $new;
-                #print $line."\n";
 
         }
         elsif ($fields[1] eq 'UTR' && $fields[8] =~ /UTR\s+\"3_UTR:\S+\"/){
 		my ($id) = $fields[8] =~ /UTR\s+\"3\_UTR:(\S+)\"/;
                 my $new = utr_3(\@fields, $id_lookup);
                 print $new."\n" if $new;
-                #print $line."\n";
 
         }
 

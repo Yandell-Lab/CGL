@@ -25,8 +25,8 @@ my $file = shift;
 
 die $usage unless $file;
 
-my $spans     = get_primary_transcript_coors($file);
-my $id_lookup = get_id_lookup($file, $spans);
+my $gene_coors = get_trnsc_coors($file);
+my $id_lookup  = get_id_lookup($file, $gene_coors);
 
 open (FH, $file);
 
@@ -108,7 +108,7 @@ sub index_cdss {
 		}
 
 
-                die "dead in get_primary_transcript_coors:$line\n" unless defined($transcr_id);
+                die "dead in get_trnsc_coors:$line\n" unless defined($transcr_id);
 
 		$index{$transcr_id}++;
 
@@ -119,12 +119,12 @@ sub index_cdss {
 	return \%index;
 }
 #-----------------------------------------------------------------------------
-sub get_primary_transcript_coors {
+sub get_trnsc_coors {
 	my $file = shift;
 
 	open(FH, $file);
 
-        my %gene_coors;
+        my %trnsc_coors;
         while (my $line = <FH>){
 		next unless $line =~ /protein_coding_primary_transcript/;
 		my @fields = split(/\t/, $line);
@@ -133,66 +133,71 @@ sub get_primary_transcript_coors {
 
 		my ($transcr_id) = $fields[8] =~ /Transcript\s+\"(\S+)\"$/;
 
-		die "dead in get_primary_transcript_coors:$line\n" unless defined($transcr_id);
+		die "dead in get_trnsc_coors:$line\n" unless defined($transcr_id);
 
-		my @stuff = split(/\./, $transcr_id);
+		my @id_fields = split(/\./, $transcr_id);
 
-		my $cosmid  = $stuff[0];
-		my ($gene, $isoform)  = $stuff[1] =~ /(\d+)([A-z]*)/;
-		my $splice_form = $stuff[2];
+		my $cosmid  = $id_fields[0];
+		my ($gene, $isoform)  = $id_fields[1] =~ /(\d+)([A-z]*)/;
+		my $splice_form = $id_fields[2];
 
+		my $gene_id = "${cosmid}.${gene}";
+		$transcr_id = "${cosmid}.${gene}${isoform}";
 
-		push(@{$gene_coors{$cosmid.'.'.$gene}}, {'start'   => $fields[3],
-		                                         'end'     => $fields[4],
-		                                         'strand'  => $fields[6],
-							 'transcr' => $transcr_id,
-		                                         });
+		push(@{$trnsc_coors{$gene_id}}, {'start'   => $fields[3],
+						 'end'     => $fields[4],
+						 'strand'  => $fields[6],
+						 'transcr' => $transcr_id,
+					 });
 	}
 	close(FH);
 
-	my $spans = get_gene_coors(\%gene_coors);
+	my $gene_coors = get_gene_coors(\%trnsc_coors);
 
-	return $spans;
+	return $gene_coors;
 }
 #-----------------------------------------------------------------------------
 sub get_gene_coors {
-	my $hash = shift;
+	my $trnsc_coors = shift;
 
 
-	my %spans;
-	foreach my $gene_id (keys %{$hash}){
-		my $least_start;
-		my $greatest_end;
+	my %gene_coors;
+	foreach my $gene_id (keys %{$trnsc_coors}){
+		my $min;
+		my $max;
 		my @t_ids;
-		my $all_strand;
-		foreach my $t (@{$hash->{$gene_id}}){
+		my $strand;
+
+		foreach my $t (@{$trnsc_coors->{$gene_id}}){
 			my $start  = $t->{start};
 			my $end    = $t->{end};
-			my $strand = $t->{strand};
 			my $t_id   = $t->{transcr};
+			$strand = $t->{strand};
 
-			$least_start  = $start if !defined($least_start) || $start < $least_start;
-			$greatest_end = $end   if !defined($greatest_end)|| $end > $greatest_end;
+			$min ||= $start;
+			$max ||= $end;
+
+			$min = $start if $start < $min;
+			$max = $end   if $end > $max;
 
 			push(@t_ids, $t_id);
 
-			$all_strand = $strand;
 		}
-		push(@{$spans{$all_strand}{$least_start}{$greatest_end}}, @t_ids);
+		push(@{$gene_coors{$strand}{$min}{$max}}, @t_ids);
 	}
 
-
-	return \%spans;
+	return \%gene_coors;
 }
 #-----------------------------------------------------------------------------
 sub get_id_lookup {
 	my $file  = shift;
-	my $spans = shift;
+	my $gene_coors = shift;
 
 	open(FH, $file);
 
 	my %lookup;
 	while (my $line = <FH>){
+		next if $line =~ /^\#/;
 		my @fields = split("\t", $line);
 	        if ($fields[1] eq 'gene' && $fields[2] eq 'gene'){
 
@@ -205,7 +210,7 @@ sub get_id_lookup {
 			my $start  = $fields[3];
 			my $end    = $fields[4];
 
-			my $transcript_ids = $spans->{$strand}{$start}{$end};
+			my $transcript_ids = $gene_coors->{$strand}{$start}{$end};
 
 
 			next unless defined($transcript_ids);
@@ -275,7 +280,7 @@ sub mRNA {
 		return join("\t", @line);
 	}
 	else {
-		print STDERR "ERROR: No parent for mRNA ($id)\n";
+		print STDERR "no parent for ID=Transcript:$id;Name=$id\n";
 		#sleep 2;
 		return undef;
 	}
@@ -298,7 +303,9 @@ sub find_parent {
 	   $parent = $lookup->{transcr_to_gene}->{$b} if ! $parent;
 	   $parent = $lookup->{transcr_to_gene}->{$c} if ! $parent;
 
-	print STDERR "ERROR: No parent for $id a:$a b:$b c:$c\n" unless $parent;
+	if (! $parent) {
+		print STDERR "NO PARENT for $id a:$a b:$b c:$c\n" unless $parent;
+	}
 
 	return $parent;
 }
@@ -332,7 +339,7 @@ sub cds {
                 return join("\t", @line);
         }
         else {
-                print STDERR "ERROR: No parent for CDS ($id)\n";
+                print STDERR "no parent for ID=Transcript:$id;Name=$id\n";
                 #sleep 2;
                 return undef;
         }
@@ -373,7 +380,8 @@ sub exon {
                 return join("\t", @line);
         }
         else {
-                print STDERR "ERROR: No parent for exon ($id)\n";
+                print STDERR "no parent for ID=Gene:$id;Name=$id\n";
+                #sleep 2;
                 return undef;
         }
 }
@@ -406,7 +414,8 @@ sub utr_5 {
                 return join("\t", @line);
         }
         else {
-                print STDERR "ERROR: No parent for UTR_5 ($id)\n";
+                print STDERR "no parent for ID=Transcript:$id;Name=$id\n";
+                #sleep 2;
                 return undef;
         }
 }
@@ -439,7 +448,8 @@ sub utr_3 {
                 return join("\t", @line);
         }
         else {
-                print STDERR "ERROR: No parent for UTR_3 ($id)\n";
+                print STDERR "no parent for ID=Transcript:$id;Name=$id\n";
+                #sleep 2;
                 return undef;
         }
 }
