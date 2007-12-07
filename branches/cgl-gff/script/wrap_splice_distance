@@ -34,13 +34,16 @@ my $opt_success = GetOptions('type=s'   => \$type,
 
 my ($md1_file, $md2_file, $id_map) = @ARGV;
 
+$org ||= '';
+$format ||= '';
+
 die $usage unless ($md1_file && $md2_file);
 die "-type flag must be either nucleo or exonic, not $type\n\n$usage" 
     unless ($type =~ /nucleo|exonic/);
 die "-format flag must be either gff or chaos, not $format\n\n$usage" 
     unless ($format =~ /gff|chaos/); 
 die "-org flag must match [FlyBase|WormBase|WormBaseOld]"
-    unless $org =~ /FlyBase|WormBase|WormBaseOld/;
+    unless $org =~ /FlyBase|WormBase|WormBaseOld/ || $format =~ /chaos/i;
 
 my $md1 = parse_datastore($md1_file);
 my $md2 = parse_datastore($md2_file);
@@ -92,7 +95,7 @@ my $type_format = "${type}_${format}";
 
 	    my %command_lines = (nucleo_gff   => "splice_distance_nucleo --gff_i $gff_path1 --fasta_i " . 
 				                 "$fasta_path1 --gff_j $gff_path2 --fasta_j $fasta_path2 " .
-				                 "--format_i $org",
+				                 "--format_i $org --format_j $org",
 				 exonic_gff   => "splice_distance_exonic --gff_i $gff_path1 --fasta_i " . 
 				                 "$fasta_path1 --gff_j $gff_path2 --fasta_j $fasta_path2",
 				 nucleo_chaos => "splice_distance_nucleo --chaos_i $chaos_path1 --chaos_j $chaos_path2",
@@ -112,7 +115,6 @@ my $type_format = "${type}_${format}";
 #----------------------------------------------------------------------------- 
 #-------------------------------- SUBROUTINES -------------------------------- 
 #----------------------------------------------------------------------------- 
-
 sub parse_datastore {
 	my $file = shift;
 
@@ -136,7 +138,7 @@ sub parse_datastore {
 	}
 	return \%md;
 }
-
+#----------------------------------------------------------------------------- 
 sub parse_id_map {
 	my $file = shift;
 

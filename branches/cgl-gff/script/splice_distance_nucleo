@@ -83,8 +83,8 @@ my ($cgl_i, $cgl_j);
 
 $format_j ||= $format_i;
 
-die "--format_i and --format_j options must be WormBase WormBaseOld or FlyBase"
-    unless grep {$_ =~ /WormBase|WormBaseOld|FlyBase/} ($format_i, $format_j);
+die "--format_i and --format_j options must be WormBase WormBaseOld or FlyBase\n\n"
+    unless (grep {$_ =~ /WormBase|WormBaseOld|FlyBase/} ($format_i, $format_j)) || $chaos_file_i;
 
 if ($gff_file_i && $fasta_file_i &&
     $gff_file_j && $fasta_file_j) { 

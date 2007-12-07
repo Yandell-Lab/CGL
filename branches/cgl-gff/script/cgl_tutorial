@@ -13,6 +13,7 @@ use lib $ENV{CGL_GFF_LIB};
 use FileHandle;
 use CGL::Annotation;
 use CGL::Annotation::GFF3::WormBaseOld;
+use CGL::Annotation::GFF3::WormBase;
 #use CGL::Annotation::GFF3::FlyBase;
 #use CGL::Annotation::GFF3::Maker;
 use CGL::Annotation::Iterator;
@@ -42,7 +43,7 @@ scalar @ids > 0
     ? $ids_ref = \@ids 
     : undef($ids_ref);
 
-my $cgl = new CGL::Annotation::GFF3::WormBaseOld($gff_file, $fasta_file, $ids_ref);
+my $cgl = new CGL::Annotation::GFF3::WormBase($gff_file, $fasta_file, $ids_ref);
 
 my $iterator = new CGL::Annotation::Iterator($cgl);
 
