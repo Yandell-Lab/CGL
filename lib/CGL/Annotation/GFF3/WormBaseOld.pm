@@ -876,7 +876,7 @@ sub get_genes {
 									 $utr_3->{$id},
 									 $build_exons,
 									 );
-			}	
+			}
 		for my $exon (@{$build_exons}) {
 			if (! $exon->{used}) {
 				warn "Error: Orphaned exons in gene: $p_id\n";
