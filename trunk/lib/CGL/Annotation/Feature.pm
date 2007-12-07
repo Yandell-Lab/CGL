@@ -177,7 +177,7 @@ BEGIN {
  Argument  : XXXX
  Throws    :
  Comments  : XXXX Never used anywhere.
-           :
+	   :
  See Also  :
 
 =cut
@@ -224,7 +224,7 @@ sub new {
  Argument  : The value for the residues field if setting it.
  Throws    :
  Comments  :
-           :
+	   :
  See Also  :
 
 =cut
@@ -274,7 +274,7 @@ sub residues {
  Argument  : The value for the nbeg field if setting it.
  Throws    :
  Comments  :
-           :
+	   :
  See Also  :
 
 =cut
@@ -324,7 +324,7 @@ sub nbeg {
  Argument  : The natural end to set the value, none otherwise.
  Throws    :
  Comments  :
-           :
+	   :
  See Also  :
 
 =cut
@@ -333,14 +333,14 @@ sub nbeg {
 
 sub nend {
 	my $self = shift;
-        my $nend = shift;
+	my $nend = shift;
 
-        if (defined($nend)){
-                $self->featureLocation(0)->nend($nend);
-        }
-        else {
+	if (defined($nend)){
+		$self->featureLocation(0)->nend($nend);
+	}
+	else {
 		return $self->featureLocation(0)->nend();
-        }
+	}
 
 }
 
@@ -373,7 +373,7 @@ sub nend {
  Argument  : none.
  Throws    :
  Comments  :
-           :
+	   :
  See Also  :
 
 =cut
@@ -416,7 +416,7 @@ sub length {
  Argument  :
  Throws    :
  Comments  : Replaces any occurences of "/" in the uniquename with
-           : "-".
+	   : "-".
  See Also  :
 
 =cut
@@ -424,10 +424,14 @@ sub length {
 ################################################## subroutine header end ##
 sub uniquename {
 	my $self = shift;
-	
+
 	my $u = $self->{uniquename};
 
-	$u =~ s/\//-/g;
+	#I'm taking this line out because it's causing the CGL object
+	#to end up as a mosaic of names with '/' and '-' for it's features
+	#better to deal with '/' escaping issues externally with something like
+	#URI::Escape - Barry (12/7/07);
+	#$u =~ s/\//-/g;
 
 	return $u;
 }
@@ -460,7 +464,7 @@ sub uniquename {
  Argument  :
  Throws    :
  Comments  : Replaces any occurences of "/" in the uniquename with
-           : "-".
+	   : "-".
  See Also  :
 
 =cut
@@ -474,9 +478,9 @@ sub featureLocation {
 	if ($i > 0){
 	  die "dead in CGL::Annotation::Feature::featureLocation(); i > 0 \n";
 	}
-        if (!defined($self->{locations})){
-	  die;			# XXXX fix message	
-        }
+	if (!defined($self->{locations})){
+	  die;			# XXXX fix message
+	}
 
 	return $self->{locations}->[$i];
 }
@@ -509,7 +513,7 @@ sub featureLocation {
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  :
 
 =cut
@@ -517,9 +521,9 @@ sub featureLocation {
 ################################################## subroutine header end ##
 
 sub name {
-        my $self = shift;
+	my $self = shift;
 
-        return $self->{name};
+	return $self->{name};
 
 }
 
@@ -550,7 +554,7 @@ sub name {
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  :
 
 =cut
@@ -558,9 +562,9 @@ sub name {
 ################################################## subroutine header end ##
 
 sub type {
-        my $self = shift;
+	my $self = shift;
 
-        return $self->{type};
+	return $self->{type};
 }
 
 ################################################ subroutine header begin ##
@@ -590,7 +594,7 @@ sub type {
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  :
 
 =cut
@@ -598,7 +602,7 @@ sub type {
 ################################################## subroutine header end ##
 
 sub strand {
-        my $self = shift;
+	my $self = shift;
 
 
 	my $s = $self->nbeg < $self->nend ? 1 : -1;
@@ -608,7 +612,7 @@ sub strand {
 	die "strand undefined in CGL::Annotation::Feature::strand\n"
 	unless ($s == 1 || $s == -1);
 
-        return $s;
+	return $s;
 }
 
 ################################################ subroutine header begin ##
@@ -638,7 +642,7 @@ sub strand {
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  :
 
 =cut
@@ -685,7 +689,7 @@ sub id {
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  :
 
 =cut
@@ -727,14 +731,14 @@ sub inScope {
   isa_ok($g, CGL::Annotation::Feature::Gene, "moose");
   is($note,
      'MXC7.4;similartoHcr25bGB:AAC78595(Lycopersiconesculentum)(PlantCell10,19151926(1998));containsPfamprofile:PF00560leucinerichrepeat(17copies)',
-     "Check that we properly retrieve a note property."); 
+     "Check that we properly retrieve a note property.");
 
  Purpose   :
  Returns   :
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  :
 
 =cut
@@ -781,7 +785,7 @@ sub properties {
  Argument  : None.
  Throws    :
  Comments  :
-           :
+	   :
  See Also  :
 
 =cut
@@ -789,9 +793,9 @@ sub properties {
 ################################################## subroutine header end ##
 
 sub relationships {
-        my $self = shift;
+	my $self = shift;
 
-        return @{$self->{relationships}|| []};
+	return @{$self->{relationships}|| []};
 }
 
 ################################################ subroutine header begin ##
@@ -821,7 +825,7 @@ sub relationships {
  Argument  : Required and optional input.
  Throws    : Exceptions and other anomolies
  Comments  : This is a sample subroutine header.
-           : It is polite to include more pod and fewer comments.
+	   : It is polite to include more pod and fewer comments.
  See Also  : Other things that might be useful.
 
 =cut
@@ -862,7 +866,7 @@ sub _add_id {
  Argument  :
  Throws    :
  Comments  : The shared so object is part of a closure.
-           :
+	   :
  See Also  : CGL::Ontology::SO
 
 =cut
@@ -897,7 +901,7 @@ sub _add_id {
  Returns   : Whether the feature is "inScope".
  Argument  : A reference to a contig.
  Throws    : die()s if either the Feature or the contig has an invalid
-           : strand.
+	   : strand.
  Comments  :
  See Also  :
 
@@ -918,12 +922,12 @@ sub _add_residues
 		$self->inScope(0);
 		goto done;
 	}
-	
-        if (CORE::length($contig->residues()) < $nB ||
+
+	if (CORE::length($contig->residues()) < $nB ||
 	    CORE::length($contig->residues()) < $self->length()){
 		$self->inScope(0);
 		goto done;
-        }
+	}
 
 	if ($nB > $contig->length() || $nE > $contig->length()){
 		$self->{residues} = undef;
@@ -941,16 +945,16 @@ sub _add_residues
 					       $nE, $self->length())));
 		$self->inScope(1);
 	}
-        elsif ($contig->strand() == -1 && $self->strand() == 1){
-                $self->residues(substr($contig->residues,
+	elsif ($contig->strand() == -1 && $self->strand() == 1){
+		$self->residues(substr($contig->residues,
 				       $nB, $self->length()));
-                $self->inScope(1);
-        }
-        elsif ($contig->strand() == -1 && $self->strand() == -1){
-                $self->residues(revcomp(substr($contig->residues,
+		$self->inScope(1);
+	}
+	elsif ($contig->strand() == -1 && $self->strand() == -1){
+		$self->residues(revcomp(substr($contig->residues,
 					       $nE, $self->length())));
-                $self->inScope(1);
-        }
+		$self->inScope(1);
+	}
 	else {
 		die "Invalid strand in __add_residues.";
 	}
@@ -976,8 +980,8 @@ sub _add_residues
  Argument  : A hash full of the feature's info.
  Throws    :
  Comments  : Generally just copies the hash fields,
-           : but it creates FeatureLocation objects for anything in the
-           : the location field.
+	   : but it creates FeatureLocation objects for anything in the
+	   : the location field.
  See Also  : CGL::Annotation::FeatureLocation
 
 =cut
@@ -996,7 +1000,7 @@ sub _load_feature {
       }
     }
     else {
-      $feature->{$k} = $hash->{$k};	
+      $feature->{$k} = $hash->{$k};
     }
   }
   return $feature;
@@ -1019,7 +1023,7 @@ sub _load_feature {
  Argument  : The location to be added.
  Throws    :
  Comments  : XXXX appears to be unused.
-           :
+	   :
  See Also  : CGL::Annotation::FeatureLocation
 
 =cut
@@ -1027,10 +1031,10 @@ sub _load_feature {
 ################################################## subroutine header end ##
 
 sub _add_location {
-        my $self = shift;
-        my $l    = shift;
+	my $self = shift;
+	my $l    = shift;
 
-        push(@{$self->{locations}}, $l);
+	push(@{$self->{locations}}, $l);
 }
 
 ################################################ subroutine header begin ##
@@ -1050,7 +1054,7 @@ sub _add_location {
  Argument  : The relationship to be added.
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::FeatureRelationships
 
 =cut
@@ -1072,11 +1076,11 @@ sub _add_relationship {
 
  Purpose   : Get via metaPos the begin & end of a feature on it's source.
  Returns   : An list, first element is the begin, second element is the end
-           : of the feature on the source.
+	   : of the feature on the source.
  Argument  : The source contig. (XXXX contig?)
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature::Intron::_get_begin_end_on_src
 
 =cut
@@ -1085,27 +1089,27 @@ sub _add_relationship {
 
 sub _get_begin_end_on_src
  {
-        my $self = shift;
-        my $c    = shift;
+	my $self = shift;
+	my $c    = shift;
 
-        my $b_on_c = $self->metaPos($c, 0);
-        my $e_on_c = $self->metaPos($c, $self->length);
+	my $b_on_c = $self->metaPos($c, 0);
+	my $e_on_c = $self->metaPos($c, $self->length);
 
-        my $src_b = $c->location(0)->nbeg();
-        my $src_e = $c->location(0)->nend();
+	my $src_b = $c->location(0)->nbeg();
+	my $src_e = $c->location(0)->nend();
 
-        my $b_on_s;
-        my $e_on_s;
+	my $b_on_s;
+	my $e_on_s;
 
-        if ($src_b < $src_e){
-                $b_on_s = $b_on_c + $src_b;
-                $e_on_s = $e_on_c + $src_b;
-        }
-        else {
-                $b_on_s = $src_b - $b_on_c;
-                $e_on_s = $src_b - $e_on_c;
-        }
-        return ($b_on_s, $e_on_s);
+	if ($src_b < $src_e){
+		$b_on_s = $b_on_c + $src_b;
+		$e_on_s = $e_on_c + $src_b;
+	}
+	else {
+		$b_on_s = $src_b - $b_on_c;
+		$e_on_s = $src_b - $e_on_c;
+	}
+	return ($b_on_s, $e_on_s);
 
 }
 
@@ -1120,7 +1124,7 @@ sub _get_begin_end_on_src
  Argument  : Required and optional input.
  Throws    : Exceptions and other anomolies
  Comments  : This is a sample subroutine header.
-           : It is polite to include more pod and fewer comments.
+	   : It is polite to include more pod and fewer comments.
  See Also  : Other things that might be useful.
 
 =cut
@@ -1128,15 +1132,15 @@ sub _get_begin_end_on_src
 ################################################## subroutine header end ##
 
 sub _add_src_id {
-        my $self = shift;
-        my $c    = shift;
+	my $self = shift;
+	my $c    = shift;
 
-        my ($src_b, $src_e) = $self->_get_begin_end_on_src($c);
+	my ($src_b, $src_e) = $self->_get_begin_end_on_src($c);
 
-        my $src_id = $c->location(0)->srcfeature_id() .
+	my $src_id = $c->location(0)->srcfeature_id() .
 	  ":" . $src_b . ":" . $src_e;
 
-        $self->src_id($src_id);
+	$self->src_id($src_id);
 }
 
 ################################################ subroutine header begin ##
@@ -1146,12 +1150,12 @@ sub _add_src_id {
  Usage     : *private*
 
  Purpose   : Implments a generic getter/setter routine for attributes that
-           : aren't worth defining explicitly.
+	   : aren't worth defining explicitly.
  Returns   : The current value of that field in the object.
  Argument  : The new value for that field in the object.
  Throws    :
  Comments  : Explicitly passing an argument of "undef" will effectively
-           : undefine that field in the hash.
+	   : undefine that field in the hash.
  See Also  :
 
 =cut
@@ -1160,12 +1164,12 @@ sub _add_src_id {
 
 sub AUTOLOAD
  {
-        my $self = shift;
+	my $self = shift;
 
-        my $caller = caller();
-        use vars qw($AUTOLOAD);
-        my ($call) = $AUTOLOAD =~/.*\:\:(\w+)$/;
-        $call =~/DESTROY/ && return;
+	my $caller = caller();
+	use vars qw($AUTOLOAD);
+	my ($call) = $AUTOLOAD =~/.*\:\:(\w+)$/;
+	$call =~/DESTROY/ && return;
 
 	if($ENV{CGL_CHATTER}) {
 	    print STDERR "CGL::Annotation::Feature::AutoLoader called for: ",
@@ -1173,13 +1177,12 @@ sub AUTOLOAD
 	    print STDERR "call to AutoLoader issued from: ", $caller, "\n";
 	}
 
-        if (@_){
-                $self->{$call} = shift;
-        }
+	if (@_){
+		$self->{$call} = shift;
+	}
 
 	return $self->{$call};
 }
 
 1; #this line is important and will help the module return a true value
 __END__
-
