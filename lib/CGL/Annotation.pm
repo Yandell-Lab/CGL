@@ -113,12 +113,12 @@ my $SO = new CGL::Ontology::SO();
  isa_ok($a, "CGL::Annotation");
 
  Purpose   : Create a new CGL::Annotation object, and optionally load
-             it with data from a chaos-xml file.
+	     it with data from a chaos-xml file.
  Returns   : a reference to a CGL::Annotation object.
  Argument  : the name of a chaos-xml file [optional].
  Throws    :
  Comments  :
-           :
+	   :
  See Also  :
 
 =cut
@@ -137,7 +137,7 @@ sub new {
 		$self->file($file);
 		my $parser = new XML::LibXML();
 		my $doc = $parser->parse_file($self->file());
-	
+
 		$self->_load_meta_data($doc);
 		$self->_load_features($doc);
 		$self->_load_relationships($doc);
@@ -148,20 +148,20 @@ sub new {
 	my $iterator = new CGL::Annotation::Iterator($self);
 
 	while (my $data = $iterator->next_by_transcript()){
-                my $t = $data->[0];
-                my $g = $data->[1];
+		my $t = $data->[0];
+		my $g = $data->[1];
 
 		next unless transcript_is_in_scope($t);
 
-                $t->_add_residues_2();
+		$t->_add_residues_2();
 		my $i = 0;
-                while (my $p  = $t->translation($i)){
+		while (my $p  = $t->translation($i)){
 			$p->_add_residues_2($t);
-                        $i++;
-                }
+			$i++;
+		}
 
 	}
-	
+
 	return $self;
 }
 
@@ -193,7 +193,7 @@ sub new {
  Argument  : the zero-based index identifying the transcript feature.
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature::Transcript
 
 =cut
@@ -237,7 +237,7 @@ sub transcript {
  Argument  : a zero-based integer identifying the protein feature.
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature::Protein
 
 =cut
@@ -245,11 +245,11 @@ sub transcript {
 ################################################## subroutine header end ##
 
 sub translation {
-        my $self = shift;
-        my $i    = shift;
+	my $self = shift;
+	my $i    = shift;
 
 # XXXX should this be "or undef";
-        return $self->translations->[$i];
+	return $self->translations->[$i];
 }
 
 ################################################ subroutine header begin ##
@@ -277,13 +277,13 @@ sub translation {
   isa_ok($g, CGL::Annotation::Feature::Gene);
 
  Purpose   : return a reference to the gene object with the requested
-             id from the annotation.
+	     id from the annotation.
  Returns   : a reference to a gene object, undef if there isn't a gene
-             with that identifier.
+	     with that identifier.
  Argument  : a string containing the gene id.
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature::Gene
 
 =cut
@@ -326,13 +326,13 @@ sub get_gene_by_id {
   isa_ok($g, CGL::Annotation::Feature::Gene);
 
  Purpose   : return a reference to the gene object with the requested
-             name from the annotation.
+	     name from the annotation.
  Returns   : a reference to a gene object, undef if there isn't a gene
-             with that name.
+	     with that name.
  Argument  : a string containing the gene name.
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature::Gene
 
 =cut
@@ -375,13 +375,13 @@ sub get_gene_by_name {
   isa_ok($g, CGL::Annotation::Feature::Gene);
 
  Purpose   : return a reference to the gene object with the requested
-             uniquename from the annotation.
+	     uniquename from the annotation.
  Returns   : a reference to a gene object, undef if there isn't a gene
-             with that uniquename.
+	     with that uniquename.
  Argument  : a string containing the gene name.
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature::Gene
 
 =cut
@@ -424,24 +424,24 @@ sub get_gene_by_uniquename {
   isa_ok($g, CGL::Annotation::Feature::Gene);
 
  Purpose   : return a reference to the i'th gene feature in the
-             annotation.
+	     annotation.
  Returns   : a reference to a gene object, undef if there
-             isn't an i'th gene.
+	     isn't an i'th gene.
  Argument  : an integer, the index into the list of genes.
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature::Gene
 
 =cut
 
 ################################################## subroutine header end ##
 sub gene {
-        my $self = shift;
-        my $i    = shift;
+	my $self = shift;
+	my $i    = shift;
 
 	# XXXX should this be "or undef"?
-        return $self->genes->[$i];
+	return $self->genes->[$i];
 }
 
 ################################################ subroutine header begin ##
@@ -467,30 +467,30 @@ sub gene {
   isa_ok($g->[0], CGL::Annotation::Feature::Gene);
 
  Purpose   : return a reference to a list of gene objects from the
-             annotation.
+	     annotation.
  Returns   : a reference to a (possibly empty) list of gene objects,
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature::Gene
-             CGL::Ontology::SO
+	     CGL::Ontology::SO
 
 =cut
 
 ################################################## subroutine header end ##
 
 sub genes {
-        my $self = shift;
+	my $self = shift;
 
-        return $self->{genes} if defined($self->{genes});
+	return $self->{genes} if defined($self->{genes});
 
-        my @genes;
-        foreach my $g ($self->featuresByType('gene')){
-                my $gene = new CGL::Annotation::Feature::Gene($g);
-                foreach my $part ($self->trace($g, 'parts')->features(0)){
+	my @genes;
+	foreach my $g ($self->featuresByType('gene')){
+		my $gene = new CGL::Annotation::Feature::Gene($g);
+		foreach my $part ($self->trace($g, 'parts')->features(0)){
 			if ($SO->a_is_hyponym_of_b($part->type(), 'transcript')){
-                                my $t = new CGL::Annotation::Feature::Transcript($part);
+				my $t = new CGL::Annotation::Feature::Transcript($part);
 				foreach my $part ($self->trace($t, 'parts')->features(0)){
 					if ($SO->a_is_hyponym_of_b($part->type(), 'exon')){
 						my $exon = new CGL::Annotation::Feature::Exon($part);
@@ -501,7 +501,7 @@ sub genes {
 					}
 				}
 				foreach my $part ($self->trace($t, 'produces')->features(0)){
-				        if (($part->type() eq 'protein') ||
+					if (($part->type() eq 'protein') ||
 					    ($part->type() eq 'polypeptide') ||
 					    ($SO->a_is_hypomeronym_of_b($part->type(), 'protein')) ||
 					    ($SO->a_is_hypomeronym_of_b($part->type(), 'polypeptide'))) {
@@ -511,14 +511,14 @@ sub genes {
 						$t->_add_translation($translation);
 					}
 				}
-			        #$t->_add_residues($self->contig(0));
+				#$t->_add_residues($self->contig(0));
 				$t->_add_introns($self->contig(0));
-                                $gene->_add_transcript($t);
-                        }
-                }
-                push(@genes, $gene);
-        }
-        $self->{genes} = \@genes;
+				$gene->_add_transcript($t);
+			}
+		}
+		push(@genes, $gene);
+	}
+	$self->{genes} = \@genes;
 # XXXX should it explicitly return the reference....
 }
 
@@ -545,13 +545,13 @@ sub genes {
   isa_ok($t->[0], CGL::Annotation::Feature::Transcript);
 
  Purpose   : return a reference to a list of transcript objects
-             from the annotation.
+	     from the annotation.
  Returns   : a reference to a (possibly empty) list of
-             transcript objects.
+	     transcript objects.
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature::Transcript
 
 =cut
@@ -559,38 +559,38 @@ sub genes {
 ################################################## subroutine header end ##
 
 sub transcripts {
-        my $self = shift;
+	my $self = shift;
 
 
-        return $self->{transcripts} if defined($self->{transcripts});
+	return $self->{transcripts} if defined($self->{transcripts});
 
-        my @transcripts;
+	my @transcripts;
 
 	foreach my $t ($self->features){
 		next unless $SO->a_is_hyponym_of_b($t->type(), 'transcript');
-                my $transcript = new CGL::Annotation::Feature::Transcript($t);
-                foreach my $part ($self->trace($t, 'parts')->features(0)){
-		        if ($SO->a_is_hyponym_of_b($part->type(), 'exon')){
-                                my $exon = new CGL::Annotation::Feature::Exon($part);
-                                $transcript->_add_exon($exon);
-                        }
-                }
-                foreach my $part ($self->trace($t, 'produces')->features(0)){
+		my $transcript = new CGL::Annotation::Feature::Transcript($t);
+		foreach my $part ($self->trace($t, 'parts')->features(0)){
+			if ($SO->a_is_hyponym_of_b($part->type(), 'exon')){
+				my $exon = new CGL::Annotation::Feature::Exon($part);
+				$transcript->_add_exon($exon);
+			}
+		}
+		foreach my $part ($self->trace($t, 'produces')->features(0)){
 			if (($part->type() eq 'protein') ||
 			    ($part->type() eq 'polypeptide') ||
 			    ($SO->a_is_hypomeronym_of_b($part->type(), 'protein')) ||
 			    ($SO->a_is_hypomeronym_of_b($part->type(), 'polypeptide'))) {
-                                my $translation =
-                                new CGL::Annotation::Feature::Protein($part);
+				my $translation =
+				new CGL::Annotation::Feature::Protein($part);
 
-                                $transcript->_add_translation($translation);
-                        }
-                }
+				$transcript->_add_translation($translation);
+			}
+		}
 
-                $transcript->_add_introns($self->contig(0));
-                push(@transcripts, $transcript);
-        }
-        $self->{transcripts} = \@transcripts;
+		$transcript->_add_introns($self->contig(0));
+		push(@transcripts, $transcript);
+	}
+	$self->{transcripts} = \@transcripts;
 	# XXXX should we explicitly return() here?
 }
 
@@ -619,11 +619,11 @@ sub transcripts {
 
  Purpose   : return a reference to the i'th contig feature in the annotation.
  Returns   : a reference to the i'th contig feature, undef if there isn't an
-             i'th contig.
+	     i'th contig.
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature::Contig
 
 =cut
@@ -631,10 +631,10 @@ sub transcripts {
 ################################################## subroutine header end ##
 
 sub contig {
-        my $self = shift;
-        my $i    = shift;
+	my $self = shift;
+	my $i    = shift;
 
-        return $self->contigs->[$i];
+	return $self->contigs->[$i];
 }
 
 ################################################ subroutine header begin ##
@@ -660,12 +660,12 @@ sub contig {
   isa_ok($c->[0], CGL::Annotation::Feature::Contig);
 
  Purpose   : return a reference to a list of contig objects from the
-             annotation.
+	     annotation.
  Returns   : a reference to a (possibly empty) list of contig objects.
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature::Contig
 
 =cut
@@ -673,40 +673,40 @@ sub contig {
 ################################################## subroutine header end ##
 
 sub contigs {
-        my $self = shift;
+	my $self = shift;
 
-        return $self->{contigs} if defined($self->{contigs});
+	return $self->{contigs} if defined($self->{contigs});
 
-        my @contigs;
+	my @contigs;
 	foreach my $s ($self->features){
 		next unless $SO->a_is_hyponym_of_b($s->type(), 'contig');
-                my $contig = new CGL::Annotation::Feature::Contig($s);
-                foreach my $part ($self->trace($s, 'parts')->features(0)){
+		my $contig = new CGL::Annotation::Feature::Contig($s);
+		foreach my $part ($self->trace($s, 'parts')->features(0)){
 			# add stuff here
-                }
-                push(@contigs, $contig);
-        }
+		}
+		push(@contigs, $contig);
+	}
 	# XXXX explicit return?
-        $self->{contigs} = \@contigs;
+	$self->{contigs} = \@contigs;
 }
 #-------------------------------------------------------------------------------
 sub sequence_variants {
-        my $self = shift;
+	my $self = shift;
 
-        return $self->{sequence_variants} if defined($self->{sequence_variants});
+	return $self->{sequence_variants} if defined($self->{sequence_variants});
 
-        foreach my $v ($self->featuresByType('sequence_variant')){
-                my $poly = new CGL::Annotation::Feature::Sequence_variant($v);
-                $self->_add_variant($poly);
-        }
-        return $self->{sequence_variants} || [];
+	foreach my $v ($self->featuresByType('sequence_variant')){
+		my $poly = new CGL::Annotation::Feature::Sequence_variant($v);
+		$self->_add_variant($poly);
+	}
+	return $self->{sequence_variants} || [];
 }
 #-------------------------------------------------------------------------------
 sub _add_variant {
-        my $self = shift;
-        my $f    = shift;
+	my $self = shift;
+	my $f    = shift;
 
-        push(@{$self->{sequence_variants}}, $f);
+	push(@{$self->{sequence_variants}}, $f);
 }
 #-------------------------------------------------------------------------------
 ################################################ subroutine header begin ##
@@ -732,12 +732,12 @@ sub _add_variant {
   isa_ok($g->[0], CGL::Annotation::Feature::Protein);
 
  Purpose   : return a reference to a list of translations from the
-             annotation.
+	     annotation.
  Returns   : a reference to a (possibly empty) list of translations.
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature::Translation
 
 =cut
@@ -745,28 +745,28 @@ sub _add_variant {
 ################################################## subroutine header end ##
 
 sub translations {
-        my $self = shift;
+	my $self = shift;
 
-        return $self->{translations} if defined($self->{translations});
+	return $self->{translations} if defined($self->{translations});
 
-        my @translations;
+	my @translations;
 	foreach my $p ($self->features){
 		next unless ($p->type() eq 'protein' ||
 			     $p->type() eq 'polypeptide' ||
 			     $SO->a_is_hyponym_of_b($p->type(), 'protein')||
 			     $SO->a_is_hyponym_of_b($p->type(), 'polypeptide'));
-                my $translation = new CGL::Annotation::Feature::Protein($p);
-                foreach my $producer ($self->trace($p, 'producers')->features(0)){
+		my $translation = new CGL::Annotation::Feature::Protein($p);
+		foreach my $producer ($self->trace($p, 'producers')->features(0)){
 			if ($SO->a_is_hyponym_of_b($producer->type(), 'transcript')){
-                                my $transcript =
+				my $transcript =
 				new CGL::Annotation::Feature::Transcript($producer);
-                                $translation->_add_transcript($transcript);
-                        }
-                }
-                push(@translations, $translation);
-        }
+				$translation->_add_transcript($transcript);
+			}
+		}
+		push(@translations, $translation);
+	}
 	# XXXX explicit return?
-        $self->{translations} = \@translations;
+	$self->{translations} = \@translations;
 }
 
 ################################################ subroutine header begin ##
@@ -792,12 +792,12 @@ sub translations {
   isa_ok($l->[0], CGL::Annotation::Feature::Exon);
 
  Purpose   : return a reference to a list of gene objects from the
-             annotation.
+	     annotation.
  Returns   : A (possibly empty) list of exon features.
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature::Exon
 
 =cut
@@ -840,14 +840,14 @@ sub exons {
   isa_ok(\@l, ARRAY);           # Weird, take the ref so that isa_ok works...
   isa_ok($l[0], CGL::Annotation::Feature);
   isa_ok(new CGL::Annotation::Feature::Exon($l[0]),
-         CGL::Annotation::Feature::Exon);
+	 CGL::Annotation::Feature::Exon);
 
  Purpose   : retrieve a set of Feature objects from an annotation.
  Returns   : a list of Feature objects from the annotation.
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature
 
 =cut
@@ -855,15 +855,15 @@ sub exons {
 ################################################## subroutine header end ##
 
 sub featuresByType {
-        my $self = shift;
+	my $self = shift;
 	my $type = shift;
 
 	my @f;
-        foreach my $f ($self->features){
-                push(@f, $f) if $f->type eq $type;
-        }
+	foreach my $f ($self->features){
+		push(@f, $f) if $f->type eq $type;
+	}
 
-        return @f;
+	return @f;
 }
 
 ################################################ subroutine header begin ##
@@ -891,13 +891,13 @@ sub featuresByType {
   is($f->id(), "NC_003074.1", "Check for correct feature id.");
 
  Purpose   : retrieve a feature with a particular id from the
-             annotation.
+	     annotation.
  Returns   : a reference to a feature object, undef if there is
-             no feature with the requested id.
+	     no feature with the requested id.
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature
 
 =cut
@@ -941,7 +941,7 @@ sub feature {
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Annotation::Feature
 
 =cut
@@ -976,12 +976,12 @@ sub features {
   isa_ok(\@r, ARRAY);
 
  Purpose   : retrieve information about the annotation's
-             feature relationships
+	     feature relationships
  Returns   : a (possibly emtpy) list of NodeRelationship objects.
  Argument  :
  Throws    :
  Comments  :
-           :
+	   :
  See Also  : CGL::Ontology::NodeRelationship
 
 =cut
@@ -989,9 +989,9 @@ sub features {
 ################################################## subroutine header end ##
 
 sub relationships {
-        my $self = shift;
+	my $self = shift;
 
-        return @{$self->{relationships}|| []};
+	return @{$self->{relationships}|| []};
 }
 
 
@@ -1043,18 +1043,18 @@ sub relationships {
  Purpose   : trace through the relations for a feature in an annotation.
  Returns   : a reference to a trace object.
  Argument  : A Feature to trace from.
-             A type of trace (as a string).  Valid values include:
-               'parts'
-               'producers'
-               'wholes'
-               'produces'
+	     A type of trace (as a string).  Valid values include:
+	       'parts'
+	       'producers'
+	       'wholes'
+	       'produces'
  Throws    :
  Comments  : Can also take an optional index and trace, used
-           : internally for recursing
-           : among the relationships.
-           :
-           : In newer SO releases, the typedef derived_from has replaced
-           : the produced_by typedef.  This sub currently works with either.
+	   : internally for recursing
+	   : among the relationships.
+	   :
+	   : In newer SO releases, the typedef derived_from has replaced
+	   : the produced_by typedef.  This sub currently works with either.
  See Also  : CGL::Annotation::Trace
 
 =cut
@@ -1088,7 +1088,7 @@ sub trace {
     elsif ($type eq 'wholes'){
       next unless ($r->logus eq 'part_of' ||
 		   $r->logus eq 'member_of');
-      next unless $r->sF eq $f->id;	
+      next unless $r->sF eq $f->id;
       $trace->add_feature($self->feature($r->oF), $i);
       $self->trace($self->feature($r->oF), $type, $i, $trace);
     }
@@ -1139,7 +1139,7 @@ sub trace {
  Argument  : an optional key.
  Throws    :
  Comments  :
-           :
+	   :
  See Also  :
 
 =cut
@@ -1164,13 +1164,13 @@ sub meta_data {
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 sub _load_meta_data {
-        my $self     = shift;
-        my $doc      = shift;
+	my $self     = shift;
+	my $doc      = shift;
 
 
 	my $root = 'chaos';
 	foreach my $result (@{$doc->findnodes("//$root/chaos_metadata")}){
-		
+
 		my $tags = {};
 		parse($result, $tags, 'chaos_metadata');
 		push(@{$self->{chaos_metadata}}, $tags);
@@ -1199,86 +1199,86 @@ sub _load_relationships {
 
 	my $root = 'chaos';
 	foreach my $result (@{$doc->findnodes("//$root/feature_relationship")}){
-                my $tags = {};
-                parse($result, $tags, 'feature_relationship');
-                my $r = new CGL::Annotation::FeatureRelationship($tags);
-                $self->_add_relationship($r);
-        }
-	
+		my $tags = {};
+		parse($result, $tags, 'feature_relationship');
+		my $r = new CGL::Annotation::FeatureRelationship($tags);
+		$self->_add_relationship($r);
+	}
+
 }
 #-------------------------------------------------------------------------------
 sub _reverse_relationships {
 	my $self = shift;
-        foreach my $f ($self->features){
+	foreach my $f ($self->features){
 		foreach my $r ($self->relationships){
 			if   ($r->oF eq $f->id || $r->sF eq $f->id){
 				$f->_add_relationship($r);
 			}
 		}
-        }
+	}
 }
 #-------------------------------------------------------------------------------
 sub _add_feature {
 	my $self = shift;
 	my $f    = shift;
-	
+
 	push(@{$self->{features}}, $f);
 }
 #-------------------------------------------------------------------------------
 sub _add_relationship {
-        my $self = shift;
-        my $r    = shift;
+	my $self = shift;
+	my $r    = shift;
 
-        push(@{$self->{relationships}}, $r);
+	push(@{$self->{relationships}}, $r);
 }
 #-------------------------------------------------------------------------------
 #------------------------------- FUNCTIONS -------------------------------------
 #-------------------------------------------------------------------------------
 sub transcript_is_in_scope {
-        my $t = shift;
+	my $t = shift;
 
-        foreach my $e (@{$t->exons}){
-                return 0 unless $e->inScope();
-        }
+	foreach my $e (@{$t->exons}){
+		return 0 unless $e->inScope();
+	}
 
-        return 1;
+	return 1;
 }
 #-----------------------------------------------------------------------------
 sub parse {
-        my $e    = shift;
-        my $tags = shift;
-        my $type  = shift;
-	
+	my $e    = shift;
+	my $tags = shift;
+	my $type  = shift;
+
 	my $hell = $e->nodeName();
 
-        next unless ref($e) eq 'XML::LibXML::Element';
+	next unless ref($e) eq 'XML::LibXML::Element';
 
-        foreach my $c (@{$e->childNodes()}){
+	foreach my $c (@{$e->childNodes()}){
 		next unless ref($c) eq 'XML::LibXML::Element';
-                if     ($c->nodeName() eq 'featureprop'){
-                        load_featureprop($c, $tags, $type);
-                        next;
-                }
-                elsif ($c->nodeName() eq 'featureloc'){
-                        load_featureloc($c, $tags, $type);
-                        next;
-                }
-                elsif ($c->nodeName() eq 'placeholder'){
-                        #load_place_holder($c, $tags, $type);
-                        #next;
-                }
-                else {
-                        load_tag($c, $tags, $type);
-                        next;
-                }
-                parse($c, $tags);
-        }
-        return $tags;
+		if     ($c->nodeName() eq 'featureprop'){
+			load_featureprop($c, $tags, $type);
+			next;
+		}
+		elsif ($c->nodeName() eq 'featureloc'){
+			load_featureloc($c, $tags, $type);
+			next;
+		}
+		elsif ($c->nodeName() eq 'placeholder'){
+			#load_place_holder($c, $tags, $type);
+			#next;
+		}
+		else {
+			load_tag($c, $tags, $type);
+			next;
+		}
+		parse($c, $tags);
+	}
+	return $tags;
 }
 #-------------------------------------------------------------------------------
 sub load_tag {
-        my $e    = shift;
-        my $tags = shift;
+	my $e    = shift;
+	my $tags = shift;
 	my $type = shift;
 
 	my $n = $e->textContent();
@@ -1292,36 +1292,36 @@ sub _load_snp_struct {
 	my $e   = shift;
 	my $key = shift;
 
-        my %data;       
+	my %data;
 	my $eName = $e->nodeName();
-        foreach my $c (@{$e->childNodes()}){
-        	my $pKey = $c->nodeName();
+	foreach my $c (@{$e->childNodes()}){
+		my $pKey = $c->nodeName();
 		my $pVal = $c->textContent();
 		   $pVal =~ s/[\s\n]//g;
-               	foreach my $d (@{$c->childNodes()}){
-                       	my $pKey = $d->nodeName();
-                        my $pVal = $d->textContent();
-                           $pVal =~ s/[\s\n]//g;
+		foreach my $d (@{$c->childNodes()}){
+			my $pKey = $d->nodeName();
+			my $pVal = $d->textContent();
+			   $pVal =~ s/[\s\n]//g;
 
-                        next unless defined($pVal);
+			next unless defined($pVal);
 			next if $pKey eq 'text';
 
 			if ($pKey eq 'snpfxn'){
 				foreach my $f (@{$d->childNodes()}){
 					my $pKey = $f->nodeName();
-                        		my $pVal = $f->textContent();
-                           		   $pVal =~ s/[\s\n]//g;
+				my $pVal = $f->textContent();
+					   $pVal =~ s/[\s\n]//g;
 
-                        		next unless defined($pVal);
-                        		next if $pKey eq 'text';
+				next unless defined($pVal);
+				next if $pKey eq 'text';
 
 					$data{$pKey} = $pVal;
 				}
 			}
 			else {
-                        	$data{$pKey} = $pVal;
+			$data{$pKey} = $pVal;
 			}
-              }
+	      }
 	}
 	return \%data;
 }
@@ -1331,9 +1331,9 @@ sub load_featureprop {
 	my $tags = shift;
 	my $type = shift;
 
-	
-        my $pKey = $e->getElementsByTagName('type')->[0]->textContent();
-        my $pVal = $e->getElementsByTagName('value')->[0]->textContent();
+
+	my $pKey = $e->getElementsByTagName('type')->[0]->textContent();
+	my $pVal = $e->getElementsByTagName('value')->[0]->textContent();
 
 	#-- dealing with snpstructs from CJM
 	if ($pKey eq 'snpstruct'){
@@ -1343,7 +1343,7 @@ sub load_featureprop {
 		foreach my $k (keys %{$data}){
 			$tags->{$type}->{'properties'}->{$k} = $data->{$k};
 		}
-                return;
+		return;
 
 	}
 	#-- end;
@@ -1354,13 +1354,13 @@ sub load_featureprop {
 }
 #-------------------------------------------------------------------------------
 sub load_featureloc {
-        my $e    = shift;
-        my $tags = shift;
-        my $type = shift;
+	my $e    = shift;
+	my $tags = shift;
+	my $type = shift;
 
 	my %locs;
 	foreach my $c (@{$e->childNodes()}){
-	        my $pKey = $c->nodeName();
+		my $pKey = $c->nodeName();
 		my $pVal;
 		if (defined($c->textContent())){
 			$pVal = $c->textContent();
@@ -1370,32 +1370,31 @@ sub load_featureloc {
 		else {
 			$locs{$pKey} = '';
 		}
-	}	
+	}
 	push(@{$tags->{$type}->{'locations'}}, \%locs);
 }
 
 #-------------------------------------------------------------------------------
 sub AUTOLOAD {
-        my ($self, $arg) = @_;
+	my ($self, $arg) = @_;
 
-        my $caller = caller();
-        use vars qw($AUTOLOAD);
-        my ($call) = $AUTOLOAD =~/.*\:\:(\w+)$/;
-        $call =~/DESTROY/ && return;
+	my $caller = caller();
+	use vars qw($AUTOLOAD);
+	my ($call) = $AUTOLOAD =~/.*\:\:(\w+)$/;
+	$call =~/DESTROY/ && return;
 	if ($ENV{CGL_CHATTER}) {
 	    print STDERR "CGL::Annotation::AutoLoader called for: ",
 	    "\$self->$call","()\n";
 	    print STDERR "call to AutoLoader issued from: ", $caller, "\n";
 	}
-        if (defined($arg)){
-                $self->{$call} = $arg;
-        }
-        else {
-                return $self->{$call};
-        }
+	if (defined($arg)){
+		$self->{$call} = $arg;
+	}
+	else {
+		return $self->{$call};
+	}
 }
 #----------------------------------------------------------------------------
 
 1; #this line is important and will help the module return a true value
 __END__
-
