@@ -1,0 +1,24 @@
+##gff-version   3
+III:3461188:3468147	.	contig	1	6960	.	.	.	ID=III:3461188:3468147;Name=III:3461188:3468147
+III:3461188:3468147	Coding_transcript	gene	1	6960	.	+	.	ID=Gene:WBGene00007922;Name=WBGene00007922
+III:3461188:3468147	Coding_transcript	mRNA	501	6460	.	+	.	ID=Transcript:C34C12.3;Parent=Gene:WBGene00007922;Name=C34C12.3
+III:3461188:3468147	Coding_transcript	exon	501	578	.	+	.	ID=III:exon:6446;Parent=Gene:WBGene00007922
+III:3461188:3468147	Coding_transcript	exon	1100	1189	.	+	.	ID=III:exon:6447;Parent=Gene:WBGene00007922
+III:3461188:3468147	Coding_transcript	exon	1246	1358	.	+	.	ID=III:exon:6448;Parent=Gene:WBGene00007922
+III:3461188:3468147	Coding_transcript	exon	2825	2927	.	+	.	ID=III:exon:6449;Parent=Gene:WBGene00007922
+III:3461188:3468147	Coding_transcript	exon	2985	3111	.	+	.	ID=III:exon:6450;Parent=Gene:WBGene00007922
+III:3461188:3468147	Coding_transcript	exon	3830	3961	.	+	.	ID=III:exon:6451;Parent=Gene:WBGene00007922
+III:3461188:3468147	Coding_transcript	exon	4653	4733	.	+	.	ID=III:exon:6452;Parent=Gene:WBGene00007922
+III:3461188:3468147	Coding_transcript	exon	4923	5052	.	+	.	ID=III:exon:6453;Parent=Gene:WBGene00007922
+III:3461188:3468147	Coding_transcript	exon	5634	6460	.	+	.	ID=III:exon:6454;Parent=Gene:WBGene00007922
+III:3461188:3468147	Coding_transcript	CDS	502	578	.	+	.	ID=CDS:Transcript:C34C12.3;Parent=Transcript:C34C12.3
+III:3461188:3468147	Coding_transcript	CDS	1100	1189	.	+	.	ID=CDS:Transcript:C34C12.3;Parent=Transcript:C34C12.3
+III:3461188:3468147	Coding_transcript	CDS	1246	1358	.	+	.	ID=CDS:Transcript:C34C12.3;Parent=Transcript:C34C12.3
+III:3461188:3468147	Coding_transcript	CDS	2825	2927	.	+	.	ID=CDS:Transcript:C34C12.3;Parent=Transcript:C34C12.3
+III:3461188:3468147	Coding_transcript	CDS	2985	3111	.	+	.	ID=CDS:Transcript:C34C12.3;Parent=Transcript:C34C12.3
+III:3461188:3468147	Coding_transcript	CDS	3830	3961	.	+	.	ID=CDS:Transcript:C34C12.3;Parent=Transcript:C34C12.3
+III:3461188:3468147	Coding_transcript	CDS	4653	4733	.	+	.	ID=CDS:Transcript:C34C12.3;Parent=Transcript:C34C12.3
+III:3461188:3468147	Coding_transcript	CDS	4923	5052	.	+	.	ID=CDS:Transcript:C34C12.3;Parent=Transcript:C34C12.3
+III:3461188:3468147	Coding_transcript	CDS	5634	5776	.	+	.	ID=CDS:Transcript:C34C12.3;Parent=Transcript:C34C12.3
+III:3461188:3468147	Coding_transcript	three_prime_UTR	5777	6460	.	+	.	ID=III:three_prime_UTR:412;Parent=Transcript:C34C12.3
+III:3461188:3468147	Coding_transcript	five_prime_UTR	501	501	.	+	.	ID=III:five_prime_UTR:469;Parent=Transcript:C34C12.3

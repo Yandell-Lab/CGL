@@ -127,40 +127,16 @@ my $SO = new CGL::Ontology::SO();
 
 sub new {
 	my $class = shift;
-	my $file  = shift;
+	my @args  = @_;
 
-	my $self = {};
+	my %params = @args;
 
-	bless($self, $class);
+	my $format = $params{format};
 
-	if (defined($file)){
-		$self->file($file);
-		my $parser = new XML::LibXML();
-		my $doc = $parser->parse_file($self->file());
+	$class = "CGL::Parser::$format";
 
-		$self->_load_meta_data($doc);
-		$self->_load_features($doc);
-		$self->_load_relationships($doc);
-		$self->_reverse_relationships();
-	}
-
-
-	my $iterator = new CGL::Annotation::Iterator($self);
-
-	while (my $data = $iterator->next_by_transcript()){
-		my $t = $data->[0];
-		my $g = $data->[1];
-
-		next unless transcript_is_in_scope($t);
-
-		$t->_add_residues_2();
-		my $i = 0;
-		while (my $p  = $t->translation($i)){
-			$p->_add_residues_2($t);
-			$i++;
-		}
-
-	}
+	eval "require $class";
+	my $self = $class->new(@args);
 
 	return $self;
 }
