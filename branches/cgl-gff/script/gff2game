@@ -1,4 +1,4 @@
-#!/usr/bin/perl 
+#!/usr/bin/perl
 use strict;
 use warnings;
 
@@ -6,20 +6,17 @@ use lib "$ENV{CGL_GFF_LIB}";
 
 use Getopt::Long;
 use CGL::Annotation;
-use CGL::Annotation::GFF3::WormBase;
-use CGL::Annotation::GFF3::WormBaseOld;
-use CGL::Annotation::GFF3::FlyBase;
 use Dumper::XML::Game;
 
 
-#----------------------------------------------------------------------------- 
-#----------------------------------- MAIN ------------------------------------ 
-#----------------------------------------------------------------------------- 
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
 my $usage = "
 
 Synopsis:
 
-gff2game --org Fly gff3_file [fasta_file]
+gff2game --format gff3_flybase --gff_file gff3_file [--fasta_file fasta_file]
 
 Description:
 
@@ -29,18 +26,16 @@ gff3 file with the extension changed from gff or gff3 to fasta.
 
 Options:
 
-  --org  FlyBase or WormBase.  FlyBase is default.
+  --format  The format of the annotation GFF file
 
 ";
 
-my ($help, $org);
-my $opt_success = GetOptions('help'  => \$help,
-			     'org=s' => \$org,
+my ($help, $format);
+my $opt_success = GetOptions('help'     => \$help,
+			     'format=s' => \$format,
 			      );
 
 die $usage if $help || ! $opt_success;
-
-$org ||= 'FlyBase';
 
 my $gff3_file = shift;
 my $fasta_file = shift;
@@ -51,14 +46,9 @@ if (! defined $fasta_file) {
 
 die $usage unless $gff3_file && $fasta_file;
 
-my $cgl;
-$org =~ /^fly/i
-    ? $cgl = new CGL::Annotation::GFF3::FlyBase($gff3_file, $fasta_file)
-    : $org =~ /wormbaseold/i
-    ? $cgl = new CGL::Annotation::GFF3::WormBaseOld($gff3_file, $fasta_file)
-    : $org =~/^worm/i
-    ? $cgl = new CGL::Annotation::GFF3::WormBase($gff3_file, $fasta_file)
-    : die $usage;
+my $cgl = new CGL::Annotation->new(format     => $format,
+				   gff_file   => $gff3_file,
+				   fasta_file => $fasta_file)
 
 my $game_io = new Dumper::XML::Game->init(Annot => $cgl);
 $game_io->Game();

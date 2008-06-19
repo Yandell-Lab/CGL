@@ -1,17 +1,16 @@
-#!/usr/bin/perl -w 
+#!/usr/bin/perl
+
 use strict;
+use warnings;
 
-# pod docs at end.
-
-#use lib $ENV{CGL_GFF_LIB};
 use FileHandle;
 use Getopt::Long;
 
 my $usage = "
 
 Synopsis:
-splice_complexity_exonic --format [FlyBase|WormBase] --gff gff3_file \
-                                                     --fasta fasta_file
+splice_complexity_exonic --format [gff3_wormbase|gff3_flybase] \
+                         --gff gff3_file --fasta fasta_file
 
 splice_complexity_exonic --chaos chaos_file
 
@@ -65,40 +64,19 @@ Options:
 
 my ($gff_file, $fasta_file, $chaos_file, $format);
 
-my $opt_success = GetOptions('gff=s'   => \$gff_file,
-                             'fasta=s' => \$fasta_file,
-                             'chaos=s' => \$chaos_file,
+my $opt_success = GetOptions('gff=s'    => \$gff_file,
+                             'fasta=s'   => \$fasta_file,
+                             'chaos=s'   => \$chaos_file,
 			     'format=s'  => \$format,
                              );
 
-$format ||= 'FlyBase';
+my $cgl = CGL::Annotation->new(format     => $format,
+			       gff_file   => $gff_file,
+			       fasta_file => $fasta_file,
+			       chaos_file => $chaos_file,
+			      );
 
-my $cgl;
-
-if ($gff_file && $fasta_file) {
-        unshift @INC, $ENV{CGL_GFF_LIB};
-        require CGL::Annotation;
-        require CGL::Annotation::GFF3::FlyBase;
-        require CGL::Annotation::GFF3::WormBase;
-        require CGL::Annotation::Iterator;
-
-        $format =~ /FlyBase/i 
-	    ? $cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file)
-	    : $format =~ /WormBase/i
-	    ? $cgl = new CGL::Annotation::GFF3::WormBase($gff_file, $fasta_file)
-	    : die $usage;
-}
-elsif ($chaos_file) {
-        require CGL::Annotation;
-        require CGL::Annotation::Iterator;
-
-        $cgl = CGL::Annotation->new($chaos_file);
-}
-else {
-        die $usage;
-}
-
-my $iterator = new CGL::Annotation::Iterator($cgl);
+my $iterator = CGL::Annotation::Iterator->new($cgl);
 
 my $c = $cgl->contig(0);
 

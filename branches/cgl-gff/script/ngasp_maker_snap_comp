@@ -5,8 +5,6 @@ use warnings;
 use lib "$ENV{CGL_GFF_LIB}";
 
 use CGL::Annotation;
-use CGL::Annotation::GFF3::nGASP2;
-use CGL::Annotation::GFF3::WormBase;
 use Iterator::Fasta;
 use compare;
 use SimpleCluster;
@@ -36,9 +34,14 @@ my $fasta_file  = shift;
 
 die $usage unless defined($t_gff3_file) && defined($r_gff3_file) && defined($fasta_file);
 
-my $t_cgl = new CGL::Annotation::GFF3::nGASP2($t_gff3_file, $fasta_file);
+my $t_cgl = new CGL::Annotation->new(format     => 'gff3_ngasp2',
+				     gff_file   => $t_gff3_file,
+				     fasta_file => $fasta_file
+				    );
 
-my $r_cgl = new CGL::Annotation::GFF3::WormBase($r_gff3_file, $fasta_file);
+my $r_cgl = new CGL::Annotation->(format     => 'gff3_wormbase',
+				  gff_file   => $r_gff3_file,
+				  fasta_file => $fasta_file);
 
 my $t_exon_coors = get_exon_coors($t_cgl);
 

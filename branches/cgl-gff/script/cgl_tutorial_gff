@@ -1,51 +1,55 @@
-#!/usr/bin/perl -w 
+#!/usr/bin/perl
+
 use strict;
+use warnings;
 
-# pod docs at end.
-
-BEGIN {
-	$ENV{'CGL_CHATTER'} = 1;
-}
-
-$| = 1;
-$SIG{INT} = \&gotControlC;
-use lib $ENV{CGL_GFF_LIB};
 use FileHandle;
 use CGL::Annotation;
-#use CGL::Annotation::GFF3::WormBaseOld;
-#use CGL::Annotation::GFF3::WormBase;
-use CGL::Annotation::GFF3::FlyBase;
-#use CGL::Annotation::GFF3::Maker;
 use CGL::Annotation::Iterator;
-
-my $usage = "
-
-cgl_tutorial: tutorial script for the CGL library.  This script demonstrates
-many of the functions of the CGL library. 
-
-cgl_tutorial <gff3_file> <fasta_file> <one or more ids> 
-
-cgl_tutorial ./sample_data/4.gff ../sample_data/dmel-4-chromosome-r4.3.fasta  FBtr0089155 FBgn0040037 
-
-
-\n"; 
+use Getopt::Long;
 
 #-----------------------------------------------------------------------------
 #----------------------------------- MAIN ------------------------------------
 #-----------------------------------------------------------------------------
 
-die $usage unless $ARGV[1];
+my $usage = "
 
-my ($gff_file, $fasta_file, @ids) = @ARGV;
+Synopsis:
+
+cgl_tutorial --format gff3_flybase --gff_file ./sample_data/4.gff      \
+             --fasta_file ../sample_data/dmel-4-chromosome-r4.3.fasta  \
+             FBtr0089155 FBgn0040037
+
+Description:
+
+A tutorial script for the CGL library.  This script demonstrates
+many of the functions of the CGL library.
+
+";
+
+my ($help, $format, $gff_file, $fasta_file);
+
+my $opt_success = GetOptions('format=s'     => \$format,
+			     'gff_file=s'   => \$gff_file,
+			     'fasta_file=s' => \$fasta_file);
+
+
+die $usage if $help;
+die $usage unless $format && $gff_file && $fasta_file;
+
+my @ids = @ARGV;
 
 my $ids_ref;
 scalar @ids > 0 
     ? $ids_ref = \@ids 
     : undef($ids_ref);
 
-my $cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file, $ids_ref);
+my $cgl = CGL::Annotation->new(format     => $format,
+			       gff_file   => $gff_file,
+			       fasta_file => $fasta_file,
+			       ids        => $ids_ref);
 
-my $iterator = new CGL::Annotation::Iterator($cgl);
+my $iterator = CGL::Annotation::Iterator->new($cgl);
 
 my $contig = $cgl->contig(0);
 print "contig strand:".$contig->strand()."\n";

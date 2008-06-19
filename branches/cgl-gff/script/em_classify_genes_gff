@@ -5,8 +5,7 @@ use warnings;
 use lib "$ENV{CGL_GFF_LIB}";
 
 use Getopt::Long;
-use CGL::Annotation::GFF3::FlyBase;
-use CGL::Annotation::GFF3::WormBase;
+use CGL::Annotation;
 use CGL::Annotation::Iterator;
 
 #----------------------------------------------------------------------------- 
@@ -31,18 +30,17 @@ Options:
 
 ";
 
-my ($help, $org, );
+my ($help, $format, );
 
-GetOptions ('help'  => \$help,
-	    'org=s' => \$org,
+GetOptions ('help'     => \$help,
+	    'format=s' => \$format,
 	    );
 
 
 my $ds_index_file = shift;
 
 die $usage if $help;
-die $usage unless $ds_index_file; 
-die $usage unless $org =~ /^fly|worm/i;
+die $usage unless $ds_index_file && $format;
 
 my $md = parse_ds_index($ds_index_file);
 
@@ -61,18 +59,14 @@ my $md = parse_ds_index($ds_index_file);
 
             print STDERR "$gff_file\n";
 
-            my $cgl;
-	    if ($org =~ /^worm/i) {
-		    eval {$cgl = new CGL::Annotation::GFF3::WormBase($gff_file, $fasta_file)};
-	    }
-	    else {
-		    eval {$cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file)};
-	    }
+            my $cgl = CGL::Annotation->new(format     => $format,
+					   gff_file   => $gff_file,
+					   fasta_file => $fasta_file)};
 
 	    print "ERROR: Can't create CGL object.\n$@\n" if $@;
 	    next GENE unless $cgl;
 
-            my $iterator = new CGL::Annotation::Iterator($cgl);
+            my $iterator = CGL::Annotation::Iterator->new($cgl);
             while (my $gene = $iterator->next_by_gene()){
 
 		#Skip single transcript genes

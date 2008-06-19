@@ -5,8 +5,6 @@ use warnings;
 use lib "$ENV{CGL_GFF_LIB}";
 
 use CGL::Annotation;
-use CGL::Annotation::GFF3::WormBase;
-use CGL::Annotation::GFF3::Maker;
 use Fasta;
 use Shadower;
 use PostData;
@@ -18,15 +16,31 @@ use Getopt::Long;
 
 my $usage = "
 
- wrmbase_gff3_to_sens_spec_template <gff3 file> <fasta file>
+Synopsis:
+
+gff3_to_sens_spec --format gff3_flybase --gff_file <gff3 file> \
+                           --fasta_file <fasta file>
+
+Description:
+
+??
+
 ";
 
-my $gff3_file  = shift;
-my $fasta_file = shift;
+my ($help, $format, $gff_file, $fasta_file);
+my $opt_success = GetOptions('help'         => \$help,
+			     'format=s'     => \$format,
+			     'gff_file=s'   => \$gff_file,
+			     'fasta_file=s' => \$fasta_file,
+			     );
 
-die $usage unless defined($gff3_file) && defined($fasta_file);
+die $usage if $help;
+die $usage unless $format && $gff3_file && $fasta_file;
 
-my $cgl = new CGL::Annotation::GFF3::Maker($gff3_file, $fasta_file);
+my $cgl = CGL::Annotation->new(format     => $format,
+			       gff_file   => $gff_file,
+			       fasta_file => $fasta_file,
+			      );
 
 #Get Contig details
 my $contig = $cgl->contig(0);
