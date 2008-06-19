@@ -1,0 +1,371 @@
+#!/usr/bin/perl -w
+use strict;
+use PostData;
+$| = 1;
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+
+my $usage = "
+
+Synopsis:
+
+ws150_forward gff_file
+
+Description:
+
+This script will convert gff files from C. elegans release WS150 into gff3 
+compatible files that can by used by CGL GFF.
+
+";
+
+my $file = shift;
+
+die $usage unless $file;
+
+my $id_lookup = get_id_lookup($file);
+
+open (FH, $file); 
+
+print "##gff-version 3\n";
+print "##Index-subfeatures 0\n";
+
+
+my %hash;
+while (my $line = <FH>){
+	chomp($line);
+	next if $line =~ /^\#/;
+	my @fields = split("\t", $line);
+	if ($fields[1] eq 'gene'){
+		my $new = gene(\@fields, $id_lookup);
+		print $new."\n" if $new;
+	}
+	elsif ($fields[1] eq 'Coding_transcript' && $fields[2] eq 'protein_coding_primary_transcript'){
+		my $new = mRNA(\@fields, $id_lookup);
+		print $new."\n" if $new;
+	}
+        elsif ($fields[1] eq 'Coding_transcript' && $fields[2] eq 'exon'){
+                my $new = exon(\@fields, $id_lookup);
+                print $new."\n" if $new;
+        }
+	elsif ($fields[1] eq 'Coding_transcript' && $fields[2] eq 'coding_exon'){
+		my $new = cds(\@fields, $id_lookup);
+		print $new."\n" if $new;
+	}
+        elsif ($fields[1] eq 'Coding_transcript' && $fields[2] eq 'five_prime_UTR'){
+                my $new = utr_5(\@fields, $id_lookup);
+                print $new."\n" if $new;
+        }
+        elsif ($fields[1] eq 'Coding_transcript' && $fields[2] eq 'three_prime_UTR'){
+                my $new = utr_3(\@fields, $id_lookup);
+                print $new."\n" if $new;
+        }
+
+
+}
+close(FH);
+
+#-----------------------------------------------------------------------------
+#------------------------------- SUBROUTINES ---------------------------------
+#-----------------------------------------------------------------------------
+sub get_id_lookup {
+	my $file = shift;
+
+	open(FH, $file);
+
+	my %lookup;
+	while (my $line = <FH>){
+		next if $line =~ /^\#/;
+		my @fields = split("\t", $line);
+	        if ($fields[1] eq 'curated' && $fields[2] eq 'CDS'){
+		        my ($cds_id) = $fields[8] =~ /CDS\s+\"(\S+)\"/;
+			my ($gen_id) = $fields[8] =~ /Gene\s+\"(\S+)\"/;
+
+        		die "bad line - no ID:".$fields[8]."\n" 
+			unless defined($cds_id) && defined($gen_id);
+
+			push(@{$lookup{gene_to_cds}{$gen_id}}, $cds_id);
+			$lookup{cds_to_gene}{$cds_id} = $gen_id;
+		
+			$lookup{transcr_to_gene}{$cds_id} = $gen_id;
+			push(@{$lookup{gene_to_transcr}{$gen_id}}, $cds_id);	
+        	}
+	}
+
+	close(FH);
+	return \%lookup;
+}
+#-----------------------------------------------------------------------------
+sub gene {
+	my $fields = shift;
+	my $lookup = shift;
+
+	my ($id) = $fields->[8] =~ /Gene\s+\"(\S+)\"/;
+
+	die "bad line-no id:".$fields->[8]."\n" unless defined($id);
+
+	my @line;
+	push(@line, $fields->[0]);
+	push(@line, 'Coding_transcript'); 
+	push(@line, $fields->[2]);
+	push(@line, $fields->[3]);
+	push(@line, $fields->[4]);
+	push(@line, $fields->[5]);
+	push(@line, $fields->[6]);
+	push(@line, $fields->[7]);
+	push(@line, "ID=Gene:$id;Name=$id;Easy=$id");	
+
+	if (defined($lookup->{gene_to_cds}->{$id})){
+		return join("\t", @line);
+	}
+	else {
+		return undef;
+	}
+}
+#-----------------------------------------------------------------------------
+sub mRNA {
+        my $fields = shift;
+	my $lookup = shift;
+
+        my ($id) = $fields->[8] =~ /Transcript\s+\"(\S+)\"/;
+
+        die "bad line-no id:".$fields->[8]."\n" unless defined($id);
+
+	my $parent = find_parent($lookup, $id);
+
+        my @line;
+        push(@line, $fields->[0]);
+        push(@line, 'Coding_transcript');
+        push(@line, 'mRNA');
+        push(@line, $fields->[3]);
+        push(@line, $fields->[4]);
+        push(@line, $fields->[5]);
+        push(@line, $fields->[6]);
+        push(@line, $fields->[7]);
+        push(@line, "ID=Transcript:$id;Name=Transcript:$id;Parent=Gene:$parent;Easy=$parent;prediction_status=unknown");
+
+
+	if (defined($parent)){
+		return join("\t", @line);
+	}
+	else {
+		print STDERR "no parent for mRNA ID=Transcript:$id;Name=$id\n";
+		return undef;
+	}
+}
+#-----------------------------------------------------------------------------
+sub find_parent {
+        my $lookup = shift;
+        my $id     = shift;
+
+        my @fields = split(/\./, $id);
+
+        my $a = $id;
+        my $b = $fields[0].'.'.$fields[1];
+
+        my ($clean) = $fields[1] =~ /^(\d+)[A-z]*/;
+
+        my $c = $fields[0].'.'.$clean;
+
+        my $parent = $lookup->{transcr_to_gene}->{$a};
+           $parent = $lookup->{transcr_to_gene}->{$b} if ! $parent;
+           $parent = $lookup->{transcr_to_gene}->{$c} if ! $parent;
+
+        print STDERR "NO PARENT for $id a:$a b:$b c:$c\n" unless $parent;
+
+        return $parent;
+}
+#-----------------------------------------------------------------------------
+sub cds {
+        my $fields = shift;
+        my $lookup = shift;
+
+        my ($id) = $fields->[8] =~ /Transcript\s+\"(\S+)\"/;
+
+        die "bad line-no id:".$fields->[8]."\n" unless defined($id);
+
+        my $parent = $id;
+	my $easy = find_parent($lookup, $id);
+	my $c_id = id();
+
+        my @line;
+        push(@line, $fields->[0]);
+        push(@line, 'Coding_transcript');
+        push(@line, 'CDS');
+        push(@line, $fields->[3]);
+        push(@line, $fields->[4]);
+        push(@line, $fields->[5]);
+        push(@line, $fields->[6]);
+        push(@line, $fields->[7]);
+        push(@line, "ID=CDS:$id\.$c_id;Name=CDS:$id\.$c_id;Parent=Transcript:$parent;Easy=$easy");
+
+
+        if (defined($parent) && defined($easy)){
+                return join("\t", @line);
+        }
+        else {
+                print STDERR "no parent for CDS ID=Transcript:$id;Name=$id\n";
+                return undef;
+        }
+}
+#-----------------------------------------------------------------------------
+{
+my $id = -1;
+sub id {
+	$id++;
+	return $id;
+} 
+}
+#-----------------------------------------------------------------------------
+sub exon {
+        my $fields = shift;
+        my $lookup = shift;
+
+        my ($id) = $fields->[8] =~ /Transcript\s+\"(\S+)\"/;
+
+        die "bad line-no id:".$fields->[8]."\n" unless defined($id);
+
+	my $parent = find_parent($lookup, $id);
+
+	my $e_id = id();
+
+        my @line;
+        push(@line, $fields->[0]);
+        push(@line, 'Coding_transcript');
+        push(@line, $fields->[2]);
+        push(@line, $fields->[3]);
+        push(@line, $fields->[4]);
+        push(@line, $fields->[5]);
+        push(@line, $fields->[6]);
+        push(@line, $fields->[7]);
+        push(@line, "ID=Exon:$id\.$e_id;Name=Exon:$id\.$e_id;Parent=Gene:$parent;Easy=$parent");
+
+
+        if (defined($parent)){
+                return join("\t", @line);
+        }
+        else {
+                print STDERR "no parent for exon ID=Gene:$id;Name=$id\n";
+                return undef;
+        }
+}
+#-----------------------------------------------------------------------------
+sub utr_5 {
+        my $fields = shift;
+        my $lookup = shift;
+
+        my ($id) = $fields->[8] =~ /Transcript\s+\"(\S+)\"/;
+
+        die "bad line-no id:".$fields->[8]."\n" unless defined($id);
+
+        my $parent = $id;
+	my $easy = find_parent($lookup, $id);
+
+	my $u_id = id();
+
+        my @line;
+        push(@line, $fields->[0]);
+        push(@line, 'Coding_transcript');
+        push(@line, $fields->[2]);
+        push(@line, $fields->[3]);
+        push(@line, $fields->[4]);
+        push(@line, $fields->[5]);
+        push(@line, $fields->[6]);
+        push(@line, $fields->[7]);
+        push(@line, "ID=five_prime_UTR:$id\.$u_id;Name=$id\.$u_id;Parent=Transcript:$parent;Easy=$easy");
+
+
+        if (defined($parent) && defined($easy)){
+                return join("\t", @line);
+        }
+        else {
+                print STDERR "no parent for 5' UTR ID=Transcript:$id;Name=$id\n";
+                return undef;
+        }
+}
+#-----------------------------------------------------------------------------
+sub utr_3 {
+        my $fields = shift;
+        my $lookup = shift;
+
+        my ($id) = $fields->[8] =~ /Transcript\s+\"(\S+)\"/;
+
+        die "bad line-no id:".$fields->[8]."\n" unless defined($id);
+
+        my $parent = $id;
+	my $easy = find_parent($lookup, $id);
+
+	my $u_id   = id();
+
+        my @line;
+        push(@line, $fields->[0]);
+        push(@line, 'Coding_transcript');
+        push(@line, $fields->[2]);
+        push(@line, $fields->[3]);
+        push(@line, $fields->[4]);
+        push(@line, $fields->[5]);
+        push(@line, $fields->[6]);
+        push(@line, $fields->[7]);
+        push(@line, "ID=three_prime_utr:$id\.$u_id;Name=$id\.$u_id;Parent=Transcript:$parent;Easy=$easy");
+
+
+        if (defined($parent) && defined($easy)){
+                return join("\t", @line);
+        }
+        else {
+                print STDERR "no parent for 3' UTR ID=Transcript:$id;Name=$id\n";
+                return undef;
+        }
+}
+
+#-----------------------------------------------------------------------------
+sub shorten {
+
+	my $file = shift;
+
+	open(FH, $file);
+
+	while (my $line = <FH>){
+        	chomp($line);
+        	my @fields = split("\t", $line);
+        	if ($fields[1] eq 'gene'){
+                	print $line."\n";
+        	}
+        	elsif ($fields[1] eq 'Coding_transcript'){
+                	print $line."\n";
+        	}
+        	elsif ($fields[1] eq 'curated'){
+                	print $line."\n";
+        	}
+	}
+	
+	close(FH);
+}
+#-----------------------------------------------------------------------------
+sub print_keys {
+
+	my $file = shift;
+
+	open(FH, $file);
+
+	my $hash;
+        while (my $line = <FH>){
+                chomp($line);
+                my @fields = split("\t", $line);
+		$hash{$fields[1]}{$fields[2]} = $fields[8];
+        }
+
+	foreach my $key (sort keys %hash){
+        	print $key."\n";
+        	foreach my $key_2 (sort keys %{$hash{$key}}){
+			my $space = 25 - length($key_2);
+			my $spacer = " "x$space;
+                	print "     $key_2$spacer-------->".$hash{$key}{$key_2}."\n";;
+        	}
+	}
+	close(FH);
+
+}
+#-----------------------------------------------------------------------------
+
