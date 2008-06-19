@@ -18,7 +18,7 @@ sub new {
 	#Turn args array into a hash.
 	my %params = @args;
 
-	my $file  = $params{file};
+	my $file = $params{chaos_file} || $params{file};
 
 	my $self = {};
 

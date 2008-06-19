@@ -17,14 +17,23 @@ CGL::Annotation - An object for working with genome annotations.
   }
 
   use CGL::Annotation;
-  my $a;			# an annotation.
 
-  $a = new CGL::Annotation("sample_data/atha.sample.chaos.xml");
+  my $b = CGL::Annotation->new(format => 'chaos',
+                               file   => 'chaos_file.xml');
+
+  my $b = CGL::Annotation->new(format     => 'gff3_flybase',
+                               gff_file   => 'fly.gff3',
+                               fasta_file => 'fly.fasta');
+
+  #And for backwards compatibility with previous versions of CGL
+  my $c = CGL::Annotation->("sample_data/atha.sample.chaos.xml");
 
 =for example end
 
 =for example_testing
   isa_ok($a, "CGL::Annotation", "Check if it's the right type.");
+  isa_ok($b, "CGL::Annotation", "Check if it's the right type.");
+  isa_ok($c, "CGL::Annotation", "Check if it's the right type.");
 
 =head1 DESCRIPTION
 
@@ -105,17 +114,29 @@ my $SO = new CGL::Ontology::SO();
 
 =for example begin
 
-  my $a = new CGL::Annotation("sample_data/atha.sample.chaos.xml");
+  my $b = CGL::Annotation->new(format => 'chaos',
+                               file   => 'chaos_file.xml');
+
+  my $b = CGL::Annotation->new(format     => 'gff3_flybase',
+                               gff_file   => 'fly.gff3',
+                               fasta_file => 'fly.fasta');
+
+  #And for backwards compatibility with previous versions of CGL
+  my $c = CGL::Annotation->("sample_data/atha.sample.chaos.xml");
 
 =for example end
 
 =for example_testing
  isa_ok($a, "CGL::Annotation");
+ isa_ok($b, "CGL::Annotation");
+ isa_ok($c, "CGL::Annotation");
 
  Purpose   : Create a new CGL::Annotation object, and optionally load
 	     it with data from a chaos-xml file.
  Returns   : a reference to a CGL::Annotation object.
- Argument  : the name of a chaos-xml file [optional].
+ Argument  : format (gff3_flybase, gff3_wormbase, gff3_maker etc. see 
+             Parser modules), file (Chaos XML) or gff_file (GFF3) and 
+             fasta_file
  Throws    :
  Comments  :
 	   :
