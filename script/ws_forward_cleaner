@@ -1,0 +1,152 @@
+#!/usr/bin/perl -w
+use strict;
+use PostData;
+$| = 1;
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+
+my $usage = "
+
+Synopsis:
+
+ws_forward_cleaner gff_file
+
+Description:
+
+This script will check a file that has been created by one of the ws1XX_forward
+series of scripts and delete any genes that got mangled.
+
+";
+
+my $file = shift;
+
+die $usage unless $file;
+
+open (FH, $file);
+
+print "##gff-version 3\n";
+print "##Index-subfeatures 0\n";
+
+my %genes;
+while (my $line = <FH>){
+	next if $line =~ /^##/;
+
+	chomp($line);
+	my @fields = split("\t", $line);
+
+	my ($easy_id) = $fields[8] =~ /.*\;Easy=([^;]+)\;*.*$/;
+	die "no easy:$line\n" unless defined($easy_id);
+
+	my $start  = $fields[3];
+	my $end    = $fields[4];
+	my $strand = $fields[6];
+
+	warn "missing fields 3, 4, or 6:$line\n"
+	unless defined($start) && defined($end) && $strand;
+
+	my ($id)     = $fields[8] =~ /^ID=([^;]+)\;.*/;
+
+	die "no id:$line\n" unless defined($id);
+
+	my ($parent) = $fields[8] =~ /.*\;Parent=(\S+)\;.*/;
+
+	$parent = 'NONE' if $fields[2] eq 'gene';
+
+	die "no parent:$line\n" unless defined($parent);
+
+	if ($fields[2] eq 'gene'){
+		push(@{$genes{$easy_id}{$fields[2]}},
+		{id => $id, start => $start, end => $end, strand => $strand, parent => $parent, line => $line});
+	}
+	elsif ($fields[2] eq 'mRNA'){
+                push(@{$genes{$easy_id}{$fields[2]}},
+                {id => $id, start => $start, end => $end, strand => $strand, parent => $parent, line => $line});
+	}
+        elsif ($fields[2] eq 'CDS'){
+                push(@{$genes{$easy_id}{$fields[2]}},
+                {id => $id, start => $start, end => $end, strand => $strand, parent => $parent, line => $line});
+        }
+	elsif ($fields[2] eq 'exon'){
+                push(@{$genes{$easy_id}{$fields[2]}},
+                {id => $id, start => $start, end => $end, strand => $strand, parent => $parent, line => $line});
+	}
+        elsif ($fields[2] eq 'five_prime_UTR'){
+                push(@{$genes{$easy_id}{$fields[2]}},
+                {id => $id, start => $start, end => $end, strand => $strand, parent => $parent, line => $line});
+
+        }
+        elsif ($fields[2] eq 'three_prime_UTR'){
+                push(@{$genes{$easy_id}{$fields[2]}},
+                {id => $id, start => $start, end => $end, strand => $strand, parent => $parent, line => $line});
+
+        }
+
+
+}
+close(FH);
+
+check(\%genes);
+
+#-----------------------------------------------------------------------------
+#------------------------------- SUBROUTINES ---------------------------------
+#-----------------------------------------------------------------------------
+sub features_complete {
+	my $features = shift;
+
+	foreach my $f (@{$features}){
+		return 0 unless $f->{start};
+		return 0 unless $f->{end};
+		return 0 unless $f->{strand};
+		return 0 unless $f->{parent};
+		return 0 unless $f->{id};
+		return 0 unless $f->{line};
+	}
+	return 1;
+}
+#-----------------------------------------------------------------------------
+sub check {
+	my $genes = shift;
+
+	my %bad;
+	foreach my $easy_id (keys %{$genes}){
+		my %parts;
+		foreach my $part (keys %{$genes->{$easy_id}}){
+			$parts{$part}++;
+			#print "    PART:$part\n";
+
+			my $features = $genes->{$easy_id}->{$part};
+
+			$bad{$easy_id} = 999 unless features_complete($features);
+		}
+
+		$bad{$easy_id}++ unless $parts{gene};
+		$bad{$easy_id}++ unless $parts{mRNA};
+		$bad{$easy_id}++ unless $parts{CDS};
+		$bad{$easy_id}++ unless $parts{exon};
+	}
+
+
+	my $size = keys %bad;
+	print STDERR "DELETING $size BAD GENES!\n";
+	sleep 3;
+
+	#PostData(\%bad);
+
+	foreach my $easy_id (keys %{$genes}){
+		next if $bad{$easy_id};
+		foreach my $part (keys %{$genes->{$easy_id}}){
+			my $features = $genes->{$easy_id}->{$part};
+			foreach my $f (@{$features}){
+				print $f->{line}."\n";
+			}
+		}
+	}
+}
+#-----------------------------------------------------------------------------
+
+
+
+
+
