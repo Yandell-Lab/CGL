@@ -5,10 +5,6 @@ use warnings;
 use lib "$ENV{CGL_GFF_LIB}";
 
 use CGL::Annotation;
-use CGL::Annotation::GFF3::Maker;
-use CGL::Annotation::GFF3::FlyBase;
-use CGL::Annotation::GFF3::WormBase;
-use CGL::Annotation::GFF3::WormBaseOld;
 use CGL::Annotation::Iterator;
 use Getopt::Long;
 use Text::Wrap qw(wrap);
@@ -20,24 +16,25 @@ my $usage = "
 
 Synopsis:
 
-cgl2fasta_gff [options] <master_datastore.index>
-cgl2fasta_gff --trans <master_datastore.index>
-cgl2fasta_gff --utr3 --col 70 <master_datastore.index>
-cgl2fasta_gff --prot --gene_name <master_datastore.index>
+cgl2fasta_gff --format gff3_flybase [options] <master_datastore.index>
+cgl2fasta_gff --format gff3_wormbase --trans <master_datastore.index>
+cgl2fasta_gff --format gff3_maker --utr3 --col 70 <master_datastore.index>
+cgl2fasta_gff --format gff3_flybase --prot --gene_name <master_datastore.index>
 
-This script takes input from a datastore index and outputs a fasta file of 
+This script takes input from a datastore index and outputs a fasta file of
 sequences.  The options control what fasta sequence to produce.
 
 
-Options:                                                                       
+Options:
+  --format     The format of the input files.
   --trans      transcript sequence
   --prot       protien sequence
   --utr3       3' UTR sequence
   --utr5       5' UTR sequence
   --col        Number of colmns to wrap sequences at [80].
-  --gene_name  Use gene_name-mRNA-1 or gene_name-CDS-1 naming convention.  
-               This is useful for making RBH mappings.  Only works for 
-               transcript and protein sequences.
+  --gene_name  Use gene_name-mRNA-1 or gene_name-CDS-1 naming convention.
+	       This is useful for making RBH mappings.  Only works for
+	       transcript and protein sequences.
 
 ";
 
@@ -60,19 +57,21 @@ my $md = parse_datastore($md_file);
  GENE:
     for my $id (keys %{$md}) {
 
-            unless (-e $md->{$id}) {
-                    print STDERR "Missing path for ID: $id\n";
-                    next GENE;
-            }
+	    unless (-e $md->{$id}) {
+		    print STDERR "Missing path for ID: $id\n";
+		    next GENE;
+	    }
 
-            my $gff_file = $md->{$id} ? $md->{$id} : undef;
+	    my $gff_file = $md->{$id} ? $md->{$id} : undef;
 	    my $fasta_file;
-	    ($fasta_file = $gff_file) =~ s/.gff3/.fasta/; 
+	    ($fasta_file = $gff_file) =~ s/.gff3/.fasta/;
 
 	    print STDERR "$gff_file\n";
-	    
+
 	    my $cgl;
-	    eval {$cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file)};
+	    eval {$cgl = new CGL::Annotation->new(format     => $format,
+						  gff_file   => $gff_file,
+						  fasta_file => $fasta_file)};
 
 	    print STDERR "Gene: $id died with errors:\n$@\n" if $@;
 	    next GENE unless $cgl;
@@ -89,21 +88,21 @@ my $md = parse_datastore($md_file);
 #------------------------------------------------------------------------------
 
 sub parse_datastore {
-        my $file = shift;
+	my $file = shift;
 
-        open (my $IN, '<', $file) or die "Can't open $file\n";
+	open (my $IN, '<', $file) or die "Can't open $file\n";
 
-        my %md;
-        while (<$IN>) {
-                chomp;
-                my @fields = split;
-                my ($id, $path) = ($fields[0], $fields[1]);
-                die "Incorrect format specified.  Can't parse datastore\n" 
-                    unless (defined $id && defined $path);
+	my %md;
+	while (<$IN>) {
+		chomp;
+		my @fields = split;
+		my ($id, $path) = ($fields[0], $fields[1]);
+		die "Incorrect format specified.  Can't parse datastore\n"
+		    unless (defined $id && defined $path);
 
-                $md{$id} = $path;
-        }
-        return \%md;
+		$md{$id} = $path;
+	}
+	return \%md;
 }
 #------------------------------------------------------------------------------
 sub get_fasta_seq {
@@ -132,7 +131,7 @@ sub get_fasta_seq {
 			if ($gene_name) {
 				$header = $g->id . "-CDS-$i";
 			}
-			$sequence = $p->residues; 
+			$sequence = $p->residues;
 		}
 		elsif ($utr3) {
 			next TRANS if ! $p;

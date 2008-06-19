@@ -5,8 +5,6 @@ use warnings;
 use lib "$ENV{CGL_GFF_LIB}";
 
 use CGL::Annotation;
-use CGL::Annotation::GFF3::WormBase;
-use CGL::Annotation::GFF3::Maker;
 use Fasta;
 use Shadower;
 use PostData;
@@ -26,7 +24,10 @@ my $fasta_file = shift;
 
 die $usage unless defined($gff3_file) && defined($fasta_file);
 
-my $cgl = new CGL::Annotation::GFF3::WormBase($gff3_file, $fasta_file);
+my $cgl = CGL::Annotation->new(format     => 'gff3_wormbase',
+			       gff_file   => $gff3_file,
+			       fasta_file => $fasta_file
+			      );
 
 #Get Contig details
 my $contig = $cgl->contig(0);

@@ -8,10 +8,10 @@ use Getopt::Long;
 my $usage = '
 
 Synopsis:
-splice_complexity_nucleo --format [FlyBase|WormBase] --gff gff3_file \
-                                                     --fasta fasta_file
+splice_complexity_nucleo --format gff3_flybase --gff gff3_file \
+                         --fasta fasta_file
 
-splice_complexity_nucleo --chaos chaos_file
+splice_complexity_nucleo --format chaos --chaos chaos_file
 
 Description:
 
@@ -22,8 +22,7 @@ complexity.  If a chaos file is given, then --format, --gff and --fasta
 options are not needed.
 
 Options:
-  --format [Flybase|Wormbase]  Is the annotation in FlyBase GFF or 
-           Wormbase GFF?  Wormbase is the default.
+  --format Annotation format (gff3_flybase, gff3_wormbase, gff3_maker etc.)
   --gff    The name of the GFF3 file.
   --fasta  The name of the fasta file.
   --chaos  The name of the chaos file.
@@ -64,40 +63,19 @@ my ($gene_id, $num_t, $num_t_p, $esc_m_x, $esc_m, $esc_c_x, $esc_c, $esc_u_x,
 
 my ($gff_file, $fasta_file, $chaos_file, $format);
 
-my $opt_success = GetOptions('gff=s'   => \$gff_file,
-                             'fasta=s' => \$fasta_file,
-                             'chaos=s' => \$chaos_file,
+my $opt_success = GetOptions('gff=s'   	 => \$gff_file,
+                             'fasta=s' 	 => \$fasta_file,
+                             'chaos=s' 	 => \$chaos_file,
                              'format=s'  => \$format,
                              );
 
-$format ||= 'FlyBase';
+my $cgl = CGL::Annotation->new(format     => $format,
+			       gff_file   => $gff_file,
+			       fasta_file => $fasta_file,
+			       chaos_file => $chaos_file,
+			       );
 
-my $cgl;
-
-if ($gff_file && $fasta_file) {
-        unshift @INC, $ENV{CGL_GFF_LIB};
-        require CGL::Annotation;
-        require CGL::Annotation::GFF3::FlyBase;
-        require CGL::Annotation::GFF3::WormBase;
-        require CGL::Annotation::Iterator;
-
-        $format =~ /FlyBase/i
-            ? $cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file)
-            : $format =~ /WormBase/i
-            ? $cgl = new CGL::Annotation::GFF3::WormBase($gff_file, $fasta_file)
-            : die $usage;
-}
-elsif ($chaos_file) {
-        require CGL::Annotation;
-        require CGL::Annotation::Iterator;
-
-        $cgl = CGL::Annotation->new($chaos_file);
-}
-else {
-        die $usage;
-}
-
-my $iterator = new CGL::Annotation::Iterator($cgl);
+my $iterator = CGL::Annotation::Iterator->new($cgl);
 
 my $c = $cgl->contig(0);
 

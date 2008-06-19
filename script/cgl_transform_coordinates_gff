@@ -5,7 +5,6 @@ use warnings;
 use lib "$ENV{CGL_GFF_LIB}";
 
 use CGL::Annotation;
-use CGL::Annotation::GFF3::FlyBase;
 use Getopt::Long;
 
 #-----------------------------------------------------------------------------
@@ -14,29 +13,33 @@ use Getopt::Long;
 
 my $usage = "
 
+Synopsis:
+
+transform_coordinates -gff_file <gff_file> -fasta_file <fasta_file> \
+		      transcript_id coordinate coordinate
+transform_coordinates -gff_file <gff_file> -fasta_file <fasta_file> \
+		      -data_file <id_coordinate_file>
+
+Description:
+
 This script takes a gff file, a fasta file, and either a data file described
 below, or three values.  The first value is a transcript id, the second
 value is a coordinate on that transcript and the third value is also a
 coordinate on that transcript.  The script returns the transcript_id, a contig
-id, and two contig coordinates that correspond to the transcript coordinates 
+id, and two contig coordinates that correspond to the transcript coordinates
 delimited by tabs.
 
-A data file may be given.  This file must be a tab delimited file with three 
+A data file may be given.  This file must be a tab delimited file with three
 columns.  The three columns are the same as arguments to the command line.  A
 transcript id, and two coordinates.
 
-EXAMPLES:
-
-transform_coordinates -gff_file <gff_file> -fasta_file <fasta_file> \
-                      transcript_id coordinate coordinate
-transform_coordinates -gff_file <gff_file> -fasta_file <fasta_file> \
-                      -data_file <id_coordinate_file>
 
 ";
 
-my ($gff_file, $fasta_file, $data_file);
+my ($format, $gff_file, $fasta_file, $data_file);
 
-GetOptions ("gff_file=s"   => \$gff_file,
+GetOptions ('$format=s'    => \$format
+	    "gff_file=s"   => \$gff_file,
 	    "fasta_file=s" => \$fasta_file,
 	    "data_file=s"  => \$data_file);
 
@@ -47,7 +50,7 @@ die $usage if ! (($id && $start && $end) || $data_file);
 #Get data from a file, from the command line or die.
 my $data;
 $data_file
-    ? $data = get_data($data_file)           : ($id && $start && $end) 
+    ? $data = get_data($data_file)         : ($id && $start && $end)
     ? $data = {$id => {start => $start,
 		       end   => $end}}     : die $usage;
 
@@ -55,7 +58,10 @@ $data_file
 my @ids  = keys %{$data};
 
 #Build a CGL object for the given ids
-my $cgl = new CGL::Annotation::GFF3::FlyBase($gff_file, $fasta_file, \@ids);
+my $cgl = CGL::Annotation->new(format     => $format,
+			       gff_file   => $gff_file,
+			       fasta_file => $fasta_file,
+			       \@ids);
 
 #Get Contig details
 my $contig = $cgl->contig(0);
@@ -92,12 +98,12 @@ for my $id (@ids) {
 
 	print join "\t", ($id,
 			  $contig_id,
-			  $c_start, 
+			  $c_start,
 			  $c_end,
 			  );
 	print "\n";
 
-}	
+}
 
 #-----------------------------------------------------------------------------
 #------------------------------- SUBROUTINES ---------------------------------
@@ -106,16 +112,15 @@ for my $id (@ids) {
 sub get_data {
 	my $id_file = shift;
 	open (IN, $id_file) or die "Can't open $id_file\n";
-	
+
 	my %data;
 	while (<IN>) {
 		my ($id, $start, $end) = split;
 		$data{$id}{start} = $start;
 		$data{$id}{end}   = $end;
 	}
-	
-	close IN;
-	
-	return \%data;
-}	
 
+	close IN;
+
+	return \%data;
+}

@@ -3,6 +3,7 @@ use strict;
 
 use FileHandle;
 use Getopt::Long;
+use CGL::Annotation;
 use Shadower;
 
 my $usage = '
@@ -11,9 +12,10 @@ Synopsis:
 
 splice_distance_nucleo --gff_i gff3_file --fasta_i fasta_file \
                        --gff_j gff3_file --fasta_j fasta_file
-                       --format_i WormBase --format_j WormBaseOld
+                       --format_i gff3_wormbase --format_j gff3_wormbase_old
 
-splice_distance_nucleo --chaos_i chaos_file --chaos_j chaos_file 
+splice_distance_nucleo --format_i chaos --chaos_i chaos_file \
+                       --format_j chaos --chaos_j chaos_file 
 
 Description:
 
@@ -83,62 +85,15 @@ my ($cgl_i, $cgl_j);
 
 $format_j ||= $format_i;
 
-die "--format_i and --format_j options must be WormBase WormBaseOld or FlyBase\n\n"
-    unless (grep {$_ =~ /WormBase|WormBaseOld|FlyBase/} ($format_i, $format_j)) || $chaos_file_i;
+my $cgl_i = CGL::Annotation->new(format     => $format_i,
+				 gff_file   => $$gff_file_i,
+				 fasta_file => $fasta_file_i,
+				 chaos_file => $chaos_file_i);
 
-if ($gff_file_i && $fasta_file_i &&
-    $gff_file_j && $fasta_file_j) { 
-	unshift @INC, $ENV{CGL_GFF_LIB};
-	require CGL::Annotation;
-
-###########################
-# Why doesn't this work?? #
-###########################
-#	eval {require CGL::Annotation::GFF3::$format_i};
-#	eval {require CGL::Annotation::GFF3::$format_j unless $format_i eq $format_j};
-
-	require CGL::Annotation::GFF3::WormBase;
-	require CGL::Annotation::GFF3::WormBaseOld;
-	require CGL::Annotation::GFF3::FlyBase;
-	require CGL::Annotation::Iterator;
-
-	if ($format_i eq 'FlyBase') {
-		$cgl_i = new CGL::Annotation::GFF3::FlyBase($gff_file_i, $fasta_file_i);
-	}
-	elsif ($format_i eq 'WormBase') {
-		$cgl_i = new CGL::Annotation::GFF3::WormBase($gff_file_i, $fasta_file_i);
-	}
-	elsif ($format_i eq 'WormBaseOld') {
-		$cgl_i = new CGL::Annotation::GFF3::WormBaseOld($gff_file_i, $fasta_file_i);
-	}
-	else {
-		die "Bad --format_i parameter: $format_i must match [WormBase|WormBaseOld|FlyBase]\n";
-	}
-
-	if ($format_j eq 'FlyBase') {
-		$cgl_j = new CGL::Annotation::GFF3::FlyBase($gff_file_j, $fasta_file_j);
-	}
-	elsif ($format_j eq 'WormBase') {
-		$cgl_j = new CGL::Annotation::GFF3::WormBase($gff_file_j, $fasta_file_j);
-	}
-	elsif ($format_j eq 'WormBaseOld') {
-		$cgl_j = new CGL::Annotation::GFF3::WormBaseOld($gff_file_j, $fasta_file_j);
-	}
-	else {
-		die "Bad --format_j parameter: $format_j must match [WormBase|WormBaseOld|FlyBase]\n";
-	}
-}
-elsif ($chaos_file_i && $chaos_file_j) {
-	unshift @INC, "$ENV{HOME}/CGL/trunk/lib/";
-	require CGL::Annotation;
-	require CGL::Annotation::Iterator;
-
-	$cgl_i = CGL::Annotation->new($chaos_file_i);
-	$cgl_j = CGL::Annotation->new($chaos_file_j);
-}
-else {
-	die $usage;
-}
+my $cgl_j = CGL::Annotation->new(format     => $format_j,
+				 gff_file   => $$gff_file_j,
+				 fasta_file => $fasta_file_j,
+				 chaos_file => $chaos_file_j);
 
 my $g_i = $cgl_i->gene(0);
 my $g_j = $cgl_j->gene(0);

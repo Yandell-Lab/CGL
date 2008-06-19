@@ -2,16 +2,18 @@
 use strict;
 
 use FileHandle;
-use PostData;
+use CGL::Annotation;
 use Getopt::Long;
 
 my $usage = "
 
 Synopsis:
-splice_distance_exonic --gff_i gff3_file --fasta_i fasta_file \
-                       --gff_j gff3_file --fasta_j fasta_file
+splice_distance_exonic --format gff3_flybase --gff_i gff3_file \
+                       --fasta_i fasta_file --gff_j gff3_file  \
+                       --fasta_j fasta_file
 
-splice_distance_exonic --chaos_i chaos_file --chaos_j chaos_file
+splice_distance_exonic --format chaos --chaos_i chaos_file \
+                       --chaos_j chaos_file
 
 Description:
 
@@ -49,8 +51,8 @@ my ($gene_id, $num_t, $num_t_p, $esc_m_x, $esc_m, $esc_c_x, $esc_c, $esc_u_x,
     $isc_c, $isc_5_x, $isc_5, $isc_3_x, $isc_3) = split;
 
 Options:
-  --format  [Flybase|Wormbase]  Is the annotation in FlyBase GFF or 
-            Wormbase GFF?  Wormbase is the default.
+  --format  The fomate of the annotation file (gff3_flybase, 
+            gff3_wormbase, gff3_maker etc.)
   --gff_i   The name of the first GFF3 file.
   --gff_j   The name of the second GFF3 file.
   --fasta_i The name of the first fasta file.
@@ -64,7 +66,7 @@ Options:
 #----------------------------------- MAIN ------------------------------------
 #-----------------------------------------------------------------------------
 
-my ($gff_file_i, $fasta_file_i, $gff_file_j,
+my ($format, $gff_file_i, $fasta_file_i, $gff_file_j,
     $fasta_file_j, $chaos_file_i, $chaos_file_j);
 
 my $opt_success = GetOptions('gff_i=s'   => \$gff_file_i,
@@ -73,30 +75,20 @@ my $opt_success = GetOptions('gff_i=s'   => \$gff_file_i,
                              'fasta_j=s' => \$fasta_file_j,
                              'chaos_i=s' => \$chaos_file_i,
                              'chaos_j=s' => \$chaos_file_j,
+			     'format=s'  => \$format,
                              );
 
-my ($cgl_i, $cgl_j);
+my $cgl_i = CGL::Annotation->new(format     => $format,
+				 gff_file   => $gff_file_i,
+				 fasta_file => $fasta_file_i,
+				 chaos_file => $chaos_file,
+				);
 
-if ($gff_file_i && $fasta_file_i &&
-    $gff_file_j && $fasta_file_j) {
-        unshift @INC, $ENV{CGL_GFF_LIB};
-        require CGL::Annotation;
-        require CGL::Annotation::GFF3::FlyBase;
-        require CGL::Annotation::Iterator;
-
-        $cgl_i = new CGL::Annotation::GFF3::FlyBase($gff_file_i, $fasta_file_i);
-        $cgl_j = new CGL::Annotation::GFF3::FlyBase($gff_file_j, $fasta_file_j);
-}
-elsif ($chaos_file_i && $chaos_file_j) {
-        require CGL::Annotation;
-        require CGL::Annotation::Iterator;
-
-        $cgl_i = CGL::Annotation->new($chaos_file_i);
-        $cgl_j = CGL::Annotation->new($chaos_file_j);
-}
-else {
-        die $usage;
-}
+my $cgl_j = CGL::Annotation->new(format     => $format,
+				 gff_file   => $gff_file_j,
+				 fasta_file => $fasta_file_j,
+				 chaos_file => $chaos_file,
+				);
 
 my $g_i = $cgl_i->gene(0);
 my $g_j = $cgl_j->gene(0);

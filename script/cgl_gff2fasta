@@ -5,7 +5,6 @@ use warnings;
 use lib "$ENV{CGL_GFF_LIB}";
 
 use CGL::Annotation;
-use CGL::Annotation::GFF3::WormBase;
 use Bio::SeqIO;
 use Getopt::Long;
 
@@ -15,12 +14,20 @@ use Getopt::Long;
 
 my $usage = "
 
-This script takes a gff file, a fasta file, either a data file with a space
-seperated list of IDs or a list of space seperated IDs on the command line.  
-The output is a fasta file or a multi-fasta file that contains the fasta 
-sequences corresponding the IDs given.
+Synopsis:
 
-cgl_gff2fasta -gff_file <gff_file> -fasta_file <fasta_file> [-id_file id_file] [id1 id2 id3...] 
+cgl_gff2fasta --format gff3_flybase --gff_file <gff_file>  \
+              --fasta_file <fasta_file> [-id_file id_file] \
+              [id1 id2 id3...]
+
+
+Description:
+
+This script takes a gff file, a fasta file, either a data file with a
+space seperated list of IDs or a list of space seperated IDs on the
+command line.  The output is a fasta file or a multi-fasta file that
+contains the fasta sequences corresponding the IDs given.
+
 
 EXAMPLES:
 
@@ -29,9 +36,10 @@ cgl_gff2fasta -gff_file gff_file -fasta_file fasta_file -out_file out_file_base 
 
 ";
 
-my ($gff_file, $fasta_file, $id_file, $out_file);
+my ($fomat, $gff_file, $fasta_file, $id_file, $out_file);
 
-GetOptions ("gff_file=s"   => \$gff_file,
+GetOptions ('format=s'     => \$format,
+	    "gff_file=s"   => \$gff_file,
 	    "fasta_file=s" => \$fasta_file,
 	    "id_file=s"    => \$id_file,
 	    "out_file=s"   => \$out_file);
@@ -52,7 +60,9 @@ my $output_fasta;
 die $usage if ! @ids;
 
 #Build a CGL object for the given ids
-my $cgl = new CGL::Annotation::GFF3::WormBase($gff_file, $fasta_file);
+my $cgl = CGL::Annotation->new(format     => $format,
+			       gff_file   => $gff_file,
+			       fasta_file => $fasta_file);
 
 #Get Contig details
 my $contig = $cgl->contig(0);
