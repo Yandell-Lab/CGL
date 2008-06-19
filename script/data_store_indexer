@@ -13,41 +13,35 @@ use lib ('/Users/myandell/lib',
 
 $| = 1;
 use FileHandle;
-use PostData;
-use CGL::Annotation;
-use CGL::Annotation::Iterator;
 use Cwd;
-use PostData;
 
 my $usage = "
 
-data_store_indexer: opens an xml file & spits out the uniquename of the
-                    focus feature and the explicit path to that file 
-                    designed to be used as the \"--all\" argument of 
-                    of ds_do. 
-
-data_store_indexer <chaos.xml file>
+Synopsis:
 
 data_store_indexer  dmel.sample.chaos.xml
 
-assuming you are in the chaos_datastore root directory:
+Description:
 
-ds_do --all 'data_store_indexer `pwd`/*xml' | tee datastore.index
+This script creates a datastore index.  It opens a Chaos XML file in a
+datastore and prints the uniquename of the focus feature and the
+absolute path to the XML file.
 
-the result is a tab delimited file with the following fields
+The result is a file with the following tab delimited fields:
 
-gene_uniquename gene_synomnyms explit_path_to_chaos.xml_file
+gene_uniquename gene_synomnyms absolute_path_to_chaos_file
 
 
-\n"; 
+
+"; 
 
 #-----------------------------------------------------------------------------
 #----------------------------------- MAIN ------------------------------------
 #-----------------------------------------------------------------------------
 
-die $usage unless $ARGV[0];
+my $file  = shift;
 
-my $file  = $ARGV[0];
+die $usage unless $file;
 
 my $return = system("cgl_validate $file");
 
@@ -55,6 +49,3 @@ unless ($return ==0 ){
 	print "DOC_INVALID"."\t"."-"."\t"."-"."\t"."-"."\t".$file."\n";
 	exit(0);
 }
-#-----------------------------------------------------------------------------
-#---------------------------------- SUBS -------------------------------------
-#-----------------------------------------------------------------------------

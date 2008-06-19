@@ -9,8 +9,19 @@ use PostData;
 
 my $usage = "
 
-splice_distance_exonic <chaos_file 1> <chaos_file 2>
+Synopsis:
 
+splice_distance_exonic  chaos1.xml chaos2.xml
+
+Description:
+
+This script will accept two single gene chaos XML files and and will
+calculate the annotation edit distance (AED) between the two genes
+
+Note:
+
+With the current version of CGL, this file could be merged with the gff3
+version by accepting a few more arguments.
 
 ";
 
@@ -23,8 +34,10 @@ chomp ($chaos_i, $chaos_j);
 
 die $usage unless ($chaos_i && $chaos_j);
 
-my $cgl_i = CGL::Annotation->new($chaos_i);
-my $cgl_j = CGL::Annotation->new($chaos_j);
+my $cgl_i = CGL::Annotation->new(format => 'chaos',
+				 file   => $chaos_i);
+my $cgl_j = CGL::Annotation->new(format => 'chaos',
+				 file   => $chaos_j);
 
 my $g_i = $cgl_i->gene(0);
 my $g_j = $cgl_j->gene(0);

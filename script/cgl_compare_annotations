@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w 
+#!/usr/local/bin/perl -w
 use strict;
 
 # pod docs at end.
@@ -16,16 +16,16 @@ use Bio::Search::HSP::HSPFactory;
 
 my $usage = "
 
-cgl_compare_annotations: 
+cgl_compare_annotations:
 
-a simple introduction to using the PhatHit and PhatHSP 
-objects to compare annotations to one-another using a 
-BLASTP report 
+a simple introduction to using the PhatHit and PhatHSP
+objects to compare annotations to one-another using a
+BLASTP report
 
 cgl_compare_annotations  <blastp report> <query chaos.xml document> <hit chaos.xml document>
 
 XXXXXXXXXXXXXX this script needs to be completed!
-\n"; 
+\n";
 
 #-----------------------------------------------------------------------------
 #----------------------------------- MAIN ------------------------------------
@@ -47,23 +47,23 @@ my $sio = parseBlast($blast_report);
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 sub parseBlast {
-        my $report = shift;
+	my $report = shift;
 
 	my $hitType = 'Bio::Search::Hit::PhatHit::blastp';
 	my $hspType = 'Bio::Search::HSP::PhatHSP::blastp';
 
-        my $sio = new Bio::SearchIO(-format => 'blast',
-                                    -file   => $report,
-                                   );
+	my $sio = new Bio::SearchIO(-format => 'blast',
+				    -file   => $report,
+				   );
 
-        my $hspFactory = new Bio::Search::HSP::HSPFactory(-type =>$hspType);
-        my $hitFactory = new Bio::Search::Hit::HitFactory(-type =>$hitType);
+	my $hspFactory = new Bio::Search::HSP::HSPFactory(-type =>$hspType);
+	my $hitFactory = new Bio::Search::Hit::HitFactory(-type =>$hitType);
 
 
-        $sio->_eventHandler->register_factory('hsp', $hspFactory);
-        $sio->_eventHandler->register_factory('hit', $hitFactory);
+	$sio->_eventHandler->register_factory('hsp', $hspFactory);
+	$sio->_eventHandler->register_factory('hit', $hitFactory);
 
-        return $sio;
+	return $sio;
 }
 #-----------------------------------------------------------------------------
 
