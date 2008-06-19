@@ -30,8 +30,9 @@ my @ds_index = parse_ds_index($ds_index_file);
 for my $gene_data (@ds_index) {
 	my $gene_name = $$gene_data{gene_name};
 	my $file_name = $$gene_data{file};
-	
-	my $cgl = CGL::Annotation->new($file_name);
+
+	my $cgl = CGL::Annotation->new(format => 'chaos',
+				       file   => '$file_name');
 	my $focus = $cgl->meta_data('focus_feature_id')
 	    || 'no focus given in file';
 
