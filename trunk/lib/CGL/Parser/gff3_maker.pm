@@ -20,9 +20,10 @@ use CGL::Annotation;
 #-------------------------------------------------------------------------------
 sub new {
         my $class      = shift;
-        my $args       = shift;
-
-        my %params = @{$args};
+        my @args       = @_;
+        #my $args       = shift;
+        my %params = @args;
+        #my %params = @{$args};
 
         my $gff_file   = $params{gff_file};
         my $fasta_file = $params{fasta_file};
@@ -702,7 +703,7 @@ sub grab {
                 my $tag_t = $f->primary_tag();
                 my $tag_s = $f->source_tag();
 
-                if ($tag_t eq $type && $tag_s eq  $source) {
+               if ($tag_t eq $type && $tag_s eq  $source) {
                         my $id = $f->get_SeqFeatures('ID')->value();
                         my $p_ids = get_p_ids($f);
                         foreach my $p_id (@{$p_ids}){

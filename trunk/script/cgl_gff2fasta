@@ -36,7 +36,7 @@ cgl_gff2fasta -gff_file gff_file -fasta_file fasta_file -out_file out_file_base 
 
 ";
 
-my ($fomat, $gff_file, $fasta_file, $id_file, $out_file);
+my ($format, $gff_file, $fasta_file, $id_file, $out_file);
 
 GetOptions ('format=s'     => \$format,
 	    "gff_file=s"   => \$gff_file,
