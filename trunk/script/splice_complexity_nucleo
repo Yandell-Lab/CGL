@@ -31,7 +31,7 @@ Output is the following columns:
 
 gene_id  Gene ID
 num_t    Number of transcripts
-num_t_p  Number of transcripts ??
+num_t_p  Number of transcripts pairs
 esc_m    Exon splice complexity of the entire mRNA
 esc_m_x  
 esc_c    Exon splice complexity of the CDS

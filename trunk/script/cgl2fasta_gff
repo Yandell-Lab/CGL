@@ -43,7 +43,7 @@ Options:
 my ($format, $trans, $prot, $utr3, $utr5, $cds, $column, $gene_name);
 
 GetOptions('trans'     => \$trans,
-	   'format=s'  => \$format, 	   
+	   'format=s'  => \$format,
 	   'prot'      => \$prot,
 	   'utr3'      => \$utr3,
 	   'utr5'      => \$utr5,
@@ -129,8 +129,9 @@ sub get_fasta_seq {
 		my $p = $t->translation(0);
 		my $sequence;
 		my $header;
-		my $p_end_on_t = $p->metaPos($t, $p->length);
-		my $p_beg_on_t = $p->metaPos($t, 0);
+
+		my $p_beg_on_t   = $p->metaPos($t, 0);
+		my $five_length  = $p_beg_on_t;
 
 		if ($trans) {
 			print STDERR "Getting ID\n";
@@ -169,8 +170,8 @@ sub get_fasta_seq {
 			$header   = $t->id . "cds-sequences";
 			$sequence = substr($t->residues, $five_length_cd, $three_length_cd);
 			next TRANS if ! $sequence;
-		    
-}		
+
+}
 		$fasta .= ">$header\n";
 		$fasta .= wrap('', '', $sequence);
 		$fasta .= "\n";
@@ -182,7 +183,7 @@ sub get_fasta_seq {
 sub fasta_creator {
     my $gff3_file = shift;
 
-    open my $IN, '<', "$gff3_file" || 
+    open my $IN, '<', "$gff3_file" ||
 	die "fasta_creator could not open the gff3_file";
 
     while (my $line= <$IN>){
@@ -196,5 +197,4 @@ sub fasta_creator {
     my $fasta = "$seq_id $seq";
 
     return $fasta;
-} 
-
+}
