@@ -42,8 +42,8 @@ Options:
 
 my ($format, $trans, $prot, $utr3, $utr5, $cds, $column, $gene_name);
 
-GetOptions('trans'     => \$trans,
-	   'format=s'  => \$format, 	   
+GetOptions('format'    => \$format, 
+	   'trans'     => \$trans,
 	   'prot'      => \$prot,
 	   'utr3'      => \$utr3,
 	   'utr5'      => \$utr5,
@@ -81,9 +81,9 @@ my $md = parse_datastore($md_file);
 
 
 	    my $cgl;
-	    eval {$cgl = CGL::Annotation->new(format     => $format,
-					      gff_file   => $gff_file,
-					      fasta_file => $fasta_file)};
+	    eval {$cgl = new CGL::Annotation->new(format     => "gff3_maker",
+						  gff_file   => $gff_file,
+						  fasta_file => $fasta_file)};
 
 	    print STDERR "Gene: $id died with errors:\n$@\n" if $@;
 	    next GENE unless $cgl;
@@ -182,7 +182,7 @@ sub get_fasta_seq {
 sub fasta_creator {
     my $gff3_file = shift;
 
-    open my $IN, '<', "$gff3_file" || 
+    open my $IN,' >', "$gff3_file" || 
 	die "fasta_creator could not open the gff3_file";
 
     while (my $line= <$IN>){
@@ -193,7 +193,7 @@ sub fasta_creator {
     my $seq_id= <$IN>;
     my @sequences= <$IN>;
     my $seq = join '',  @sequences;
-    my $fasta = "$seq_id $seq";
+    my $fasta = $seq_id.$seq;
 
     return $fasta;
 } 
