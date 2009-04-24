@@ -1,25 +1,20 @@
+package CGL::Parser::gff3;
 #-------------------------------------------------------------------------------
-#------              CGL::Parser::gff3_flybase                           -------
+#------------------------------ CGL::Parser::gff3 ------------------------------
 #-------------------------------------------------------------------------------
-package CGL::Parser::gff3_flybase;
 use strict;
-use vars qw(@ISA @EXPORT $VERSION);
-use Exporter;
+use warnings;
 use FileHandle;
-use Bio::DB::GFF;
+#use Bio::DB::GFF;
 use Bio::Tools::GFF;
-use Bio::FeatureIO::gff;
+#use Bio::FeatureIO::gff;
 use Bio::Tools::CodonTable;
 use CGL::Annotation;
 use Iterator::Fasta;
 use Datastore::MD5;
-use PostData;
-
-@ISA = qw(
-	  );
 
 #-------------------------------------------------------------------------------
-#------------------------------- FUNCTIONS -------------------------------------
+#------------------------------- CLASS METHODS ---------------------------------
 #-------------------------------------------------------------------------------
 sub new {
 	my $class      = shift;
@@ -47,128 +42,11 @@ sub new {
 	return $cgl;
 }
 #-------------------------------------------------------------------------------
-sub to_gff3_contig {
-	my $seg_id = shift;
-	my $length = shift;
-
-	my @fields;
-	push(@fields, $seg_id, 'FlyBase', 'contig', 1, $length);
-	push(@fields, '.', '.', '.', "ID=$seg_id;Name=$seg_id");
-
-
-	return join("\t", @fields);
-
-}
-#-------------------------------------------------------------------------------
-sub to_gff3_gene {
-	my $seg_id = shift;
-	my $g      = shift;
-
-	my $g_id   = $g->{f}->get_SeqFeatures('ID')->value();
-	my $g_n    = $g->{f}->get_SeqFeatures('Name')
-	    ? $g->{f}->get_SeqFeatures('Name')->value()
-	    : $g_id;
-	my $strand = $g->{f}->strand() == 1 ? '+' : '-';
-
-	my @fields;
-
-	push(@fields, $seg_id, 'FlyBase', 'gene', $g->{i_start});
-	push(@fields, $g->{i_end}, '.', $strand, '.');
-	push(@fields, "ID=$g_id;Name=$g_n");
-
-	return join("\t", @fields);
-
-}
-#-------------------------------------------------------------------------------
-sub to_gff3_transcript {
-	my $seg_id = shift;
-	my $g      = shift;
-	my $t      = shift;
-
-	my $g_id   = $g->{f}->get_SeqFeatures('ID')->value();
-	my $t_id   = $t->{f}->get_SeqFeatures('ID')->value();
-	my $t_n    = $t->{f}->get_SeqFeatures('Name')
-	    ? $t->{f}->get_SeqFeatures('Name')->value()
-	    : $t_id;
-	my $type   = $t->{f}->primary_tag;
-
-	my $strand = $t->{f}->strand() == 1 ? '+' : '-';
-
-	my @fields;
-
-	push(@fields, $seg_id, 'FlyBase', $type, $t->{i_start});
-	push(@fields, $t->{i_end}, '.', $strand, '.');
-	push(@fields, "ID=$t_id;Parent=$g_id;Name=$t_n");
-
-	return join("\t", @fields);
-
-}
-#-------------------------------------------------------------------------------
-sub to_gff3_exon {
-	my $seg_id = shift;
-	my $t      = shift;
-	my $e      = shift;
-
-	my $t_id   = $t->{f}->get_SeqFeatures('ID')->value();
-	my $e_id   = $e->{id};
-
-	my $strand = $e->{f}->strand() == 1 ? '+' : '-';
-
-	my @fields;
-
-	push(@fields, $seg_id, 'FlyBase', 'exon', $e->{i_start});
-	push(@fields, $e->{i_end}, '.', $strand, '.');
-	push(@fields, "ID=$e_id;Parent=$t_id");
-
-	return join("\t", @fields);
-
-}
-#-------------------------------------------------------------------------------
-sub to_gff3_cds {
-	my $seg_id = shift;
-	my $t      = shift;
-	my $c      = shift;
-
-	my $t_id   = $t->{f}->get_SeqFeatures('ID')->value();
-	my $c_id   = $c->{id};
-
-	my $strand = $c->{f}->strand() == 1 ? '+' : '-';
-
-	my @fields;
-
-	push(@fields, $seg_id, 'FlyBase', 'CDS', $c->{i_start});
-	push(@fields, $c->{i_end}, '.', $strand, '.');
-	push(@fields, "ID=$c_id;Parent=$t_id");
-
-	return join("\t", @fields);
-
-}
-#-------------------------------------------------------------------------------
-sub to_fasta_seq {
-	my $id  = shift;
-	my $seq = shift;
-
-	my $fasta = Fasta::toFasta('>'.$id, \$seq);
-
-	return $$fasta;
-}
-#-------------------------------------------------------------------------------
-sub to_gff3_seq {
-	my $id  = shift;
-	my $seq = shift;
-
-	my $fasta = Fasta::toFasta('>'.$id, \$seq);
-
-	return $$fasta;
-}
-#-------------------------------------------------------------------------------
 sub split_file {
-	my $file  = shift;
-	my $fasta_file = shift;
-	my $ds_root    = shift;
+	my ($class, $gff_file, $fasta_file, $ds_root) = @_;
 
 	my ($genes, $seq, $seq_id) =
-	get_genes($file, $fasta_file, 'exon', 500);
+	get_genes($gff_file, $fasta_file, 'exon', 500);
 
 	my $ds;
 	if ($ds_root) {
@@ -198,7 +76,7 @@ sub split_file {
 		my $fh = new FileHandle();
 		   $fh->open(">$file");
 
-		print $fh "##gff-version   3\n";
+		print $fh "##gff-version 3\n";
 		my $seg_id;
 		if ($g->{f}->strand() == 1){
 			$seg_id = $seq_id.':'.$g->{src_s}.':'.$g->{src_e};
@@ -245,6 +123,151 @@ sub split_file {
 	}
 
 }
+#-------------------------------------------------------------------------------
+sub glean {
+
+	my ($class, $file)  = @_;
+
+	my $fh = new FileHandle();
+	   $fh->open($file);
+
+	my $i = 0;
+	while (my $line = <$fh>){
+
+		if ($i < 6){
+		print $line;
+		$i++;
+		next;
+		}
+
+		chomp($line);
+
+		my ($seq, $source, $type) = split("\t", $line, 3);
+
+		print $line."\n" if wanted($type);
+
+		$i++;
+	}
+
+	$fh->close();
+
+}
+#-------------------------------------------------------------------------------
+#------------------------------- OBJECT METHODS --------------------------------
+#-------------------------------------------------------------------------------
+sub to_gff3_contig {
+	my $seg_id = shift;
+	my $length = shift;
+
+	my @fields;
+	push(@fields, $seg_id, '.', 'contig', 1, $length);
+	push(@fields, '.', '.', '.', "ID=$seg_id;Name=$seg_id");
+
+
+	return join("\t", @fields);
+
+}
+#-------------------------------------------------------------------------------
+sub to_gff3_gene {
+	my $seg_id = shift;
+	my $g      = shift;
+
+	my ($g_id) = $g->{f}->get_tagset_values('ID');
+	my ($g_n)  = ($g->{f}->get_tagset_values('Name') ||
+		      $g->{f}->get_tagset_values('ID'));
+	my $strand = $g->{f}->strand() == 1 ? '+' : '-';
+
+	my @fields;
+
+	push(@fields, $seg_id, '.', 'gene', $g->{i_start});
+	push(@fields, $g->{i_end}, '.', $strand, '.');
+	push(@fields, "ID=$g_id;Name=$g_n");
+
+	return join("\t", @fields);
+
+}
+#-------------------------------------------------------------------------------
+sub to_gff3_transcript {
+	my $seg_id = shift;
+	my $g      = shift;
+	my $t      = shift;
+
+	my ($g_id) = $g->{f}->get_tagset_values('ID');
+	my ($t_id) = $t->{f}->get_tagset_values('ID');
+	my ($t_n)  = ($t->{f}->get_tagset_values('Name') ||
+		      $t->{f}->get_tagset_values('ID'));
+	my $type   = $t->{f}->primary_tag;
+
+	my $strand = $t->{f}->strand() == 1 ? '+' : '-';
+
+	my @fields;
+
+	push(@fields, $seg_id, '.', $type, $t->{i_start});
+	push(@fields, $t->{i_end}, '.', $strand, '.');
+	push(@fields, "ID=$t_id;Parent=$g_id;Name=$t_n");
+
+	return join("\t", @fields);
+
+}
+#-------------------------------------------------------------------------------
+sub to_gff3_exon {
+	my $seg_id = shift;
+	my $t      = shift;
+	my $e      = shift;
+
+	my ($t_id) = $t->{f}->get_tagset_values('ID');
+	my $e_id   = $e->{id};
+
+	my $strand = $e->{f}->strand() == 1 ? '+' : '-';
+
+	my @fields;
+
+	push(@fields, $seg_id, '.', 'exon', $e->{i_start});
+	push(@fields, $e->{i_end}, '.', $strand, '.');
+	push(@fields, "ID=$e_id;Parent=$t_id");
+
+	return join("\t", @fields);
+
+}
+#-------------------------------------------------------------------------------
+sub to_gff3_cds {
+	my $seg_id = shift;
+	my $t      = shift;
+	my $c      = shift;
+
+	my ($t_id) = $t->{f}->get_tagset_values('ID');
+	my $c_id   = $c->{id};
+
+	my $strand = $c->{f}->strand() == 1 ? '+' : '-';
+
+	my @fields;
+
+	push(@fields, $seg_id, '.', 'CDS', $c->{i_start});
+	push(@fields, $c->{i_end}, '.', $strand, '.');
+	push(@fields, "ID=$c_id;Parent=$t_id");
+
+	return join("\t", @fields);
+
+}
+#-------------------------------------------------------------------------------
+sub to_fasta_seq {
+	my $id  = shift;
+	my $seq = shift;
+
+	my $fasta = Fasta::toFasta('>'.$id, \$seq);
+
+	return $$fasta;
+}
+#-------------------------------------------------------------------------------
+sub to_gff3_seq {
+	my $id  = shift;
+	my $seq = shift;
+
+	my $fasta = Fasta::toFasta('>'.$id, \$seq);
+
+	return $$fasta;
+}
+#-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 sub base_to_space {
 
@@ -401,9 +424,6 @@ sub load_gene {
 
 	my $gene = {};
 
-#	$gene->{feature_id} = $g->{f}->get_SeqFeatures('ID')->value();
-#	$gene->{id}         = $g->{f}->get_SeqFeatures('ID')->value();
-
 	($gene->{feature_id}) = $g->{f}->get_tagset_values('ID');
 	($gene->{id})         = $g->{f}->get_tagset_values('ID');
 
@@ -417,13 +437,10 @@ sub load_gene {
 	push(@{$gene->{locations}},
 	load_feature_location($nbeg, $nend, $src_f_id));
 
-#	$gene->{name} = $g->{f}->get_SeqFeatures('Name')
-#	    ? $g->{f}->get_SeqFeatures('Name') ->value()
-#	    : $g->{f}->get_SeqFeatures('ID');
 
-	($gene->{name}) = $g->{f}->get_tagset_values('Name');
+	($gene->{name}) = ($g->{f}->get_tagset_values('Name') ||
+			   $g->{f}->get_tagset_values('ID'));
 
-#	my $oF_id = $g->{f}->get_SeqFeatures('ID')->value();
 	my ($oF_id) = $g->{f}->get_tagset_values('ID');
 
 	foreach my $t (@{$g->{transcripts}}){
@@ -441,13 +458,10 @@ sub load_gene {
 
 	}
 
-	($gene->{uniqename}) = $g->{f}->get_tagset_values('Name');
+	($gene->{uniqename}) = ($g->{f}->get_tagset_values('Name') ||
+				$g->{f}->get_tagset_values('ID'));
 
-#	$gene->{uniquename} = $g->{f}->get_SeqFeatures('Name')
-#	    ? $gene->{uniquename} = $g->{f}->get_SeqFeatures('Name')->value()
-#	    : $gene->{uniquename} = $g->{f}->get_SeqFeatures('ID')->value();
-
-	$gene->{type}       = 'gene';
+	$gene->{type} = 'gene';
 
 	bless $gene, 'CGL::Annotation::Feature::Gene';
 	return $gene;
@@ -468,9 +482,6 @@ sub load_transcript {
 	($transcr->{feature_id}) = $t->{f}->get_tagset_values('ID');
 	($transcr->{id})         = $t->{f}->get_tagset_values('ID');
 
-#	$transcr->{feature_id} = $t->{f}->get_SeqFeatures('ID')->value();
-#	$transcr->{id}         = $t->{f}->get_SeqFeatures('ID')->value();
-
 	$transcr->{gene} = $t->{part_of}->[0];
 
 	my $nbeg = $t->{f}->start();
@@ -487,12 +498,10 @@ sub load_transcript {
 	$props{gene} = $t->{part_of}->[0];
 
 	($props{transcript_id}) = $t->{f}->get_tagset_values('ID');
-#	$props{transcript_id} = $t->{f}->get_SeqFeatures('ID')->value();
 
 	$transcr->{properties} = \%props;
 
 	my ($oF_id) = $t->{f}->get_tagset_values('ID');
-#	my $oF_id = $t->{f}->get_SeqFeatures('ID')->value();;
 
 	foreach my $e (@{$transcr->{exons}}){
 		my $sF_id =$e->{id};
@@ -507,7 +516,6 @@ sub load_transcript {
 
 	$transcr->{residues} = $t->{seq};
 
-	#Barry
 	if ($type eq 'mRNA') {
 		my $t_offset = get_translation_offset($t);
 
@@ -522,22 +530,12 @@ sub load_transcript {
 			     load_feature_relationship($oF_id, $sF_id, 'produced_by'));
 		}
 	}
-	#Barry
 
-	($transcr->{name}) = $t->{f}->get_tagset_values('Name');
+	($transcr->{name})       = ($t->{f}->get_tagset_values('Name') ||
+				    $t->{f}->get_tagset_values('ID'));
+	($transcr->{uniquename}) = ($t->{f}->get_tagset_values('Name') ||
+				    $t->{f}->get_tagset_values('Name'));
 
-#	$transcr->{name}       = $t->{f}->get_SeqFeatures('Name')
-#	    ? $t->{f}->get_SeqFeatures('Name')->value()
-#	    : $t->{f}->get_SeqFeatures('ID')->value();
-
-	($transcr->{uniquename}) = $t->{f}->get_tagset_values('Name');
-
-#	$transcr->{uniquename} = $t->{f}->get_SeqFeatures('Name')
-#	    ? $t->{f}->get_SeqFeatures('Name')->value()
-#	    : $t->{f}->get_SeqFeatures('ID')->value();
-
-#	$transcr->{type} = 'mRNA';
-	#Barry
 	$transcr->{type}  = $type;
 
 	bless $transcr, 'CGL::Annotation::Feature::Transcript';
@@ -582,15 +580,15 @@ sub get_l_beg_end {
 		return ($end, $start);
 	}
 	else {
-		die "dead in WormBase::get_l_beg_end\n";
+		die "Error in CGL::Parser::gff3::get_l_beg_end\n";
 	}
 }
 #-------------------------------------------------------------------------------
 sub load_translations {
 	my $t = shift;
 
-	my ($f_id) = 'protein:'.$t->{f}->get_tagset_values('Name');
-#	my $f_id = 'protein:'.$t->{f}->get_SeqFeatures('ID')->value();
+	my ($f_id) = 'protein:' . ($t->{f}->get_tagset_values('Name') ||
+				   $t->{f}->get_tagset_values('ID'));
 
 	my $transl = {};
 
@@ -612,13 +610,13 @@ sub load_translations {
 	my ($a_l_beg, $a_l_end) = get_l_beg_end($alpha);
 	my ($o_l_beg, $o_l_end) = get_l_beg_end($omega);
 
-=cut
+#=cut
 	my $nbeg = $sorted->[0]->{f}->start();
 	my $nend = $sorted->[0]->{f}->end();
 
 	($nbeg, $nend) = ($nend, $nbeg) if $sorted->[0]->{f}->strand() == -1;
 
-=cut
+#=cut
 	my $src_f_id = $t->{src_f_id};
 
 	push(@{$transl->{locations}},
@@ -633,7 +631,7 @@ sub load_translations {
 	$transl->{name} = $f_id;
 
 	my ($oF_id) = $t->{f}->get_tagset_values('ID');
-#	my $oF_id = $t->{f}->get_SeqFeatures('ID')->value();
+
 	my $sF_id = $transl->{id};
 
 	push(@{$transl->{relationships}},
@@ -846,9 +844,7 @@ sub load_seq {
 }
 #-------------------------------------------------------------------------------
 sub grab {
-	#Barry
 	my $types    = shift;
-#	my $type     = shift;
 	my $source   = shift;
 	my $features = shift;
 	my $c_id     = shift;
@@ -859,16 +855,10 @@ sub grab {
 	for my $type (@{$types}) {
 		foreach my $f (@{$features}){
 			my $tag_t = $f->primary_tag();
-			my $tag_s = $f->source_tag();
 
-			if ($tag_t eq $type && $tag_s eq  $source) {
+			if ($tag_t eq $type) {
 
 				my ($id) = $f->get_tagset_values('ID');
-#				my $id =
-#				    ($f->get_SeqFeatures('ID')
-#			     ? $f->get_SeqFeatures('ID')->value()
-#				     : $c_id.':'.$type.':'.$i
-#				     );
 
 				my $p_ids = get_p_ids($f);
 				foreach my $p_id (@{$p_ids}){
@@ -882,8 +872,6 @@ sub grab {
 			}
 		}
 	}
-
-
 	return \%booty;
 }
 #-------------------------------------------------------------------------------
@@ -891,15 +879,6 @@ sub get_p_ids {
 	my $f = shift;
 
 	my @p_ids = $f->get_tagset_values('Parent');
-
-#       Code changed 12/1/08 by Barry to adapt to what appears to be a BioPerl
-#       API change
-
-#	my @parents = $f->get_SeqFeatures('Parent');
-#	my @p_ids;
-#	foreach my $p (@parents){
-#		push(@p_ids, $p->{value});
-#       }
 
 	return \@p_ids;
 }
@@ -922,18 +901,17 @@ sub get_genes {
 	print STDERR "...finished\n";
 
 	print STDERR "grabbing exons...\n";
-	my $exons = grab([$base_type], 'FlyBase', $features, $c_id); #FlyBase
+	my $exons = grab([$base_type], undef, $features, $c_id);
 	print STDERR "grabbing CDSs...\n";
-	my $cdss  = grab(['CDS'], 'FlyBase', $features, $c_id); #FlyBase
+	my $cdss  = grab(['CDS'], undef, $features, $c_id);
 	 print STDERR "grabbing transcripts...\n";
-	my $transcripts = grab([qw|mRNA miRNA ncRNA rRNA snRNA snoRNA tRNA|], 'FlyBase', $features, $c_id); #FlyBase
+	my $transcripts = grab([qw|mRNA miRNA ncRNA rRNA snRNA snoRNA tRNA|], undef, $features, $c_id);
 	print STDERR "...finished\n";
 
 	print STDERR "loading genes...\n";
 	foreach my $p_id (keys %{$transcripts}){
 		for (my $i = 0; $i < @{$transcripts->{$p_id}}; $i++) {
 			my $f  = $transcripts->{$p_id}->[$i]->{f};
-#			my $id = $f->get_SeqFeatures('ID')->value();
 			my ($id) = $f->get_tagset_values('ID');
 
 			$transcripts->{$p_id}->[$i]->{exons} = $exons->{$id};
@@ -943,13 +921,9 @@ sub get_genes {
 	my @genes;
 	foreach my $f (@{$features}){
 		my $tag = $f->primary_tag();
-		my $source = $f->source_tag();
 
-		if ($tag eq 'gene' && $source eq 'FlyBase') { #FlyBase
+		if ($tag eq 'gene') {
 			my ($id) = $f->get_tagset_values('ID');
-#			my $id = $f->get_SeqFeatures('ID')   ?
-#			  $f->get_SeqFeatures('ID')->value() :
-#			  '';
 
 			next unless defined($transcripts->{$id});
 
@@ -978,50 +952,27 @@ sub get_genes {
 
 }
 #-------------------------------------------------------------------------------
-sub glean {
-
-	my $file  = shift;
-
-	my $fh = new FileHandle();
-	   $fh->open($file);
-
-	my $i = 0;
-	while (my $line = <$fh>){
-
-		if ($i < 6){
-		print $line;
-		$i++;
-		next;
-		}
-
-		chomp($line);
-
-		my @stuff = split("\t", $line);
-
-		print $line."\n" if wanted($stuff[2]);
-
-		$i++;
-	}
-
-	$fh->close();
-
-}
-#-----------------------------------------------------------------------------
 sub wanted {
-	my $x = shift;
+	my $type = shift;
 
-	return 1 if $x eq 'gene';
-	return 1 if $x eq 'mRNA';
-	return 1 if $x eq 'miRNA';
-	return 1 if $x eq 'ncRNA';
-	return 1 if $x eq 'rRNA';
-	return 1 if $x eq 'snRNA';
-	return 1 if $x eq 'snoRNA';
-	return 1 if $x eq 'tRNA';
-	return 1 if $x eq 'exon';
-	return 1 if $x eq 'CDS';
-	return 1 if $x eq 'scaffold';
-	return 0;
+	if (grep {$type eq $_} qw(gene
+				  mRNA
+				  miRNA
+				  ncRNA
+				  rRNA
+				  snRNA
+				  snoRNA
+				  tRNA
+				  exon
+				  CDS
+				  scaffold
+				 )
+	   ) {
+		return 1;
+	}
+	else {
+		return undef;
+	}
 }
 #-------------------------------------------------------------------------------
 sub debug {
@@ -1190,7 +1141,7 @@ sub sort_exons {
 		sort {$b->{f}->start <=> $a->{f}->start} @{$t->{exons}};
 	}
 	else {
-		die "unknown strand in GFF3::FlyBase::sort_exons!\n";
+		die "Unknown strand in CGL::Parser::gff3::sort_exons!\n";
 	}
 	return \@sorted;
 }
@@ -1208,7 +1159,7 @@ sub sort_cdss {
 		sort {$b->{f}->start <=> $a->{f}->start} @{$t->{cdss}};
 	}
 	else {
-		die "unknown strand in GFF3::Maker::sort_cdss!\n";
+		die "Unknown strand in CGL::Parser::gff3::sort_cdss!\n";
 	}
 	return \@sorted;
 }
@@ -1222,7 +1173,7 @@ sub validate_gene {
 	my $g_strand = $gene->{f}{_location}{_strand};
 	if ($g_strand != 1 && $g_strand != -1) {
 		warn "Invalid strand in gene caught at " .
-		    "FlyBase::validate_gene\n";
+		    "CGL::Parser::gff3::validate_gene\n";
 		return undef;
 	}
 
@@ -1235,7 +1186,7 @@ sub validate_gene {
 		my $t_strand = $transcript->{f}{_location}{_strand};
 		if ($t_strand != 1 && $t_strand != -1) {
 			warn "Invalid strand in transcript caught " .
-			    "at FlyBase::validate_gene\n";
+			    "at CGL::Parser::gff3::validate_gene\n";
 			return undef;
 		}
 		#Push the strand onto an array so that we can check
@@ -1247,7 +1198,7 @@ sub validate_gene {
 			my $c_strand = $transcript->{f}{_location}{_strand};
 			if ($c_strand != 1 && $c_strand != -1) {
 				warn "Invalid strand in cds caught " .
-				    "at FlyBase::validate_gene\n";
+				    "at CGL::Parser::gff3::validate_gene\n";
 				return undef;
 			}
 			#Push the strand onto an array so that we can check
@@ -1260,7 +1211,7 @@ sub validate_gene {
 			my $e_strand = $transcript->{f}{_location}{_strand};
 			if ($e_strand != 1 && $e_strand != -1) {
 				warn "Invalid strand in exon caught " .
-				    "at FlyBase::validate_gene\n";
+				    "at GF3::validate_gene\n";
 				return undef;
 			}
 			#Push the strand onto an array so that we can check

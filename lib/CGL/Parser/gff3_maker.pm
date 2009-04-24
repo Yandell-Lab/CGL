@@ -11,6 +11,7 @@ use Bio::Tools::GFF;
 use Bio::FeatureIO::gff;
 use Bio::Tools::CodonTable;
 use CGL::Annotation;
+use Iterator::Fasta;
 
 @ISA = qw(
           );
@@ -114,8 +115,8 @@ sub to_gff3_gene {
 	my $seg_id = shift;
 	my $g      = shift;
 
-	my $g_id   = $g->{f}->get_SeqFeatures('ID')->value();
-	my $g_n    = $g->{f}->get_SeqFeatures('Name')->value();
+	my ($g_id) = $g->{f}->get_tagset_values('ID');
+	my ($g_n)  = $g->{f}->get_tagset_values('Name');
 	my $strand = $g->{f}->strand() == 1 ? '+' : '-';
 
 	my @fields;
@@ -133,9 +134,9 @@ sub to_gff3_mRNA {
         my $g      = shift;
         my $t      = shift;
 
-        my $g_id   = $g->{f}->get_SeqFeatures('ID')->value();
-	my $t_id   = $t->{f}->get_SeqFeatures('ID')->value();
-	my $t_n    = $t->{f}->get_SeqFeatures('Name')->value();
+	my ($g_id)   = $g->{f}->get_tagset_values('ID');
+	my ($t_id)   = $t->{f}->get_tagset_values('ID');
+	my ($t_n)    = $t->{f}->get_tagset_values('Name');
 
         my $strand = $t->{f}->strand() == 1 ? '+' : '-';
 
@@ -154,8 +155,8 @@ sub to_gff3_exon {
         my $t      = shift;
         my $e      = shift;
 
-        my $t_id   = $t->{f}->get_SeqFeatures('ID')->value();
-        my $e_id   = $e->{f}->get_SeqFeatures('ID')->value();
+        my ($t_id)   = $t->{f}->get_tagset_values('ID');
+        my ($e_id)   = $e->{f}->get_tagset_values('ID');
 
         my $strand = $e->{f}->strand() == 1 ? '+' : '-';
 
@@ -174,8 +175,8 @@ sub to_gff3_cds {
         my $t      = shift;
         my $c      = shift;
 
-        my $t_id   = $t->{f}->get_SeqFeatures('ID')->value();
-        my $c_id   = $c->{f}->get_SeqFeatures('ID')->value();
+        my ($t_id)   = $t->{f}->get_tagset_values('ID');
+        my ($c_id)   = $c->{f}->get_tagset_values('ID');
 
         my $strand = $c->{f}->strand() == 1 ? '+' : '-';
 
@@ -205,7 +206,7 @@ sub split_file {
 	my ($genes, $seq, $seq_id) = get_genes($file, 'exon', 500);
 
 	foreach my $g (@{$genes}){
-		my $g_id = $g->{f}->get_SeqFeatures('ID')->value();
+		my ($g_id) = $g->{f}->get_tagset_values('ID');
 
 		my $file = $root.'/'.$seq_id.'_'.$g_id.'.gff3';
 		my $fh = new FileHandle();
@@ -313,8 +314,8 @@ sub load_gene {
 
 	my $gene = {};
 
-	$gene->{feature_id} = $g->{f}->get_SeqFeatures('ID')->value();
-	$gene->{id}         = $g->{f}->get_SeqFeatures('ID')->value();
+	($gene->{feature_id}) = $g->{f}->get_tagset_values('ID');
+	($gene->{id})         = $g->{f}->get_tagset_values('ID');
 
 	my $src_f_id = $g->{src_f_id};
 
@@ -326,9 +327,9 @@ sub load_gene {
 	push(@{$gene->{locations}}, 
 	load_feature_location($nbeg, $nend, $src_f_id));
 
-	$gene->{name} = $g->{f}->get_SeqFeatures('Name')->value();
+	($gene->{name}) = $g->{f}->get_tagset_values('Name');
 
-	my $oF_id = $g->{f}->get_SeqFeatures('ID')->value();
+	my ($oF_id) = $g->{f}->get_tagset_values('ID');
 
         foreach my $t (@{$g->{mRNAs}}){
                 my $transcr = load_transcript($t, $seq);
@@ -345,7 +346,7 @@ sub load_gene {
 
         }
 
-	$gene->{uniquename} = $g->{f}->get_SeqFeatures('Name')->value();
+	($gene->{uniquename}) = $g->{f}->get_tagset_values('Name');
 	$gene->{type}       = 'gene';
 
 	bless $gene, 'CGL::Annotation::Feature::Gene';
@@ -362,8 +363,8 @@ sub load_transcript {
 
 	load_introns($t, $transcr, $seq);
 
-	$transcr->{feature_id} = $t->{f}->get_SeqFeatures('ID')->value();
-	$transcr->{id}         = $t->{f}->get_SeqFeatures('ID')->value();
+	($transcr->{feature_id}) = $t->{f}->get_tagset_values('ID');
+	($transcr->{id})         = $t->{f}->get_tagset_values('ID');
 
 	$transcr->{gene} = $t->{part_of}->[0];
 	
@@ -379,11 +380,11 @@ sub load_transcript {
 
 	my %props;
 	$props{gene} = $t->{part_of}->[0];
-	$props{transcript_id} = $t->{f}->get_SeqFeatures('ID')->value();
+	($props{transcript_id}) = $t->{f}->get_tagset_values('ID');
 
 	$transcr->{properties} = \%props;
 
-	my $oF_id = $t->{f}->get_SeqFeatures('ID')->value();;
+	my ($oF_id) = $t->{f}->get_tagset_values('ID');;
 	foreach my $e (@{$transcr->{exons}}){
 		my $sF_id =$e->{id};
 		push(@{$transcr->{relationships}}, 
@@ -410,8 +411,8 @@ sub load_transcript {
                 load_feature_relationship($oF_id, $sF_id, 'produced_by'));
         }
 
-	$transcr->{name}       = $t->{f}->get_SeqFeatures('Name')->value();
-	$transcr->{uniquename} = $t->{f}->get_SeqFeatures('Name')->value();
+	($transcr->{name})       = $t->{f}->get_tagset_values('Name');
+	($transcr->{uniquename}) = $t->{f}->get_tagset_values('Name');
 
 	$transcr->{type} = 'mRNA';
 
@@ -444,7 +445,8 @@ sub load_feature_location {
 sub load_translations {
 	my $t = shift;
 
-	my $f_id = 'protein:'.$t->{f}->get_SeqFeatures('ID')->value();
+	my ($f_id) = $t->{f}->get_tagset_values('ID');
+	my $f_id = 'protein:'. $f_id;
 
 	my $transl = {};
 
@@ -472,7 +474,7 @@ sub load_translations {
 
 	$transl->{name} = $f_id;
 
-	my $oF_id = $t->{f}->get_SeqFeatures('ID')->value();
+	my ($oF_id) = $t->{f}->get_tagset_values('ID');
 	my $sF_id = $transl->{id};
 
 	push(@{$transl->{relationships}},
@@ -611,8 +613,8 @@ sub load_exon {
 
 	my $exon ={};
 
-	$exon->{feature_id} = $e->{f}->get_SeqFeatures('ID')->value();
-	$exon->{id}         = $e->{f}->get_SeqFeatures('ID')->value();
+	($exon->{feature_id}) = $e->{f}->get_tagset_values('ID');
+	($exon->{id})         = $e->{f}->get_tagset_values('ID');
 	$exon->{inScope}    = 1;
 
 
@@ -628,10 +630,10 @@ sub load_exon {
 	load_feature_location($nbeg, $nend, $scr_f_id));
 
 
-	$exon->{name} = $e->{f}->get_SeqFeatures('ID')->value();
+	($exon->{name}) = $e->{f}->get_tagset_values('ID');
 
 
-	my $sF_id = $e->{f}->get_SeqFeatures('ID')->value();
+	my ($sF_id) = $e->{f}->get_tagset_values('ID');
 
 	foreach my $oF_id (@{$e->{part_of}}){
 		push(@{$exon->{relationships}},
@@ -644,8 +646,8 @@ sub load_exon {
 
 	$exon->{type} = 'exon';
 
-	$exon->{uniquename} = 
-	$e->{src_f_id}.':'.$e->{f}->get_SeqFeatures('ID')->value();
+	($exon->{uniquename}) = $e->{f}->get_tagset_values('ID');
+	$exon->{uniquename} = $e->{src_f_id} . ':' . $exon->{uniquename};
 
 	bless $exon, 'CGL::Annotation::Feature::Exon';
 
@@ -704,7 +706,7 @@ sub grab {
                 my $tag_s = $f->source_tag();
 
                if ($tag_t eq $type && $tag_s eq  $source) {
-                        my $id = $f->get_SeqFeatures('ID')->value();
+                        my ($id) = $f->get_tagset_values('ID');
                         my $p_ids = get_p_ids($f);
                         foreach my $p_id (@{$p_ids}){
                                 push(@{$booty{$p_id}}, {f        => $f,
@@ -720,11 +722,11 @@ sub grab {
 sub get_p_ids {
 	my $f = shift;
 
-	my @parents = $f->get_SeqFeatures('Parent');
-        my @p_ids;
-       foreach my $p (@parents){
-       		push(@p_ids, $p->{value});
-       }
+	my @p_ids = $f->get_tagset_values('Parent');
+#        my @p_ids;
+#       foreach my $p (@parents){
+#       		push(@p_ids, $p->{value});
+#       }
 
 	return \@p_ids;
 }
@@ -747,7 +749,7 @@ sub get_genes {
 	foreach my $p_id (keys %{$mRNAs}){
 		for (my $i = 0; $ i < @{$mRNAs->{$p_id}}; $i++) {
 			my $f  = $mRNAs->{$p_id}->[$i]->{f};
-			my $id = $f->get_SeqFeatures('ID')->value(); 
+			my ($id) = $f->get_tagset_values('ID'); 
 
 			$mRNAs->{$p_id}->[$i]->{exons} = $exons->{$id};
 			$mRNAs->{$p_id}->[$i]->{cdss}  = $cdss->{$id};
@@ -759,7 +761,7 @@ sub get_genes {
                 my $source = $f->source_tag();
 
                 if ($tag eq 'gene' && $source eq 'maker') {
-                        my $id = $f->get_SeqFeatures('ID')->value();
+                        my ($id) = $f->get_tagset_values('ID');
                         push(@genes, {'f'        => $f,
                                       'mRNAs'    => $mRNAs->{$id},
                                       'src_f_id' => $c_id,

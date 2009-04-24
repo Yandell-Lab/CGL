@@ -11,7 +11,7 @@ Synopsis:
 splice_complexity_nucleo --format gff3_flybase --gff gff3_file \
                          --fasta fasta_file
 
-splice_complexity_nucleo --format chaos --chaos chaos_file
+splice_complexity_nucleo --chaos chaos_file
 
 Description:
 

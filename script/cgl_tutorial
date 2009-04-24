@@ -72,6 +72,8 @@ while (my $g = $iterator->next_by_gene()){
 
 		my $p = $t->translation(0);
 
+		last unless defined $p;
+
 		print "protein residues: " . $p->residues . "\n";
 
 		my $translation_offset = defined($p) ? $p->metaPos($t, 0) : 'NA';

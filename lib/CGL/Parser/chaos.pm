@@ -43,7 +43,7 @@ sub new {
 		my $t = $data->[0];
 		my $g = $data->[1];
 
-		next unless $self->transcript_is_in_scope($t);
+#		next unless $self->transcript_is_in_scope($t);
 
 		$t->_add_residues_2();
 		my $i = 0;
