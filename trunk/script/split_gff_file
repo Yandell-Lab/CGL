@@ -1,0 +1,44 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use Getopt::Long;
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+
+my $usage = "
+
+Synopsis:
+
+split_gff_file --format gff3 gff_file fasta_file ds_root
+
+Description:
+
+Splits gff and fasta files into the single gene files and places them
+in the given data store.
+
+Options:
+
+  --format  Any valid CGL GFF format.
+
+";
+
+my ($help, $format);
+my $opt_success = GetOptions("help"     => \$help,
+			     "format=s" => \$format,
+);
+
+die $usage if $help || ! $format;
+my $class = "CGL::Parser::$format";
+eval "require $class";
+die $usage . "\n\n$@\n\n" if $@;
+
+my ($gff, $fasta, $datastore) = @ARGV;
+
+die $usage unless ($gff && $fasta && $datastore);
+
+my $class_method = "${class}::split_file";
+
+$class->split_file($gff, $fasta, $datastore);
