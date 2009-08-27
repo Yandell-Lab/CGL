@@ -12,6 +12,7 @@ use Bio::Tools::CodonTable;
 use CGL::Annotation;
 use Iterator::Fasta;
 use Datastore::MD5;
+use URI::Escape;
 
 #-------------------------------------------------------------------------------
 #------------------------------- CLASS METHODS ---------------------------------
@@ -58,6 +59,8 @@ sub split_file {
 		my $g_id = $g->{id};
 
 		my $file_base = "${seq_id}_${g_id}";
+		$file_base =~ s/\s+/_/g;
+		uri_escape($file_base, '\*\?\|\\\/\'\"\{\}\<\>\;\,\^\(\)\$\~');
 		my $file;
 		if ($ds_root) {
 			$ds->mkdir($file_base) || die "Unable to ds->mkdir() for $file_base";
@@ -74,7 +77,7 @@ sub split_file {
 		}
 
 		my $fh = new FileHandle();
-		   $fh->open(">$file");
+		   $fh->open(">$file") or die "Can't open $file\n$!\n";;
 
 		print $fh "##gff-version 3\n";
 		my $seg_id;
