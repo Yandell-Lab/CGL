@@ -60,7 +60,8 @@ sub split_file {
 
 		my $file_base = "${seq_id}_${g_id}";
 		$file_base =~ s/\s+/_/g;
-		uri_escape($file_base, '\*\?\|\\\/\'\"\{\}\<\>\;\,\^\(\)\$\~');
+		$file_base = uri_escape($file_base, '\*\?\|\\\/\'\"\{\}\<\>\;\,\^\(\)\$\~');
+
 		my $file;
 		if ($ds_root) {
 			$ds->mkdir($file_base) || die "Unable to ds->mkdir() for $file_base";
