@@ -228,7 +228,8 @@ sub to_gff3_exon {
 
 	push(@fields, $seg_id, '.', 'exon', $e->{i_start});
 	push(@fields, $e->{i_end}, '.', $strand, '.');
-	push(@fields, "ID=$e_id;Parent=$t_id");
+	my $attrb = $e_id ? "ID=$e_id;Parent=$t_id" : "Parent=$t_id";
+	push(@fields, $attrb);
 
 	return join("\t", @fields);
 
@@ -894,25 +895,25 @@ sub get_genes {
 	my $flank      = shift;
 	my $ids        = shift;
 
-	print STDERR "loading sequence...\n";
+	#print STDERR "loading sequence...\n";
 	my ($def, $seq)   = load_seq($fasta_file);
-	print STDERR "...finished\n";
+	#print STDERR "...finished\n";
 
 	my ($c_id) = $def =~ />(\S+)/;
 
-	print STDERR "loading features...\n";
+	#print STDERR "loading features...\n";
 	my $features = get_features($file, $ids);
-	print STDERR "...finished\n";
+	#print STDERR "...finished\n";
 
-	print STDERR "grabbing exons...\n";
+	#print STDERR "grabbing exons...\n";
 	my $exons = grab([$base_type], undef, $features, $c_id);
-	print STDERR "grabbing CDSs...\n";
+	#print STDERR "grabbing CDSs...\n";
 	my $cdss  = grab(['CDS'], undef, $features, $c_id);
-	 print STDERR "grabbing transcripts...\n";
+	 #print STDERR "grabbing transcripts...\n";
 	my $transcripts = grab([qw|mRNA miRNA ncRNA rRNA snRNA snoRNA tRNA|], undef, $features, $c_id);
-	print STDERR "...finished\n";
+	#print STDERR "...finished\n";
 
-	print STDERR "loading genes...\n";
+	#print STDERR "loading genes...\n";
 	foreach my $p_id (keys %{$transcripts}){
 		for (my $i = 0; $i < @{$transcripts->{$p_id}}; $i++) {
 			my $f  = $transcripts->{$p_id}->[$i]->{f};
@@ -939,18 +940,18 @@ sub get_genes {
 				     });
 		}
 	}
-	print STDERR "...finished\n";
+	#print STDERR "...finished\n";
 
-	print STDERR "validating genes\n";
+	#print STDERR "validating genes\n";
 	my @valid_genes;
 	for my $gene (@genes) {
 		push @valid_genes, $gene if validate_gene($gene);
 	}
-	print STDERR "...finished\n";
+	#print STDERR "...finished\n";
 
-	print STDERR " loading seqs\n";
+	#print STDERR " loading seqs\n";
 	load_seqs(\@valid_genes, $seq, $flank);
-	print STDERR "...finished\n";
+	#print STDERR "...finished\n";
 
 	return (\@valid_genes, $seq, $c_id);
 
@@ -1239,9 +1240,9 @@ sub AUTOLOAD {
 	my ($call) = $AUTOLOAD =~/.*\:\:(\w+)$/;
 	$call =~/DESTROY/ && return;
 
-	print STDERR "GFF::AutoLoader called for: ",
-	      "\$self->$call","()\n";
-	print STDERR "call to AutoLoader issued from: ", $caller, "\n";
+	#print STDERR "GFF::AutoLoader called for: ",
+	#      "\$self->$call","()\n";
+	#print STDERR "call to AutoLoader issued from: ", $caller, "\n";
 
 	if (defined($arg)){
 		$self->{$call} = $arg;
