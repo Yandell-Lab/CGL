@@ -1,0 +1,51 @@
+#!/usr/bin/perl -w 
+
+eval 'exec /usr/bin/perl -w  -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+use strict;
+
+BEGIN {
+	#$ENV{'CGL_CHATTER'} = 1;
+}
+
+use lib ('/Users/myandell/lib',
+        );
+
+$| = 1;
+use FileHandle;
+use Cwd;
+
+my $usage = "
+
+Synopsis:
+
+data_store_indexer  dmel.sample.chaos.xml
+
+Description:
+
+This script creates a datastore index.  It opens a Chaos XML file in a
+datastore and prints the uniquename of the focus feature and the
+absolute path to the XML file.
+
+The result is a file with the following tab delimited fields:
+
+gene_uniquename gene_synomnyms absolute_path_to_chaos_file
+
+
+
+"; 
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+
+my $file  = shift;
+
+die $usage unless $file;
+
+my $return = system("cgl_validate $file");
+
+unless ($return ==0 ){
+	print "DOC_INVALID"."\t"."-"."\t"."-"."\t"."-"."\t".$file."\n";
+	exit(0);
+}

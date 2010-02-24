@@ -1,0 +1,248 @@
+#!/usr/bin/perl 
+use strict;
+use warnings;
+
+use lib "$ENV{CGL_GFF_LIB}";
+
+use Getopt::Long;
+use CGL::Annotation;
+use CGL::Annotation::Iterator;
+
+#----------------------------------------------------------------------------- 
+#----------------------------------- MAIN ------------------------------------ 
+#----------------------------------------------------------------------------- 
+my $usage = "
+
+Synopsis:
+
+em_classify_genes_gff --org fly <master_datastore.index>
+
+Description:
+
+This script takes a master_datastore.index file and classifies all
+multiply- spliced genes according a to a SO base extensional merology
+classification scheme as defined in Genome Biology 2005, 6:R44.
+
+Options:
+
+  org  The organism (currently limited to fly or worm) that the GFF
+       file is based on.
+
+";
+
+my ($help, $format, );
+
+GetOptions ('help'     => \$help,
+	    'format=s' => \$format,
+	    );
+
+
+my $ds_index_file = shift;
+
+die $usage if $help;
+die $usage unless $ds_index_file && $format;
+
+my $md = parse_ds_index($ds_index_file);
+
+ GENE:
+    for my $id (keys %{$md}) {
+
+	    print STDERR "\n\n";
+            unless (-e $md->{$id}) {
+                    print STDERR "Missing path for ID: $id\n";
+                    next GENE;
+            }
+
+            my $gff_file = $md->{$id} ? $md->{$id} : undef;
+            my $fasta_file;
+            ($fasta_file = $gff_file) =~ s/.gff3/.fasta/;
+
+            print STDERR "$gff_file\n";
+
+            my $cgl = CGL::Annotation->new(format     => $format,
+					   gff_file   => $gff_file,
+					   fasta_file => $fasta_file)};
+
+	    print "ERROR: Can't create CGL object.\n$@\n" if $@;
+	    next GENE unless $cgl;
+
+            my $iterator = CGL::Annotation::Iterator->new($cgl);
+            while (my $gene = $iterator->next_by_gene()){
+
+		#Skip single transcript genes
+		my $trnsc_count;
+		eval{$trnsc_count = scalar @{$gene->transcripts}};
+		if ($@) {
+			print STDERR "ERROR: Can't count transcripts\n$@\n";
+			next GENE;
+		}
+
+		if ($trnsc_count <= 1) {
+			print STDERR "ERROR: single transcript gene" .
+				  "($id)";
+			next;
+		}
+		
+		#Get the count for the three transcript pair classes
+		#for this gene.
+		my ($seq_disjoint, $parts_disjoint, $aligned) = 
+		    em_classify_gene($gene);
+		print join "\t", ($id,
+				  $seq_disjoint,
+				  $parts_disjoint,
+				  $aligned,
+				  $md->{$id},
+				  );
+		print "\n";
+		print STDERR "SUCCESS: gene classified " .
+			  "($id)";
+	}
+}
+
+#----------------------------------------------------------------------------- 
+#-------------------------------- SUBROUTINES -------------------------------- 
+#----------------------------------------------------------------------------- 
+sub parse_ds_index {
+        my $file = shift;
+
+        open (my $IN, '<', $file) or die "Can't open $file\n";
+
+        my %md;
+        while (<$IN>) {
+                chomp;
+                my @fields = split;
+                my ($id, $path) = ($fields[0], $fields[1]);
+                die "Incorrect format specified.  Can't parse datastore\n"
+                    unless (defined $id && defined $path);
+
+                $md{$id} = $path;
+        }
+        return \%md;
+}
+#----------------------------------------------------------------------------- 
+sub em_classify_gene {
+	my $gene = shift;
+
+	#Build an all by all matrix of transcript pairs for this gene so that 
+	#we can then loop over that matrix.
+	my @trnsc_pairs = build_trnsc_matrix($gene);
+
+	my %class_counter;
+	for my $trnsc_pair (@trnsc_pairs) {
+		#Get the count for the three transcript pair classes
+		#for this transcript.
+		my $trnsc_pair_class = 
+		    em_classify_trnsc_pair($trnsc_pair);
+		$class_counter{$trnsc_pair_class}++;
+	}
+	return ($class_counter{seq_disjoint} || 0, 
+		$class_counter{parts_disjoint} || 0, 
+		$class_counter{aligned} || 0)
+}
+#----------------------------------------------------------------------------- 
+sub build_trnsc_matrix {
+	my $gene = shift;
+
+	my @transcripts;
+	my $i = 0;
+	my $j = 0;
+	my @trnsc_pairs;
+	#Build all by all array of transcript pairs.
+	while (my $trnsc1 = $gene->transcript($i)) {
+		while (my $trnsc2 = $gene->transcript($i)) {
+			push @trnsc_pairs, [$trnsc1, $trnsc2]
+			    #Don't include self pairs though.
+			    unless $trnsc1 eq $trnsc2;
+			$i++;
+		}
+		$j++;
+	}	
+	return @trnsc_pairs;
+}
+#----------------------------------------------------------------------------- 
+sub em_classify_trnsc_pair {
+	my $trnsc_pair = shift;
+	my @exon_pairs = build_exon_matrix($trnsc_pair);
+
+	#The logic below is based on the SO paper (Genome Biology 2005, 6:R44).
+	#The paper has three classes for transcript pairs: sequence disjoint,
+	#parts disjoint and overlapping.  I refer to the 'overlapping' class as
+	#'aligned' in the code below.  Rules are described below in order of
+	#precedence (i.e. matching rule 1 on any exon pair will classify the
+	#transcript pair as 'aligned' even if other exon pairs match other 
+        #rules).
+	#   1) transcripts are 'aligned' if any exon is shared in common.
+	#   2) transcripts are 'parts-disjoint' if any exons share even one
+	#      nt in common, but have different exon boundaries.
+	#   3) transcripts are 'sequence-disjoint' if they share no nts in 
+	#      common.
+
+	#Default to 'seq_disjoint if nothing better is found in loop
+	my $trnsc_pair_class = 'seq_disjoint';
+
+	#Loop over all exon pairs, apply the rules commented above and
+	#return a class for this exon pair;
+	for my $exon_pair (@exon_pairs) {
+		my $exon1 = shift @$exon_pair;
+		my $exon2 = shift @$exon_pair;
+		
+		#Get natural begin and end for exons
+		my $ex1_beg = $exon1->nbeg;
+		my $ex1_end = $exon1->nend;
+		my $ex2_beg = $exon2->nbeg;
+		my $ex2_end = $exon2->nend;
+
+		#If exon coordinates are on the opposite strand switch them
+		#for the purposes of the following comparison (i.e. we want the
+		#begining to be numerically before the end.
+		($ex1_beg, $ex1_end) = ($ex1_end, $ex1_beg) 
+		    if $ex1_beg > $ex1_end;
+		($ex2_beg, $ex2_end) = ($ex2_end, $ex2_beg) 
+		    if $ex2_beg > $ex2_end;
+
+		#If any exons align
+#		if ($exon1->id eq $exon2->id) {
+		# You could use either the ID comparison or the coordinate 
+		# comparison.  The coordinate comparison seems a bit more robust.
+		if ($ex1_beg == $ex2_beg &&
+		    $ex1_end == $ex2_end ) {
+			$trnsc_pair_class = 'aligned';
+			return $trnsc_pair_class;
+		}
+
+		if (
+                    #Check if the exons share even on nt in common
+		    #Exon 1 begin lies within exon2 or ...
+		    ($ex1_beg >= $ex2_beg && $ex1_beg <= $ex2_end) ||
+		    #Exon 1 end lies within exon2 or ...
+		    ($ex1_end >= $ex2_beg && $ex1_end <= $ex2_end) ||
+		    #Exon 2 begin lies within exon1 or ...
+		    ($ex2_beg >= $ex1_beg && $ex2_beg <= $ex1_end) ||
+		    #Exon 2 end lies within exon1
+		    ($ex2_end >= $ex1_beg && $ex2_end <= $ex1_end)
+		    ) {
+			#Then trnsc_pair is at least 'parts_disjoint'
+			$trnsc_pair_class = 'parts_disjoint';
+		}
+	}
+	return $trnsc_pair_class;
+}
+#----------------------------------------------------------------------------- 
+sub build_exon_matrix {
+	my $trnsc_pair = shift;
+	my $trnsc1 = $trnsc_pair->[0];
+	my $trnsc2 = $trnsc_pair->[1];
+
+	my @exon_pairs;
+	my $i = 0;
+	#Build all by all array of transcript pairs.
+	while (my $exon1 = $trnsc1->exon($i)) {
+		my $j = 0;
+		while (my $exon2  = $trnsc2->exon($j)) {
+			push @exon_pairs, [$exon1, $exon2];
+			$j++;
+		}
+		$i++;
+	}
+	return @exon_pairs;
+}

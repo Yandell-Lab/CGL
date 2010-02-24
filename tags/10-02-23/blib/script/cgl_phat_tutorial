@@ -1,0 +1,180 @@
+#!/usr/bin/perl -w 
+
+eval 'exec /usr/bin/perl -w  -S $0 ${1+"$@"}'
+    if 0; # not running under some shell
+use strict;
+
+# pod doc at end.
+
+BEGIN {
+	$ENV{'CGL_CHATTER'} = 1;
+}
+
+$| = 1;
+
+use Getopt::Std;
+use vars qw($opt_t);
+getopts('t:');
+use Bio::SearchIO;
+use Bio::Search::Hit::HitFactory;
+use Bio::Search::HSP::HSPFactory;
+
+
+my $usage = "
+
+cgl_phat_tutorial a simple introduction to using the 
+               PhatHit and PhatHSP objects 
+
+cgl_phat_tutorial  -t <blastn|blastp|blastx|tblastn|tblastx> <blast report>
+
+cgl_phat_tutorial  -t tblastn tblastn.sample.report 
+
+
+\n"; 
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+
+die $usage unless $ARGV[0];
+
+my $report = $ARGV[0];
+
+
+# Bio::Search::IO
+my $sio = parseBlast($report);
+
+while(my $result = $sio->next_result) {
+	# standard Bioperl result  methods
+        print "d:".$result->database_name()."\n";
+        print "q:" .$result->query_name()."\n";
+        while(my $hit = $result->next_hit) {
+		 print ref($hit)."\n";
+		# standard Bioperl Hit methods
+
+                print $hit->description()."\n";
+                print $hit->algorithm()."\n";
+                print print $hit->bits()."\n";;
+                print $hit->length."\n";
+		# methods unique to the PhatHits
+
+		$hit->id('running_id');
+		print $hit->id()."\n";
+
+		print $hit->nB('query')."\n" if defined($hit->nB('query')); # These two methods returns undef 
+		print $hit->nE('hit')."\n"   if defined($hit->nE('hit'));   # if hit cotains HSPs on both strands.
+
+
+		$hit->show();
+
+                while(my $hsp = $hit->next_hsp) {
+			print ref($hsp)."\n";
+
+			# standard Bioperl HSP methods
+
+                        print $hsp->strand('query')."\n";
+                        print $hsp->strand('hit')."\n";
+                        print $hsp->start('query')."\n";
+                        print $hsp->start('hit')."\n";
+                        print $hsp->end('query')."\n";
+                        print $hsp->end('hit')."\n";
+                        print $hsp->query_string(). "\n";
+
+			# methods unique to the PhatHSPs
+
+			$hsp->show();
+			
+	                $hsp->id('running_id');
+                        print $hsp->id()."\n";
+
+			print $hsp->isContained('hit', 931)."\n"; #is position 931 on the hit contained 
+	                                                          # in this HSPs alignment?
+
+			print $hsp->nB('query')."\n";
+			print $hsp->nE('hit'). "\n"; 
+
+
+			print $hsp->hasRun('|', 10)."\n";   # HSP has a run of 10 or more identities (blastn)
+                                                                
+			print $hsp->hasRun('A-Z', 10, 10, 20 )."\n"; # HSP has a run of 10 or more identities(blastp)
+			                                            # in a region begining at least 10 characters
+								    # from the HSP start and 20 characters long.
+
+			print $hsp->whatIsThere('query', $hsp->nB('query'))."\n";	
+			
+			print $hsp->whatIsInTheMiddle('query', $hsp->nB('query'))."\n";
+
+			my $pos = $hsp->equivalent_pos_in_alignment_partner('query', $hsp->nB('query'));
+
+			print $hsp->whatIsThere('hit', $pos)."\n" if defined($pos);	
+
+                }
+        }
+}
+
+#-----------------------------------------------------------------------------
+#---------------------------------- SUBS -------------------------------------
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+sub parseBlast {
+        my $report = shift;
+
+	my $hitType;
+	my $hspType;
+	if    ($opt_t eq 'blastn'){
+		$hitType = 'Bio::Search::Hit::PhatHit::blastn';
+		$hspType = 'Bio::Search::HSP::PhatHSP::blastn';
+	}
+	elsif ($opt_t eq 'blastp'){
+               $hitType = 'Bio::Search::Hit::PhatHit::blastp';
+               $hspType = 'Bio::Search::HSP::PhatHSP::blastp';
+	}
+	elsif ($opt_t eq 'blastx'){
+               $hitType = 'Bio::Search::Hit::PhatHit::blastx';
+               $hspType = 'Bio::Search::HSP::PhatHSP::blastx';
+        }
+        elsif ($opt_t eq 'tblastn'){
+               $hitType = 'Bio::Search::Hit::PhatHit::tblastn';
+               $hspType = 'Bio::Search::HSP::PhatHSP::tblastn';
+        }
+        elsif ($opt_t eq 'tblastx'){
+               $hitType = 'Bio::Search::Hit::PhatHit::tblastx';
+               $hspType = 'Bio::Search::HSP::PhatHSP::tblastx';
+        }
+
+        my $sio = new Bio::SearchIO(-format => 'blast',
+                                    -file   => $report,
+                                   );
+
+        my $hspFactory = new Bio::Search::HSP::HSPFactory(-type =>$hspType);
+        my $hitFactory = new Bio::Search::Hit::HitFactory(-type =>$hitType);
+
+
+        $sio->_eventHandler->register_factory('hsp', $hspFactory);
+        $sio->_eventHandler->register_factory('hit', $hitFactory);
+
+        return $sio;
+}
+#-----------------------------------------------------------------------------
+
+__END__
+
+=head1 NAME
+
+  cgl_phat_tutorial
+
+=head1 SYNOPSIS
+
+  cgl_phat_tutorial  -t <blastn|blastp|blastx|tblastn|tblastx> <blast report>
+
+=head1 DESCRIPTION
+
+A simple introduction to using the PhatHit and PhatHSP objects.
+
+=head1 DOCUMENTATION
+
+L<http://www.yandell-lab.org/cgl>
+
+=cut
+
+

@@ -1,0 +1,109 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use lib "$ENV{CGL_GFF_LIB}";
+
+use CGL::Annotation;
+use Bio::SeqIO;
+use Getopt::Long;
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+
+my $usage = "
+
+Synopsis:
+
+cgl_gff2fasta --format gff3_flybase --gff_file <gff_file>  \
+              --fasta_file <fasta_file> [-id_file id_file] \
+              [id1 id2 id3...]
+
+
+Description:
+
+This script takes a gff file, a fasta file, either a data file with a
+space seperated list of IDs or a list of space seperated IDs on the
+command line.  The output is a fasta file or a multi-fasta file that
+contains the fasta sequences corresponding the IDs given.
+
+
+EXAMPLES:
+
+cgl_gff2fasta -gff_file gff_file -fasta_file fasta_file -out_file out_file_base -id_file id_file
+cgl_gff2fasta -gff_file gff_file -fasta_file fasta_file -out_file out_file_base id1 id2 id3
+
+";
+
+my ($format, $gff_file, $fasta_file, $id_file, $out_file);
+
+GetOptions ('format=s'     => \$format,
+	    "gff_file=s"   => \$gff_file,
+	    "fasta_file=s" => \$fasta_file,
+	    "id_file=s"    => \$id_file,
+	    "out_file=s"   => \$out_file);
+
+#Get command line IDs
+my %ids;
+map { $ids{$_}++ } @ARGV;
+
+#Get file IDs if file exists
+if ($id_file) {
+	map { $ids{$_}++ } get_ids($id_file);
+}
+
+my @ids = keys %ids;
+my $output_fasta;
+($output_fasta = $gff_file) =~ s/\.gff3$//;
+
+die $usage if ! @ids;
+
+#Build a CGL object for the given ids
+my $cgl = CGL::Annotation->new(format     => $format,
+			       gff_file   => $gff_file,
+			       fasta_file => $fasta_file);
+
+#Get Contig details
+my $contig = $cgl->contig(0);
+my $contig_id = $contig->id;
+
+#Grab all the genes
+my $genes = $cgl->genes;
+
+my $out_nt = Bio::SeqIO->new(-file   => ">${out_file}_nt.fasta" ,
+			       -format => 'fasta');
+
+my $out_aa = Bio::SeqIO->new(-file   => ">${out_file}_aa.fasta" ,
+			       -format => 'fasta');
+
+#Build a hash of all transcript ids and the associated transcript
+#objects.
+for my $gene (@{$genes}) {
+	my $transcripts = $gene->transcripts;
+	for my $transcript (@{$transcripts}) {
+		my $protein = $transcript->translation(0);
+		my $transcript_id = $transcript->id;
+		if (exists $ids{$transcript_id}) {
+			my $nt_seq = Bio::Seq->new(-display_id => $transcript->uniquename,
+						   -seq        => $transcript->residues);
+			my $aa_seq = Bio::Seq->new(-display_id => $protein->uniquename,
+						   -seq        => $protein->residues);
+			$out_nt->write_seq($nt_seq);
+			$out_aa->write_seq($aa_seq);
+		}
+	}
+}
+
+#-----------------------------------------------------------------------------
+#------------------------------- SUBROUTINES ---------------------------------
+#-----------------------------------------------------------------------------
+#Read the data file.
+sub get_ids {
+	my $id_file = shift;
+	open (IN, '<', $id_file) or die "Can't open $id_file\n";
+	
+	my $id_text = join '', (<IN>);
+	my @ids = split /\s+/, $id_text;
+	return @ids;
+}

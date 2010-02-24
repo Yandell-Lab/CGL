@@ -1,0 +1,34 @@
+#!/usr/bin/perl -w
+use strict;
+
+while (<>) {
+    chomp;
+    my $f = $_;
+    my @path = split(/\//, $f);
+    my $lf = pop @path;
+    next unless $lf;
+    if ($lf =~ /(.*)\.(\S+)$/) {
+        my $n = $1;
+        my $sfx = $2;
+        if ($sfx eq 'pm' || $sfx eq 'pl' || $sfx eq 'pod') {
+	    shift @path;
+            print STDERR "Making pod for $lf\n";
+            my $dir = 'html';
+            my $title = join('::',@path,$n);
+            my $outf = $dir . '/'. $title . '.html';
+            `mkdir -p $dir` unless -d $dir;
+            system("pod2html --htmlroot html --title $title $f > $outf");
+        }
+    }
+    elsif (@path && $path[-1] eq 'script') {
+        print STDERR "Making pod for $lf\n";
+        my $dir = 'html';
+        my $title = $lf;
+        my $outf = $dir . '/'. $title . '.html';
+        `mkdir -p $dir` unless -d $dir;
+        system("pod2html --htmlroot html --title $title $f > $outf");
+
+    }
+    else {
+    }
+}
