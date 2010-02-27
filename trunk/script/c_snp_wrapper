@@ -11,7 +11,7 @@ my $usage = "
 Synopsis:
 
 c_snp_wrapper --subject_file snp_experiments.txt datastore.index
-c_snp_wrapper --subject subject_001 snp_experiments.txt datastore.index
+c_snp_wrapper --subject subject_001 datastore.index
 
 Description:
 
@@ -101,12 +101,16 @@ sub parse_ds {
 
 	my $file = shift;
 
+	my $base_path;
+	($base_path = $file) =~ s/[^\/]+$//;
+
 	open (my $IN, '<', $file) or die "Can't open $file for reading\n$!\n";
 
 	my %ds;
 	while (<$IN>) {
 		chomp;
 		my ($id, $path) = split /\t/;
+		$path = $base_path . 'datastore/' . $path unless $path =~ /^\//;
 		$ds{$id} = $path;
 	}
 	return \%ds;
