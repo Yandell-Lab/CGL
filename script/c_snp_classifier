@@ -15,7 +15,7 @@ my $usage = "
 Synopsis:
 
 c_snp_classsifer --format gff3 --anno_file annotation.gff3
-		 --snp_file file.snp
+		 --fasta_file file.fasta --snp_file file.snp
 
 Description:
 
@@ -29,11 +29,34 @@ Options:
 
   format     The format of the CGL file (chaos or gff3).
   anno_file  The name of the CGL annotation file.
+  fasta_file The fasta file associated with the annotation file.
   snp_file   The name of the SNP file.
   shift      A value that will be added to all SNP positions.
-	     This is useful for debugging off-by-one style errors.
+	     This is useful for debugging off by 1 style errors.
 
-";
+Output:
+
+Columns in output are:
+
+0   subj_id     10Gen_Korean_SNV
+1   contig_id   chr11
+2   gene_id     NM_001005181:gene
+3   snp_id      rs1462983
+4   c_pos       6086413
+5   class       .
+6   allele      T/C
+7   wt_allele   C
+8   mut_allele  T
+9   wt_aa       P
+10  mt_aa       S
+11  type        nonconservative_substitution
+12  mtx_score   -1
+13  p_pos       276
+14  snp_strand  1
+15  trn_strand  1
+16  multi       0
+
+\n";
 
 my ($help, $format, $anno_file, $fasta_file, $snp_file, $shift);
 my $opt_success = GetOptions('help'          => \$help,
@@ -132,7 +155,7 @@ sub classify {
 		elsif ($mt eq '-' && !$wt_mod_3){
 			$type = 'frame_shift'
 		}
-
+		# This appears to handle MNPs, but it really only looks at the first codon I think.
 		elsif (length($wt) == length($mt) ){
 			($wt_aa, $mt_aa, $type, $mtx_score) = characterize($tm, $snp, $transcript, $protein);
 		}
@@ -140,9 +163,9 @@ sub classify {
 			$type = 'not_caught';
 		}
 
-		$snp->{type}	     = $type;
-		$snp->{wt_aa}	     = $wt_aa;
-		$snp->{mt_aa}	     = $mt_aa;
+		$snp->{type}	  = $type;
+		$snp->{wt_aa}	  = $wt_aa;
+		$snp->{mt_aa}	  = $mt_aa;
 		$snp->{mtx_score} = $mtx_score;
 	}
 }
@@ -161,6 +184,7 @@ sub characterize {
 	if ($wt eq 'not_handled' || $mt eq 'not_handled'){
 		return ('#', '#', 'not_handled');
 	}
+	#Get multiple and remainder
 	my ($m, $r) = get_m_and_r($pos_on_p);
 
 	my $codon_on_t = $protein->metaPos($transcript, $m);
@@ -216,42 +240,11 @@ sub rev_comp {
 }
 #-----------------------------------------------------------------------------
 sub get_allele {
-	my ($allele, $c_pos, $cgl) = @_;
+	my ($strand, $allele) = @_;
 
 	my ($ref_allele, $mut_allele, $ref_count, $mut_count, $allele_len);
 
-	my $contig = $cgl->contig(0);
-	my $genes = $cgl->genes;
-	my $gene  = $genes->[0];
-	my $transcript = $gene->transcript(0);
-
-	my $strand = $transcript->strand;
-
-	if ($allele =~ /^[ACGT-]+$/) {
-		$mut_allele = $allele;
-		$allele_len = length($mut_allele);
-
-		my ($contig_id, $contig_begin, $contig_end) = split /:/, $contig->id;
-
-		($contig_begin, $contig_end) = ($contig_end, $contig_begin)
-		  if $contig_begin > $contig_end;
-
-		my $pos_on_c;
-		if ($transcript->strand() == 1){
-			$pos_on_c = $c_pos - $contig_begin;
-		}
-			else {
-				$pos_on_c =  $c_pos - $contig_begin + 1;
-		}
-		my $pos_on_t = $contig->metaPos($transcript, $pos_on_c);
-		$ref_allele = uc substr($transcript->residues, $pos_on_t, $allele_len);
-
-		$ref_allele = rev_comp($ref_allele) if $strand == -1;
-		$mut_allele = rev_comp($mut_allele) if $strand == -1;
-
-		return ($ref_allele, $mut_allele, $allele_len);
-	}
-	elsif ($allele =~ /^[ACGT-]+\/[ACGT-]+$/){
+	if ($allele =~ /^[ACGT-]+\/[ACGT-]+$/){
 		($ref_allele, $mut_allele) = $allele =~/(\S+)\/(\S+)/;
 		$allele_len = length($ref_allele);
 
@@ -261,7 +254,8 @@ sub get_allele {
 		return ($ref_allele, $mut_allele, $allele_len);
 	}
 	elsif ($allele =~ /^\([ATGC]+\)\d+\/\d+$/){
-		($ref_allele, $ref_count, $mut_count) = $allele =~ /^\(([ATGC]+)\)(\d+)\/(\d+)$/;
+		($ref_allele, $ref_count, $mut_count) =
+		    $allele =~ /^\(([ATGC]+)\)(\d+)\/(\d+)$/;
 		my $wt = $ref_allele x $ref_count;
 		my $mt = $ref_allele x $mut_count;
 		$allele_len = length($wt);
@@ -298,9 +292,9 @@ sub check_consistancy {
 		die "snp not on contig!".PostData($snp)."\n"
 		unless defined($pos_on_t);
 
-		my ($ref_allele, $mut_allele, $allele_len) = get_allele($snp->{allele}, $snp->{c_pos}, $cgl);
+		my ($ref_allele, $mut_allele, $allele_len) = get_allele($transcript->strand, $snp->{allele});
 
-		if (! defined($ref_allele)){
+		if (!defined($ref_allele)){
 			$snp->{mut_allele} = 'not_handled';
 			$snp->{wt_allele}  = 'not_handled';
 			next;
@@ -443,9 +437,21 @@ sub find_c_snps {
 #-----------------------------------------------------------------------------
 sub parse_snp_file {
 
-	my ($snp_file, $cgl) = @_;
+	my ($file, $cgl) = @_;
 
-	open(my $IN, '<', $snp_file) or die "Can't open $snp_file for reading\n$!\n";
+	my $contig = $cgl->contig(0);
+
+        my $genes = $cgl->genes;
+        my $gene  = $genes->[0];
+
+        my $transcript = $gene->transcript(0);
+
+	my ($contig_id, $contig_begin, $contig_end) = split /:/, $contig->id;
+
+	($contig_begin, $contig_end) = ($contig_end, $contig_begin)
+	    if $contig_begin > $contig_end;
+	
+	open(my $IN, '<', $file) or die "Can't open $file for reading\n$!\n";
 
 	my @snps;
 	while (<$IN>) {
@@ -457,14 +463,23 @@ sub parse_snp_file {
 
 		$strand = $strand eq '+' ? 1 : $strand eq '-' ? -1 : '.';
 
+		my $pos_on_c = $snp_pos - $contig_begin;
+
+		my $reference_seq = uc substr($contig->residues, $pos_on_c, 1);
+
+		$allele_text .= "/$reference_seq";
+
 		$allele_text = uc $allele_text;
 
 		my $alleles = process_alleles($allele_text);
 		my $counter;
 		foreach my $allele (@{$alleles}){
 
-			my ($ref_allele, $mut_allele, $allele_len) = get_allele($allele, $snp_pos, $cgl);
-			$allele = $ref_allele . '/' . $mut_allele;
+			if ($strand  == -1){
+				my ($ref_allele, $mut_allele, $allele_len) = get_allele($strand, $allele);
+
+				$allele = $ref_allele . '/' . $mut_allele;
+			}
 
 			my $multi= scalar @{$alleles} > 1 ? 1 : 0;
 
@@ -507,14 +522,11 @@ sub process_alleles {
 	    $allele_text =~ s/([MRWSYKVHDBN])/$iupac_codes{$1}/g;
 
 
-	    my %uniq_alleles;
-	    my @alleles = split m|/|, $allele_text;
-	    @uniq_alleles{@alleles} = ();
-	    $allele_text = join '/', keys %uniq_alleles;
-	    print '';
 	}
 
-
+	my %uniq_alleles = map {$_ => 1} split m|/|, $allele_text;
+	$allele_text = join '/', keys %uniq_alleles;
+	print '';
 
 	if ($allele_text =~ /^[ACGT-]+\/[ACGT-]+\/[ACGT-]+.*/){
 		my @multi_alleles = split('/', $allele_text);

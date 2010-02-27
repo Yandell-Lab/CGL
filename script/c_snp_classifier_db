@@ -4,10 +4,7 @@ use strict;
 use warnings;
 
 use Getopt::Long;
-use FileHandle;
-use CGL::Annotation;
-use CGL::Annotation::Iterator;
-use CGL::TranslationMachine;
+use DBI;
 
 #-----------------------------------------------------------------------------
 #----------------------------------- MAIN ------------------------------------
@@ -16,45 +13,209 @@ my $usage = "
 
 Synopsis:
 
-c_snp_classsifer_db --gff file.gff --fasta file.fasta
-		    --dsn 'dbi:mysql:snp_db' --user user_name --pass password
+c_snp_classsifer_db --snv_dsn 'dbi:mysql:snp_db'
+                    --gene_dsn 'dbi:mysql:gene_db'
+		    --user user_name --pass password
 
 Description:
 
-This script will take a GFF3 file, the corresponding contig fasta file
-and a snp_database.  It will then classify the SNPs according to their
-impact on translation and write a report to STDOUT.
+
+Options:
+
 
 \n";
 
-my ($help, $gff, $fasta, $dsn, $user, $pass);
-my $opt_results = GetOptions(help      => \$help,
-			     'gff=s'   => \$gff,
-			     'fasta=s' => \$fasta,
-			     'dsn=s'   => \$dsn,
-			     'user=s'  => \$user,
-			     'pass=s'  => \$pass,
+my ($help, $snv_dsn, $gene_dsn, $user, $password);
+my $opt_results = GetOptions(help            => \$help,
+			     'snv_dsn=s' => \$snv_dsn,
+			     'gene_dsn=s'    => \$gene_dsn,
+			     'user=s'        => \$user,
+			     'password=s'    => \$password,
 			    );
 
-die $usage if $help
-die $usage unless ($gff && $fasta && $dsn);
+die $usage if $help;
+die $usage unless ($snv_dsn && $gene_dsn);
 
-our $MATRIX = load_matrix();
+my $gene_db = prepare_storage($gene_dsn, $user, $password);
+my $snv_db  = prepare_storage($snv_dsn, $user, $password);
 
-my $cgl  = new CGL::Annotation(format     => $format,
-			       gff_file   => $gff,
-			       fasta_file => $fasta);
+my $rv   = $gene_db->{feature_sth}->execute('gene');
+ GENE:
+    while (my $gene = get_feature($gene_db)) {
+	
+	print join "\t", @{$gene}{qw(feature_id seqid source type start end score strand phase)};
+	print "\n";
+	print '';
+			      
+	for my $mRNA (get_children($gene_db, $gene, 'mRNA')) {
+	    
+	    print "\t";
+	    print join "\t", @{$mRNA}{qw(feature_id seqid source type start end score strand phase)};
+	    print "\n";
+	    print '';
+	    
+	    for my $CDS (get_children($gene_db, $mRNA, 'CDS')) {
+		
+		print "\t\t";
+		print join "\t", @{$CDS}{qw(feature_id seqid source type start end score strand phase)};
+		print "\n";
+		print '';
+		
+		
+		for my $SNV (get_overlaps($snv_db, $CDS, 'SNV')) {
+		
+		    print "\t\t\t";
+		    print join "\t", @{$SNV}{qw(feature_id seqid source type start end score strand phase)};
+		    print "\n";
+		    print '';
+		}
+		print '';
+	    }   
+	    print '';
+	}   
+	print '';
+    }
 
-#my $TM = new CGL::TranslationMachine();
 
-my $iterator = new CGL::Annotation::Iterator($cgl);
+#    my $snps = parse_snp_file($snp_file);
+#	my $c_snps = get_c_snps($snps, $cgl, $g);
 
-while (my $g = $iterator->next_by_gene()){
+#	check_consistancy($cgl, $c_snps);
+#
 
-	my $snps = parse_snp_file($snp_file);
-	my $c_snps = get_c_snps($snps, $cgl, $g);
+sub prepare_storage {
 
-	check_consistancy($cgl, $c_snps);
+    my ($dsn, $user, $password) = @_;
+
+    my %storage;
+
+    my $dbh  = DBI->connect($dsn, $user, $password);
+
+    $storage{dbh} = $dbh;
+
+    my $feature_stmt = ("SELECT * from feature where type = ?");
+    my $feature_sth  = $dbh->prepare($feature_stmt);
+
+    $storage{feature_sth} = $feature_sth;
+
+    my $child_stmt = ("SELECT f.* from feature f, attribute a " .
+		     "where f.type = ? AND f.feature_id = " .
+		     "a.feature_id AND a.att_key = 'Parent' and " .
+		     "a.att_value = ?");
+    my $child_sth  = $dbh->prepare($child_stmt);
+
+    
+    $storage{child_sth} = $child_sth;
+
+    my $attr_stmt = ("SELECT att_key, att_value from attribute where feature_id = ?");
+    my $attr_sth  = $dbh->prepare($attr_stmt);
+    
+    $storage{attr_sth} = $attr_sth;
+
+    my $overlap_stmt = ("SELECT * from feature WHERE start >= ? AND start <= ?");
+    my $overlap_sth = $dbh->prepare($overlap_stmt);
+
+    $storage{overlap_sth} = $overlap_sth;
+    
+    return \%storage;
+    
+}
+
+sub get_feature {
+
+    my $storage = shift;
+    my @data = $storage->{feature_sth}->fetchrow_array;
+    return unless @data;
+    my $feature = build_feature($storage, \@data);
+    return $feature;
+
+}
+
+sub build_feature {
+
+    my ($storage, $data) = @_;
+
+    my ($feature_id, $seqid, $source, $type, $start, $end,
+	$score, $strand, $phase) = @{$data};
+
+    return unless $feature_id;
+
+    my $feature = {feature_id => $feature_id,
+		   seqid      => $seqid,
+		   source     => $source,
+		   type       => $type,
+		   start      => $start,
+		   end        => $end,
+		   score      => $score,
+		   strand     => $strand,
+		   phase      => $phase,
+	       };
+
+    my $attributes = get_attributes($storage, $feature);
+
+    $feature->{attributes} = $attributes;
+
+    return $feature;
+}
+
+sub get_children {
+
+    my ($storage, $feature, $type) = @_;
+
+    my $rv = $storage->{child_sth}->execute($type, $feature->{feature_id});
+
+    my $children_array = $storage->{child_sth}->fetchall_arrayref;
+
+    my @children;
+    for my $child_data (@{$children_array}) {
+	my $child_feature = build_feature($storage, $child_data);
+	push @children, $child_feature if $child_feature;
+    }
+
+    return unless @children;
+
+    return wantarray ? @children : \@children
+}
+
+sub get_overlaps {
+
+    my ($storage, $feature, $type) = @_;
+
+    my $rv = $storage->{overlap_sth}->execute($feature->{start},
+					      $feature->{end});
+
+    my $overlaps_array = $storage->{overlap_sth}->fetchall_arrayref;
+
+    my @overlaps;
+    for my $overlap_data (@{$overlaps_array}) {
+	my $overlap_feature = build_feature($storage, $overlap_data);
+	push @overlaps, $overlap_feature if $overlap_feature;
+    }
+
+    return unless @overlaps;
+
+    return wantarray ? @overlaps : \@overlaps
+}
+
+sub get_attributes {
+
+    my ($storage, $feature) = @_;
+
+    $storage->{attr_sth}->execute($feature->{feature_id});
+
+    my $attrs_array = $storage->{attr_sth}->fetchall_arrayref;
+
+    my %attributes;
+    for my $pair (@{$attrs_array}) {
+	my ($key, $value) = @{$pair};
+	push @{$attributes{$key}}, $value;
+    }
+    return \%attributes;
+}
+
+
+__END__
+
 	classify($cgl, $c_snps);
 
 	foreach my $snp (@{$c_snps->{snps}}){
