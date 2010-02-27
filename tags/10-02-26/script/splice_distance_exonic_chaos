@@ -1,0 +1,968 @@
+#!/usr/bin/perl -w 
+use strict;
+
+# pod docs at end.
+
+BEGIN {
+	$ENV{'CGL_CHATTER'} = 1;
+}
+
+$| = 1;
+use lib $ENV{CGL_GFF_LIB};
+use FileHandle;
+use CGL::Annotation;
+use CGL::Annotation::Iterator;
+use PostData;
+
+my $usage = "
+
+splice_distance_exonic <chaos_file 1> <chaos_file 2>
+
+
+\n"; 
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+
+die $usage unless $ARGV[3];
+
+my ($chaos_i, $chaos_j) = @ARGV;
+
+my $cgl_i = CGL::Annotation->($chaos_i);
+my $cgl_j = CGL::Annotation->($chaos_j);
+
+my $g_i = $cgl_i->gene(0);
+my $g_j = $cgl_j->gene(0);
+
+my $c_i = $cgl_i->contig(0);
+my $c_j = $cgl_j->contig(0);
+
+print " i gene id\tnum_t\tj gene id\tnum_t\tesd_m\tesd_c\tesd_u\tesd_5\tesd_3\tisd_m\tisd_c\tisd_5\tisd_3\n";
+
+my $PERFECT = 0;
+my $MIN_OVERLAP = 100;
+my $LOCATION;
+
+my ($I_OFFSET, $J_OFFSET, $REF_SEQ) = get_offsets($c_i, $c_j);
+
+my $num_t_i = num_transcripts($g_i);
+my $num_t_j = num_transcripts($g_j);
+
+print $g_i->id()."\t".$num_t_i."\t".$g_j->id()."\t".$num_t_j;
+
+splice_distance($g_i, $c_i, $g_j, $c_j, 'mRNAs');
+splice_distance($g_i, $c_i,$g_j, $c_j, 'CDSs');
+splice_distance($g_i, $c_i,$g_j, $c_j, 'utrs');
+splice_distance($g_i, $c_i,$g_j, $c_j, 'utr5');
+splice_distance($g_i, $c_i,$g_j, $c_j, 'utr3');
+splice_distance($g_i, $c_i,$g_j, $c_j, 'int_m');
+splice_distance($g_i, $c_i,$g_j, $c_j, 'int_c');
+splice_distance($g_i, $c_i,$g_j, $c_j, 'int_5');
+splice_distance($g_i, $c_i,$g_j, $c_j, 'int_3');
+print "\t$PERFECT";
+print "\n";
+
+#-----------------------------------------------------------------------------
+#------------------------------------ SUBS -----------------------------------
+#-----------------------------------------------------------------------------
+sub perfect_overlap {
+        my $seq_i = shift;
+        my $seq_j = shift;
+
+        my $i = 0;
+        while (my $i_substr = substr($seq_i, $i)){
+		print "i:$i "."l:".length($i_substr)."\n" if int $i/1000 == $i/1000;
+                return 0 if length($i_substr) < $MIN_OVERLAP;
+                last if $seq_j =~ /$i_substr/;
+                $i++;
+        }
+
+        if ($i > $MIN_OVERLAP){
+		$PERFECT  = $i;
+		$LOCATION = $i;
+                return $i;
+        }
+        else {
+                return 0;
+        }
+}
+#-----------------------------------------------------------------------------
+sub get_offsets {
+        my $c_i = shift;
+        my $c_j = shift;
+
+	my $seq_i = $c_i->residues();
+	my $seq_j = $c_j->residues();
+
+        my $i;
+        my $j;
+	my $ref_seq;
+
+
+        if (try_it($seq_i, $seq_j)){
+                print "SEQ IS CHANGED!\n";
+                exit(0);
+        }
+
+        if (try_it($seq_j, $seq_i)){
+                print "SEQ IS CHANGED!\n";
+                exit(0);
+        }
+
+        if    ($seq_i eq $seq_j){
+                # unchanged;
+                $i = 0;
+                $j = 0;
+		$ref_seq = $seq_i;
+        }
+        elsif ($seq_i =~ /$seq_j/){
+                $i = 0;
+                $j = index($seq_i, $seq_j);
+		$ref_seq = $seq_i;
+        }
+        elsif ($seq_j =~ /$seq_i/){
+                # i is substring of j
+                $i = index($seq_j, $seq_i);
+                $j = 0;
+		$ref_seq = $seq_j;
+        }
+        elsif (perfect_overlap($seq_i, $seq_j)){
+                $i = 0;
+                $j = $LOCATION;
+		$ref_seq = substr($seq_i, 0, $j).$seq_j;
+        }
+        elsif (perfect_overlap($seq_j, $seq_i)){
+                $i = $LOCATION;
+                $j = 0;
+		$ref_seq = substr($seq_j, 0, $i).$seq_i;
+        }
+        else {
+                die "LOGIC ERROR IN GET_OFFSETS!\n";
+        }
+
+	return ($i, $j, $ref_seq);
+}
+#-----------------------------------------------------------------------------
+sub try_it {
+        my $seq_i = shift;
+        my $seq_j = shift;
+
+        my $gain = 50;
+        my $i = 0;
+        my $str = '';
+        my $off = -1;
+        while (my $i_substr = substr($seq_i, $i, $gain)){
+
+                my $pos;
+                if ($off == -1){
+                        $pos = index($seq_j, $i_substr);
+                }
+                else {
+                        $pos  = index($seq_j, $i_substr, $off);    
+                }
+                if ($pos == -1){
+                        $str .= '0';
+                }
+                else {
+                        $off = $pos;
+                        $str .= 1;
+                }
+
+                last if $i + $gain > length($seq_i);
+                $i++;
+        }
+        
+	return 1 if $str =~ /10+1/;
+	return 0;
+}
+#-----------------------------------------------------------------------------
+sub num_transcripts {
+	my $g = shift;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+		$i++;
+	}
+	return $i;
+}
+#-----------------------------------------------------------------------------
+sub get_number_pairs {
+	my $num_t = shift;
+
+	return 1 if $num_t == 2;
+
+	my $n_fac         = factoral($num_t);
+	my $n_minus_k_fac = factoral($num_t - 2);
+	my $k_fac         = 2;
+
+	my $num_pairs = $n_fac/($n_minus_k_fac*$k_fac);
+
+	return $num_pairs;
+}
+#-----------------------------------------------------------------------------
+sub factoral {
+	my $n = shift;
+
+	my $fac = $n;
+	for (my $i = $n -1; $i > 0; $i--){
+		$fac = $fac*$i;
+	}
+	return $fac;
+}
+#-----------------------------------------------------------------------------
+sub get_key_pairs {
+	my $hash = shift;
+
+	my @pairs;
+	foreach my $i (keys %{$hash}){
+		foreach my $j (keys %{$hash->{$i}}){
+			push (@pairs, [$i, $j]);
+		}
+	}
+	return \@pairs;
+}
+#-----------------------------------------------------------------------------
+sub splice_distance {
+	my $g_i = shift;
+	my $c_i = shift;
+        my $g_j = shift;
+        my $c_j = shift;
+
+	my $type = shift;
+
+	my $data_i;
+	my $data_j;
+	if ($type eq 'mRNAs'){
+		$data_i = get_mRNA_data($g_i);
+		$data_j = get_mRNA_data($g_j);
+	}
+	elsif ($type eq 'CDSs'){
+		$data_i = get_CDS_data($g_i, $c_i);
+		$data_j = get_CDS_data($g_j, $c_j);
+	}
+        elsif ($type eq 'utrs'){
+                $data_i = get_utr_data($g_i, $c_i);
+		$data_j = get_utr_data($g_j, $c_j);
+        }
+        elsif ($type eq 'utr5'){
+                $data_i = get_utr5_data($g_i, $c_i);
+                $data_j = get_utr5_data($g_j, $c_j);
+        }
+        elsif ($type eq 'utr3'){
+                $data_i = get_utr3_data($g_i, $c_i);
+                $data_j = get_utr3_data($g_j, $c_j);
+        }
+        elsif ($type eq 'int_m'){
+                $data_i = get_int_m_data($g_i, $c_i);
+                $data_j = get_int_m_data($g_j, $c_j);
+        }
+        elsif ($type eq 'int_c'){
+                $data_i = get_int_c_data($g_i, $c_i);
+                $data_j = get_int_c_data($g_j, $c_j);
+        }
+        elsif ($type eq 'int_5'){
+                $data_i = get_int_5_data($g_i, $c_i);
+                $data_j = get_int_5_data($g_j, $c_j);
+        }
+        elsif ($type eq 'int_3'){
+                $data_i = get_int_3_data($g_i, $c_i);
+                $data_j = get_int_3_data($g_j, $c_j);
+        }
+	else {
+		die "unkown type!\n";
+	}
+
+	($data_i, $data_j) = add_offsets($data_i, $data_j);
+
+	my ($distance, $size_diff)  = get_distance($data_i, $data_j);
+
+	$distance = 0 if $distance < 0.00001;
+
+	print "\t"."($size_diff) ".substr($distance, 0, 6);
+}
+#-----------------------------------------------------------------------------
+sub add_offsets {
+	my $data_i = shift;
+	my $data_j = shift;
+
+	my %data_i_new;
+	foreach my $i (keys %{$data_i}){
+		my $pairs = get_key_pairs($data_i->{$i}); 
+		foreach my $p (@{$pairs}){
+			if ($p->[0] eq 'undef'){
+				$data_i_new{$i}{$p->[0]}{$p->[1]}++;
+			}
+			else {
+				$data_i_new{$i}{$p->[0] + $I_OFFSET}{$p->[1] + $I_OFFSET}++;
+			}
+		}
+	}
+        my %data_j_new;
+        foreach my $j (keys %{$data_j}){
+                my $pairs = get_key_pairs($data_j->{$j});
+                foreach my $p (@{$pairs}){
+			if ($p->[0] eq 'undef'){
+				$data_j_new{$j}{$p->[0]}{$p->[1]}++;
+			}
+			else {
+                        	$data_j_new{$j}{$p->[0] + $J_OFFSET}{$p->[1] + $J_OFFSET}++;
+			}
+                }
+        }
+
+	return (\%data_i_new, \%data_j_new);
+}
+#-----------------------------------------------------------------------------
+sub get_length {
+	my $pairs = shift;
+
+	my $length = 0;
+	foreach my $p (@{$pairs}){
+		$length += abs($p->[0] - $p->[1])
+		unless $p->[0] eq 'undef';
+	}
+	return $length;
+}
+#-----------------------------------------------------------------------------
+sub get_distance {
+	my $i_data = shift;
+	my $j_data = shift;
+
+        my $combined = combine($i_data, $j_data);
+
+	my %total_length;
+	my %shared;
+        foreach my $i (@{$combined}) {
+		my $pairs_i = get_key_pairs($i->{coors});
+		$total_length{$i->{source}} += get_length($pairs_i);
+                foreach my $j (@{$combined}) {
+			next if $i->{source}  eq $j->{source};
+			# initialize
+			$shared{$i->{id}}{$j->{id}} = 0;
+		}
+	}
+
+        foreach my $i (@{$combined}) {
+                foreach my $j (@{$combined}) {
+                        next if $i->{source}  eq $j->{source};
+
+                        my $pairs_j = get_key_pairs($j->{coors});
+
+                        foreach my $p (@{$pairs_j}){
+                                $shared{$i->{id}}{$j->{id}}++
+                                if $i->{coors}->{$p->[0]}->{$p->[1]};
+
+                        }
+                }
+        }
+
+	my $sizes = get_num_exons_each_t($combined);
+
+	my $sn_sp_ac = get_sn_sp_ac(\%shared, $sizes);
+
+	my $max_ac_values = get_max_values($sn_sp_ac);
+
+	my $total = 0;
+	foreach my $t_id (keys %{$max_ac_values}){
+		$total += 1 - $max_ac_values->{$t_id};
+	}
+
+	my $num_t = keys %{$max_ac_values};
+
+	my $size_diff = $total_length{'j'} - $total_length{'i'}; 
+
+	my $distance = $total/$num_t;
+
+	return ($distance, $size_diff);;
+
+}
+#-----------------------------------------------------------------------------
+sub sort_i_keys_by_max {
+	my $sn_sp_ac = shift;
+
+	my @keys;
+	foreach my $i_id (sort {max_i($sn_sp_ac->{$b}) <=> max_i($sn_sp_ac->{$a}) } keys %{$sn_sp_ac}){
+		push(@keys, $i_id);
+	}
+	return \@keys;
+}
+#-----------------------------------------------------------------------------
+sub max_i {
+	my $hash = shift;
+
+	my $max = 0; 
+	foreach my $j_id (keys %{$hash}){
+		$max = $hash->{$j_id}->{ac} if $hash->{$j_id}->{ac} > $max;
+	}
+	return $max;
+}
+#-----------------------------------------------------------------------------
+sub get_max_values {
+        my $sn_sp_ac = shift;
+
+
+        my $ordered = sort_i_keys_by_max($sn_sp_ac);
+
+        my %max_ac;
+        my %taken;
+
+        foreach my $i_id (@{$ordered}){
+                my $max_v = 0;
+                foreach my $j_id (keys %{$sn_sp_ac->{$i_id}}){
+                        my $ac = $sn_sp_ac->{$i_id}->{$j_id}->{ac};
+                        if ($ac > $max_v){
+                                $max_v = $ac;
+                        }
+                }
+                $max_ac{$i_id} = $max_v;
+        }
+        return \%max_ac;
+}
+
+#-----------------------------------------------------------------------------
+sub get_max_values_hold {
+	my $sn_sp_ac = shift;
+
+	
+	my $ordered = sort_i_keys_by_max($sn_sp_ac);
+
+	my %max_ac;
+	my %taken;
+
+	foreach my $i_id (@{$ordered}){
+		my $max_v = 0;
+		my $j_max;
+		foreach my $j_id (keys %{$sn_sp_ac->{$i_id}}){
+			my $ac = $sn_sp_ac->{$i_id}->{$j_id}->{ac};
+			if    ($ac == 1){
+				$max_v = $ac;
+				$j_max = $j_id;
+			}	
+			elsif ($ac > $max_v && ! defined($taken{$j_id})){
+				$max_v = $ac;
+				$j_max = $j_id;
+			}
+		}
+		$max_ac{$i_id} = $max_v;
+		$taken{$j_max}++ if defined($j_max);;
+	}
+	return \%max_ac;
+}
+#-----------------------------------------------------------------------------
+sub get_num_exons_each_t {
+	my $combined = shift;
+
+	my %sizes;
+	foreach my $i (@{$combined}){
+		my $pairs = get_key_pairs($i->{coors});
+		$sizes{$i->{id}} = @{$pairs};
+	}
+	return \%sizes;
+}
+#-----------------------------------------------------------------------------
+sub get_sn_sp_ac {
+	my $shared  = shift;
+	my $sizes   = shift;
+
+	my %sn_sp_ac;
+	foreach my $i_id (keys %{$shared}){
+		foreach my $j_id (keys %{$shared->{$i_id}}){
+			my $num_shared = $shared->{$i_id}->{$j_id};
+			my $sn = $num_shared/$sizes->{$j_id};
+			my $sp = $num_shared/$sizes->{$i_id};
+			my $ac = ($sn + $sp)/2;
+			$sn_sp_ac{$i_id}{$j_id}{sn} = $sn;
+			$sn_sp_ac{$i_id}{$j_id}{sp} = $sp;
+			$sn_sp_ac{$i_id}{$j_id}{ac} = $ac;
+		}
+	}
+	return \%sn_sp_ac;
+}
+#-----------------------------------------------------------------------------
+sub combine {
+	my $data_i = shift;
+	my $data_j = shift;
+
+	my @combined;
+	foreach my $i (keys %{$data_i}){
+		push(@combined, { id => 'i'.$i, source => 'i', coors => $data_i->{$i}});
+	}
+
+        foreach my $j (keys %{$data_j}){
+                push(@combined, { id => 'j'.$j,  source => 'j', coors => $data_j->{$j}});
+        }
+
+	return \@combined;
+}
+#-----------------------------------------------------------------------------
+sub get_acc {
+	my $num_shared  = shift;
+	my $num_exons_i = shift;
+	my $num_exons_j = shift;
+
+	my $sn = $num_shared/$num_exons_j;
+	my $sp = $num_shared/$num_exons_i;
+
+	my $ac = ($sn + $sp)/2;
+
+	return $ac;
+}
+#-----------------------------------------------------------------------------
+sub get_mRNA_data {
+	my $g = shift;
+
+	my %mRNAs;
+
+	my $i = 0;
+	while (my $t = $g->transcript($i)){
+		my $j = 0;
+		while (my $e = $t->exon($j)){
+			$mRNAs{$i}{$e->nbeg()}{$e->nend}++;
+			$j++;
+		}
+                $mRNAs{$i}{'undef'}{'undef'}++ 
+                if !defined($mRNAs{$i});
+
+
+		$i++;
+	}
+
+	return \%mRNAs;
+}
+#-----------------------------------------------------------------------------
+sub get_int_m_data {
+        my $g = shift;
+
+        my %introns;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+                my $j = 0;
+                while (my $int = $t->intron($j)){
+                        $introns{$i}{$int->nbeg()}{$int->nend}++;
+                        $j++;
+                }
+                $introns{$i}{'undef'}{'undef'}++ 
+                if !defined($introns{$i});
+                $i++;
+        }
+
+        return \%introns;
+}
+#-----------------------------------------------------------------------------
+sub get_int_c_data {
+        my $g = shift;
+
+        my %introns;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+		my $p = $t->translation(0);
+                if (!defined($p)){
+                        $introns{$i}{'undef'}{'undef'}++;
+                        $i++;
+                        next;
+                }
+
+                my $j = 0;
+                while (my $int = $t->intron($j)){
+			my $up_e = $t->exon($j);
+			my $dn_e = $t->exon($j + 1);
+
+                        my $dn_e_b_on_t = $dn_e->metaPos($t, 0);
+                        my $dn_e_b_on_p = $t->metaPos($p, $dn_e_b_on_t);
+
+                        my $up_e_e_on_t = $up_e->metaPos($t, length($up_e->residues));
+                        my $up_e_e_on_p = $t->metaPos($p, $up_e_e_on_t);
+
+			if (defined($up_e_e_on_p) && defined($dn_e_b_on_p)){
+                        	$introns{$i}{$int->nbeg()}{$int->nend}++;
+			}
+                        $j++;
+                }
+                $introns{$i}{'undef'}{'undef'}++ 
+                if !defined($introns{$i});
+
+                $i++;
+        }
+
+        return \%introns;
+}
+#-----------------------------------------------------------------------------
+sub get_int_5_data {
+        my $g = shift;
+
+        my %introns;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+                my $p = $t->translation(0);
+
+                if (!defined($p)){
+                        $introns{$i}{'undef'}{'undef'}++;
+                        $i++;
+                        next;
+                }
+
+                my $p_b_on_t = $p->metaPos($t, 0);
+                my $p_e_on_t = $p->metaPos($t, length($p->residues));
+
+                my $j = 0;
+                while (my $int = $t->intron($j)){
+                        my $up_e = $t->exon($j);
+                        my $dn_e = $t->exon($j + 1);
+
+                        my $dn_e_b_on_t = $dn_e->metaPos($t, 0);
+                        my $dn_e_b_on_p = $t->metaPos($p, $dn_e_b_on_t);
+
+                        my $up_e_e_on_t = $up_e->metaPos($t, length($up_e->residues));
+                        my $up_e_e_on_p = $t->metaPos($p, $up_e_e_on_t);
+
+                        if    (defined($up_e_e_on_p) && defined($dn_e_b_on_p)){
+				# intron is in CDS 
+                        }
+			elsif ($dn_e_b_on_t < $p_b_on_t){
+				# 5-prime intron utr 
+                                $introns{$i}{$int->nbeg()}{$int->nend}++;
+			}
+                        elsif ($up_e_e_on_t >  $p_e_on_t){
+                                # 3-prime intron in utr 
+                        }
+                        $j++;
+
+                }
+                $introns{$i}{'undef'}{'undef'}++ 
+		if !defined($introns{$i});
+
+                $i++;
+        }
+
+        return \%introns;
+}
+#-----------------------------------------------------------------------------
+sub get_int_3_data {
+        my $g = shift;
+
+        my %introns;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+                my $p = $t->translation(0);
+
+                if (!defined($p)){
+                        $introns{$i}{'undef'}{'undef'}++;
+                        $i++;
+                        next;
+                }
+
+                my $p_b_on_t = $p->metaPos($t, 0);
+                my $p_e_on_t = $p->metaPos($t, length($p->residues));
+
+                my $j = 0;
+                while (my $int = $t->intron($j)){
+                        my $up_e = $t->exon($j);
+                        my $dn_e = $t->exon($j + 1);
+
+                        my $dn_e_b_on_t = $dn_e->metaPos($t, 0);
+                        my $dn_e_b_on_p = $t->metaPos($p, $dn_e_b_on_t);
+
+                        my $up_e_e_on_t = $up_e->metaPos($t, length($up_e->residues));
+                        my $up_e_e_on_p = $t->metaPos($p, $up_e_e_on_t);
+
+                        if    (defined($up_e_e_on_p) && defined($dn_e_b_on_p)){
+                                # intron is in CDS
+                        }
+                        elsif ($dn_e_b_on_t < $p_b_on_t){
+                                # 5-prime intron utr
+                        }
+                        elsif ($up_e_e_on_t >  $p_e_on_t){
+                                # 3-prime intron in utr
+				$introns{$i}{$int->nbeg()}{$int->nend}++;
+                        }
+                        $j++;
+                }
+                $introns{$i}{'undef'}{'undef'}++ 
+                if !defined($introns{$i});
+
+                $i++;
+        }
+
+        return \%introns;
+}
+#-----------------------------------------------------------------------------
+sub get_utr3_data {
+        my $g = shift;
+	my $c = shift;
+
+        my %utrs;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+
+                my $p = $t->translation(0);
+
+                if (!defined($p)){
+                        $utrs{$i}{'undef'}{'undef'}++;
+                        $i++;
+                        next;
+                }
+
+                my $p_b_on_t = $p->metaPos($t, 0);
+                my $p_e_on_t = $p->metaPos($t, length($p->residues));
+
+                my $p_b_on_c = $t->metaPos($c, $p_b_on_t);
+                my $p_e_on_c = $t->metaPos($c, $p_e_on_t);
+
+                my $j = 0;
+                while (my $e = $t->exon($j)){
+                        my $e_b_on_t = $e->metaPos($t, 0);
+                        my $e_b_on_p = $t->metaPos($p, $e_b_on_t);
+
+                        my $e_e_on_t = $e->metaPos($t, length($e->residues));
+                        my $e_e_on_p = $t->metaPos($p, $e_e_on_t);
+                        if (defined($e_b_on_p) && defined($e_e_on_p)){
+                                #completely coding
+                        }
+                        elsif (!defined($e_b_on_p) && defined($e_e_on_p)){
+                                # 5-prime partial coding
+                        }
+                        elsif (defined($e_b_on_p) && !defined($e_e_on_p)){
+                                # 3-prime partial coding
+                                $utrs{$i}{$p_e_on_c}{$e->nend}++;
+                        }
+                        elsif ($e_e_on_t < $p_b_on_t){
+                                # totally 5-prime UTR
+                        }
+                        elsif ($e_b_on_t > $p_e_on_t){
+                                # totally 3-prime UTR
+                                $utrs{$i}{$e->nbeg()}{$e->nend}++;
+                        }
+                        elsif ($e_b_on_t < $p_b_on_t && $e_e_on_t > $p_e_on_t){
+                                #  single exon gene w 5 & 3 prime UTR
+                                $utrs{$i}{$p_e_on_c}{$e->nend}++;
+                        }
+                        else {
+                                die "logic error in get_utr3_data!\n";
+                        }
+
+                        $j++;
+                }
+                $utrs{$i}{'undef'}{'undef'}++ 
+                if !defined($utrs{$i});
+                $i++;
+        }
+
+        return \%utrs;
+}
+#-----------------------------------------------------------------------------
+sub get_utr5_data {
+        my $g = shift;
+	my $c = shift;
+        my %utrs;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+
+                my $p = $t->translation(0);
+
+                if (!defined($p)){
+                        $utrs{$i}{'undef'}{'undef'}++;
+                        $i++;
+                        next;
+                }
+
+                my $p_b_on_t = $p->metaPos($t, 0);
+                my $p_e_on_t = $p->metaPos($t, length($p->residues));
+
+                my $p_b_on_c = $t->metaPos($c, $p_b_on_t);
+                my $p_e_on_c = $t->metaPos($c, $p_e_on_t);
+
+                my $j = 0;
+                while (my $e = $t->exon($j)){
+
+                        my $e_b_on_t = $e->metaPos($t, 0);
+                        my $e_b_on_p = $t->metaPos($p, $e_b_on_t);
+
+                        my $e_e_on_t = $e->metaPos($t, length($e->residues));
+                        my $e_e_on_p = $t->metaPos($p, $e_e_on_t);
+                        if (defined($e_b_on_p) && defined($e_e_on_p)){
+                                #completely coding
+                        }
+                        elsif (!defined($e_b_on_p) && defined($e_e_on_p)){
+                                # 5-prime partial coding
+                                $utrs{$i}{$e->nbeg}{$p_b_on_c}++;
+                        }
+                        elsif (defined($e_b_on_p) && !defined($e_e_on_p)){
+                                # 3-prime partial coding
+                        }
+                        elsif ($e_e_on_t < $p_b_on_t){
+                                # totally 5-prime UTR
+                                $utrs{$i}{$e->nbeg()}{$e->nend}++;
+                        }
+                        elsif ($e_b_on_t > $p_e_on_t){
+                                # totally 3-prime UTR
+                        }
+                        elsif ($e_b_on_t < $p_b_on_t && $e_e_on_t > $p_e_on_t){
+                                #  single exon gene w 5 & 3 prime UTR
+                                $utrs{$i}{$e->nbeg()}{$p_b_on_c}++;
+                        }
+                        else {
+                                die "logic error in get_utr5_data!\n";
+                        }
+
+                        $j++;
+                }
+                $utrs{$i}{'undef'}{'undef'}++ 
+                if !defined($utrs{$i});
+
+                $i++;
+        }
+        return \%utrs;
+}
+#-----------------------------------------------------------------------------
+sub get_utr_data {
+        my $g = shift;
+	my $c = shift;
+
+        my %utrs;
+
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+
+                my $p = $t->translation(0);
+
+		if (!defined($p)){
+			$utrs{$i}{'undef'}{'undef'}++;
+			$i++;
+			next;
+		}
+                my $p_b_on_t = $p->metaPos($t, 0);
+                my $p_e_on_t = $p->metaPos($t, length($p->residues));
+
+                my $p_b_on_c = $t->metaPos($c, $p_b_on_t);
+                my $p_e_on_c = $t->metaPos($c, $p_e_on_t);
+
+                my $j = 0;
+                while (my $e = $t->exon($j)){
+			
+                        my $e_b_on_t = $e->metaPos($t, 0);
+                        my $e_b_on_p = $t->metaPos($p, $e_b_on_t);
+
+                        my $e_e_on_t = $e->metaPos($t, length($e->residues));
+                        my $e_e_on_p = $t->metaPos($p, $e_e_on_t);
+			if (defined($e_b_on_p) && defined($e_e_on_p)){
+				#completely coding
+			}
+			elsif (!defined($e_b_on_p) && defined($e_e_on_p)){
+				# 5-prime partial coding
+                                $utrs{$i}{$e->nbeg}{$p_b_on_c}++;
+			}
+			elsif (defined($e_b_on_p) && !defined($e_e_on_p)){
+				# 3-prime partial coding
+                                $utrs{$i}{$p_e_on_c}{$e->nend}++;
+
+			}
+                        elsif ($e_e_on_t < $p_b_on_t){
+                                # totally 5-prime UTR
+                                $utrs{$i}{$e->nbeg()}{$e->nend}++;
+                        }
+                        elsif ($e_b_on_t > $p_e_on_t){
+                                # totally 3-prime UTR
+                                $utrs{$i}{$e->nbeg()}{$e->nend}++;
+                        }
+                        elsif ($e_b_on_t < $p_b_on_t && $e_e_on_t > $p_e_on_t){
+                                #  single exon gene w 5 & 3 prime UTR 
+                                $utrs{$i}{$e->nbeg()}{$p_b_on_c}++;
+
+                                $utrs{$i}{$p_e_on_c}{$e->nend}++;
+                        }
+			else {
+				die "logic error in get_utr_data!\n";
+			}
+
+                        $j++;
+                }
+                $utrs{$i}{'undef'}{'undef'}++ 
+                if !defined($utrs{$i});
+                $i++;
+        }
+
+        return \%utrs;
+}
+#-----------------------------------------------------------------------------
+sub get_CDS_data {
+        my $g = shift;
+	my $c = shift;
+
+        my %CDSs;
+
+	my $not_included = 0;
+        my $i = 0;
+        while (my $t = $g->transcript($i)){
+		my $p = $t->translation(0);
+
+		if (!defined($p)){
+			$CDSs{$i}{'undef'}{'undef'}++;
+			$i++;
+			next;
+		}
+		my $p_b_on_t = $p->metaPos($t, 0);
+		my $p_e_on_t = $p->metaPos($t, length($p->residues));
+		
+		my $p_b_on_c = $t->metaPos($c, $p_b_on_t);
+		my $p_e_on_c = $t->metaPos($c, $p_e_on_t);
+
+                my $num_exons = @{$t->exons};
+                if ($num_exons == 1){
+                        my $e = $t->exons(0);
+                        $CDSs{$i}{$p_b_on_c}{$p_e_on_c}++;
+                        $i++;
+                        next;
+                }
+                my $j = 0;
+                while (my $e = $t->exon($j)){
+               		my $nbeg = $e->nbeg();
+                	my $nend = $e->nend();
+
+                	my $e_b_on_t = $e->metaPos($t, 0);
+                	my $e_b_on_p = $t->metaPos($p, $e_b_on_t);
+
+                	my $e_e_on_t = $e->metaPos($t, length($e->residues));
+                	my $e_e_on_p = $t->metaPos($p, $e_e_on_t);
+
+                	if (defined($e_b_on_p) && defined($e_e_on_p)){
+				$CDSs{$i}{$e->nbeg()}{$e->nend}++;
+                	}
+                        elsif (defined($e_b_on_p) && !defined($e_e_on_p)){
+				$CDSs{$i}{$e->nbeg()}{$p_e_on_c}++;
+                        }
+			elsif (!defined($e_b_on_p) && defined($e_e_on_p)){
+                                $CDSs{$i}{$p_b_on_c}{$e->nend}++;
+                        }
+                        elsif (!defined($e_b_on_p) && !defined($e_e_on_p)){
+				$not_included++;
+                        }
+
+                	else {
+				die "logic error in get_CDS_data!\n";
+                	}
+
+                        $j++;
+                }
+                $CDSs{$i}{'undef'}{'undef'}++ 
+                if !defined($CDSs{$i});
+                $i++;
+        }
+
+        return \%CDSs;
+}
+#-----------------------------------------------------------------------------
+sub slice_complexity_nucl {
+        my $g = shift;
+        my $c = shift;
+
+	return 0;
+}
+#-----------------------------------------------------------------------------
+

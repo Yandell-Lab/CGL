@@ -1,0 +1,110 @@
+BLASTX 2.0MP-WashU [09-Nov-2000] [linux-i686 19:13:41 11-Nov-2000]
+
+Copyright (C) 1996-2000 Washington University, Saint Louis, Missouri USA.
+All Rights Reserved.
+
+Reference:  Gish, W. (1996-2000) http://blast.wustl.edu
+Gish, Warren and David J. States (1993).  Identification of protein coding
+regions by database similarity search.  Nat. Genet. 3:266-72.
+
+Notice:  statistical significance is estimated under the assumption that the
+equivalent of one entire reading frame in the query sequence codes for protein
+and that significant alignments will involve only coding reading frames.
+
+Query=  gnl|ti|406705880 name:22054319 mate:406705879 mate_name:21999264
+    template:000035219611G21 end:R
+        (877 letters)
+
+  Translating both strands of query sequence in all 6 reading frames
+
+Database:  /users/myandell/blast_engine/multi-fastas/D_melanogaster_3_5_04_NONR
+           EDUNDANT_protein.fasta
+           16,104 sequences; 8,727,224 total letters.
+Searching....10....20....30....40....50....60....70....80....90....100% done
+
+                                                                     Smallest
+                                                                       Sum
+                                                              High  Probability
+Sequences producing High-scoring Segment Pairs:              Score  P(N)      N
+
+CG18729-PA.3 CG18729-RA.3 CG18729.3                            577  4.0e-58   1
+
+
+
+>CG18729-PA.3 CG18729-RA.3 CG18729.3
+        Length = 641
+
+  Minus Strand HSPs:
+
+ Score = 577 (208.2 bits), Expect = 4.0e-58, P = 4.0e-58
+ Identities = 106/150 (70%), Positives = 130/150 (86%), Frame = -2
+
+Query:   507 SASLANVYAELTRRYGENYTITYGPPPTYLASIAGVSETGKKVVLVFKEDRSGSAYKIQH 328
+             SA+LANVYAEL RR GE+YTITYG PPTYL S+ G +E GKK+VLVFKEDR+G+  +++ 
+Sbjct:     4 SANLANVYAELMRRCGESYTITYGAPPTYLVSMVGAAEAGKKIVLVFKEDRNGAVARLR- 62
+
+Query:   327 ITPKKALPKLEGTSEMDLTGSPLKDDCLVDAIADLSLDLQLEHSNPWKLEEEFQRGVPVD 148
+              TP +A PK EG++++DLTGSPLKDDCLVDAIADLS+DLQL+HSNPWKLEEE+QRG+PVD
+Sbjct:    63 TTPTRAAPKKEGSADLDLTGSPLKDDCLVDAIADLSIDLQLDHSNPWKLEEEYQRGIPVD 122
+
+Query:   147 QARGIISTEPFQQSEGTGSVWFLCDGTDLG 58
+             +AR I+ +E  Q +EG GSVWFLCDG+DLG
+Sbjct:   123 KARSIVCSEFLQLAEGLGSVWFLCDGSDLG 152
+
+
+Parameters:
+  B=1
+  V=1
+  E=0.0001
+  Z=300000
+  wordmask=seg
+
+  ctxfactor=5.99
+
+  Query                        -----  As Used  -----    -----  Computed  ----
+  Frame  MatID Matrix name     Lambda    K       H      Lambda    K       H
+   +3      0   BLOSUM62        0.318   0.135   0.401    0.350   0.154   0.536  
+               Q=9,R=2         0.244   0.0300  0.180     n/a     n/a     n/a
+   +2      0   BLOSUM62        0.318   0.135   0.401    0.357   0.159   0.580  
+               Q=9,R=2         0.244   0.0300  0.180     n/a     n/a     n/a
+   +1      0   BLOSUM62        0.318   0.135   0.401    0.346   0.152   0.529  
+               Q=9,R=2         0.244   0.0300  0.180     n/a     n/a     n/a
+   -1      0   BLOSUM62        0.318   0.135   0.401    0.343   0.149   0.516  
+               Q=9,R=2         0.244   0.0300  0.180     n/a     n/a     n/a
+   -2      0   BLOSUM62        0.318   0.135   0.401    0.337   0.149   0.504  
+               Q=9,R=2         0.244   0.0300  0.180     n/a     n/a     n/a
+   -3      0   BLOSUM62        0.318   0.135   0.401    0.348   0.150   0.524  
+               Q=9,R=2         0.244   0.0300  0.180     n/a     n/a     n/a
+
+  Query
+  Frame  MatID  Length  Eff.Length     E    S W   T  X   E2     S2
+   +3      0      291       291   0.00010  99 3  12 22  0.10    36
+                                                    33  0.10    40
+   +2      0      292       292   0.00010  99 3  12 22  0.10    36
+                                                    33  0.10    40
+   +1      0      292       292   0.00010  99 3  12 22  0.10    36
+                                                    33  0.10    40
+   -1      0      292       292   0.00010  99 3  12 22  0.10    36
+                                                    33  0.10    40
+   -2      0      292       292   0.00010  99 3  12 22  0.10    36
+                                                    33  0.10    40
+   -3      0      291       291   0.00010  99 3  12 22  0.10    36
+                                                    33  0.10    40
+
+
+Statistics:
+
+  Database:  /users/myandell/blast_engine/multi-fastas/D_melanogaster_3_5_04_NONREDUNDANT_protein.fasta
+   Title:  /users/myandell/blast_engine/multi-fastas/D_melanogaster_3_5_04_NONREDUNDANT_protein.fasta
+   Posted:  11:19:12 AM PDT Apr 12, 2004
+   Format:  BLAST-1.4
+   # of letters in database:  8,727,224  (Z = 300000)
+   # of sequences in database:  16,104
+   # of database sequences satisfying E:  1
+  No. of states in DFA:  596 (59 KB)
+  Total size of DFA:  287 KB (320 KB)
+  Time to generate neighborhood:  0.01u 0.00s 0.01t  Elapsed: 00:00:00
+  No. of threads or processors used:  2
+  Search cpu time:  3.08u 0.00s 3.08t  Elapsed: 00:00:04
+  Total cpu time:  3.09u 0.00s 3.09t  Elapsed: 00:00:04
+  Start:  Wed Jul 14 14:58:03 2004   End:  Wed Jul 14 14:58:07 2004

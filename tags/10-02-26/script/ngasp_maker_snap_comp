@@ -1,0 +1,1710 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use lib "$ENV{CGL_GFF_LIB}";
+
+use CGL::Annotation;
+use Iterator::Fasta;
+use compare;
+use SimpleCluster;
+use Fasta;
+use Shadower;
+use PostData;
+use Getopt::Std;
+our($opt_p);
+getopt('l');
+
+$| = 1;
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+
+my $usage = "
+
+maker_snap_comp -p <test_gff3 file> <ref_gff3 file > <fasta file> 
+
+OPTIONS: -p <use predicted genes> optional
+";
+
+my $t_gff3_file = shift;
+my $r_gff3_file = shift;
+my $fasta_file  = shift;
+
+die $usage unless defined($t_gff3_file) && defined($r_gff3_file) && defined($fasta_file);
+
+my $t_cgl = new CGL::Annotation->new(format     => 'gff3_ngasp2',
+				     gff_file   => $t_gff3_file,
+				     fasta_file => $fasta_file
+				    );
+
+my $r_cgl = new CGL::Annotation->(format     => 'gff3_wormbase',
+				  gff_file   => $r_gff3_file,
+				  fasta_file => $fasta_file);
+
+my $t_exon_coors = get_exon_coors($t_cgl);
+
+my $r_exon_coors = get_exon_coors($r_cgl);
+
+#protein_facts($t_cgl, $r_cgl);
+
+nuc_level($t_cgl, $r_cgl, $fasta_file, 'exon');
+nuc_level($t_cgl, $r_cgl, $fasta_file, 'cds');
+nuc_level($t_cgl, $r_cgl, $fasta_file, 'utrs');
+
+exon_level($t_exon_coors, $r_exon_coors);
+
+gene_level($t_cgl, $r_cgl);
+
+alt_transcript_level($t_cgl, $r_cgl);
+
+cds_ratio($t_cgl, $r_cgl);
+
+me($t_exon_coors, $r_exon_coors);
+
+we($t_exon_coors, $r_exon_coors);
+
+e_gasp_trans($t_cgl, $r_cgl);
+
+e_gasp_cds($t_cgl, $r_cgl);
+
+utr_facts($t_cgl, $r_cgl);
+#-----------------------------------------------------------------------------
+#------------------------------- SUBROUTINES ---------------------------------
+#-----------------------------------------------------------------------------
+sub protein_facts {
+
+	my $t_cgl = shift;
+	my $r_cgl = shift;
+
+	my $t_proteins = get_protein_hash($t_cgl);
+	my $r_proteins = get_protein_hash($r_cgl);
+
+	my @r_seqs = keys %{$r_proteins};
+	my @t_seqs = keys %{$t_proteins};
+
+	my @crap;
+	my $r_super_t = 0;
+	foreach my $r (@r_seqs){
+		$r =~ s/\*/-/g;
+		foreach my $t (@t_seqs){
+			$t =~ s/\*/-/g;
+			if ($r eq $t){
+			}
+			elsif ($r =~ /$t/){
+				$r_super_t++;
+				push(@crap, [index($r, $t), $r, $t, $t_proteins->{$t}]);
+			}
+		}
+	}
+
+	my @hell;
+	my $t_super_r = 0;
+	my $same = 0;
+        foreach my $t (@t_seqs){
+		$t =~ s/\*/-/g;
+		foreach my $r (@r_seqs){
+			$r =~ s/\*/-/g;
+			if ($t eq $r){
+				$same++;
+			}
+			elsif ($t =~ /$r/){
+				push(@hell, [index($t, $r), $t, $r]);
+				$t_super_r++;
+			}
+
+		}
+        }
+
+
+
+	print "same:$same r_super_t:$r_super_t t_super_r:$t_super_r\n";
+	#PostData(\@hell);
+	#die;
+
+	my $tp = 0;
+	my $fp = 0;
+	my $fn = 0;
+
+	foreach my $t_p (keys %{$t_proteins}){
+		if (defined($r_proteins->{$t_p})){
+			$tp++;
+		}
+		else {
+			$fp++;
+		}
+	}
+        foreach my $r_p (keys %{$r_proteins}){
+                if (defined($t_proteins->{$r_p})){
+			
+		}
+		else {
+			$fn++;
+		}
+        }
+
+	my $total_t = keys %{$t_proteins};
+	my $total_r = keys %{$r_proteins};
+
+	my $pc = $tp/$total_r;
+
+        my $sn_d = $tp + $fn;
+        my $sp_d = $tp + $fp;
+
+        my $sn = $sn_d == 0 ? 0 : $tp/($tp + $fn);
+        my $sp = $sp_d == 0 ? 0 : $tp/($tp + $fp);
+        my $ac = ($sn + $sp)/2;
+
+print "PROTEIN FACTS:\n";
+
+print "SN:$sn SP:$sp AC:$ac PERCENT CORRECT:$pc\n";
+
+}
+#-----------------------------------------------------------------------------
+sub get_protein_hash {
+	my $cgl = shift;
+
+        my $genes = $cgl->genes();
+
+        my %data;
+        my $n = 0;
+        for my $g (@{$genes}) {
+                my $i = 0;
+                while (my $t = $g->transcript($i)){
+                        if (!$opt_p && defined($t->status) && $t->status eq 'Predicted'){
+                                $i++;
+                                next;
+                        }
+
+			my $p = $t->translation(0);
+			
+			$data{$p->residues} = $t->id;		
+			$i++;
+		}
+	}
+	return \%data;
+}
+#-----------------------------------------------------------------------------
+sub init_counts_and_source {
+	my $gene_data = shift;
+	my $source    = shift;
+
+	my %c_s;
+        foreach my $i (sort keys %{$gene_data}){
+                my $strand = $gene_data->{$i}->{strand};
+                my $exons  = $gene_data->{$i}->{exons};
+                my $id     = $gene_data->{$i}->{g_id};
+
+		$c_s{$id}{source} = $source;
+		$c_s{$id}{counts} = 0;
+		
+	}
+	
+	return \%c_s;
+}
+#-----------------------------------------------------------------------------
+sub get_gene_span {
+	my $exons  = shift;
+	my $strand = shift;
+
+	my $span_nbeg;
+	my $span_nend;
+	my @nbegs;
+	my @nends;
+	foreach my $e (@{$exons}){
+		my $nbeg = $e->[0];
+		my $nend = $e->[1];
+
+		push(@nbegs, $nbeg);
+		push(@nends, $nend);
+	}
+
+        my @sorted_nbegs = sort {$a <=> $b} @nbegs;
+        my @sorted_nends = sort {$a <=> $b} @nends;
+
+	if ($strand == 1){
+		$span_nbeg = shift(@sorted_nbegs);
+		$span_nend = pop(@sorted_nends);
+	}
+	else {
+                $span_nbeg = pop(@sorted_nbegs);
+                $span_nend = shift(@sorted_nends);
+
+	}
+
+	return ($span_nbeg, $span_nend);
+}
+#-----------------------------------------------------------------------------
+sub nuc_level {
+	my $t_cgl      = shift;
+	my $r_cgl      = shift;
+	my $fasta_file = shift;
+	my $type       = shift;
+	
+
+	my $t_exon_coors;
+	my $r_exon_coors;
+
+	if ($type eq 'exon'){
+		$t_exon_coors = get_exon_coors($t_cgl);
+		$r_exon_coors = get_exon_coors($r_cgl);
+		nuc_level_calc($t_exon_coors, $r_exon_coors, $fasta_file, $type);
+	}
+	elsif ($type eq 'cds'){
+		my ($t_cdss, $t_g_lookup) = get_cds_by_transcript($t_cgl); 
+		my ($r_cdss, $r_g_lookup) = get_cds_by_transcript($r_cgl); 
+
+		$t_exon_coors = convert($t_cdss);
+		$r_exon_coors = convert($r_cdss);
+		nuc_level_calc($t_exon_coors, $r_exon_coors, $fasta_file, $type);
+	}
+	elsif ($type eq 'utrs') {
+        	my ($t_5, $t_all, $t_3, $t_g_lookup)  = get_utrs_by_transcript($t_cgl);
+        	my ($r_5, $r_all, $r_3, $r_g_lookup)  = get_utrs_by_transcript($r_cgl);
+
+		my $t_5_exons = convert($t_5);
+		my $r_5_exons = convert($r_5);
+
+		nuc_level_calc($t_5_exons, $r_5_exons, $fasta_file, '5-prime utrs');
+
+                my $t_3_exons = convert($t_3);
+                my $r_3_exons = convert($r_3);
+
+                nuc_level_calc($t_3_exons, $r_3_exons, $fasta_file, '3-prime utrs');
+
+                my $t_all_exons = convert($t_all);
+                my $r_all_exons = convert($r_all);
+
+                nuc_level_calc($t_all_exons, $r_all_exons, $fasta_file, 'all-utrs');
+
+
+	}
+
+}
+#-----------------------------------------------------------------------------
+sub convert {
+
+	my $data = shift;
+
+	my %coors;
+        foreach my $i (keys %{$data}){
+                my $trans = $data->{$i};
+                my $pairs = get_exon_beg_end($trans);
+		foreach my $p (@{$pairs}){
+			$coors{$p->[0]}{$p->[1]}++;
+		}
+        }
+
+	return \%coors;
+}
+#-----------------------------------------------------------------------------
+sub nuc_level_calc {
+        my $t_exon_coors  = shift;
+        my $r_exon_coors  = shift;
+	my $fasta_file    = shift;
+	my $type          = shift;
+	
+	my $fasta_iterator = new Iterator::Fasta($fasta_file);
+
+	my $fasta = $fasta_iterator->nextEntry();
+
+
+	my $seq   = Fasta::getSeq($fasta);
+
+	my $r_seq = $$seq;
+	my $t_seq = $$seq;
+
+	my @r_coors;
+        foreach my $i (sort keys %{$r_exon_coors}){
+		my @keys = keys %{$r_exon_coors->{$i}};
+		my $j = $keys[0];
+		push(@r_coors, [$i, $j]); 
+	}
+
+	my @t_coors;
+        foreach my $i (sort keys %{$t_exon_coors}){
+		my @keys = %{$t_exon_coors->{$i}};
+		my $j = $keys[0];
+                push(@t_coors, [$i, $j]);
+        }
+
+	my $r_masked_seq = Shadower::maskSequence($seq, \@r_coors, 0, '1');
+	my $t_masked_seq = Shadower::maskSequence($seq, \@t_coors, 0, '1');
+
+	$$r_masked_seq =~ s/[^1]/0/g;
+	$$t_masked_seq =~ s/[^1]/0/g;
+
+        my $tp = 0;
+        my $tn = 0;
+        my $fp = 0;
+        my $fn = 0;
+        for (my $i = 0 ; $i < length($$r_masked_seq); $i++) {
+                my $ref = substr($$r_masked_seq, $i, 1);
+                my $ano = substr($$t_masked_seq, $i, 1);
+
+                if    ($ref == 1 && $ano == 1){
+                        $tp++;
+                }
+                elsif ($ref == 0 && $ano == 0){
+                        $tn++;
+                }
+                elsif ($ref == 1 && $ano == 0){
+                        $fn++;
+                }
+                elsif ($ref == 0 && $ano == 1){
+                        $fp++;
+                }
+
+        }
+	my $sn_d = $tp + $fn;
+	my $sp_d = $tp + $fp;
+
+        my $sn = $sn_d == 0 ? 0 : $tp/($tp + $fn);
+        my $sp = $sp_d == 0 ? 0 : $tp/($tp + $fp);
+        my $ac = ($sn + $sp)/2;
+
+	print "NUCLEOTIDE LEVEL($type)\n";
+        print "SN:",sprintf("%.3f",$sn),"\n";
+        print "SP:",sprintf("%.3f",$sp), "\n";
+        print "AC:",sprintf("%.3f",$ac),"\n";
+	
+}
+#-----------------------------------------------------------------------------
+sub gene_level {
+        my $t_cgl = shift;
+        my $r_cgl = shift;
+
+        my $t_gene_data = get_gene_data($t_cgl);
+        my $r_gene_data = get_gene_data($r_cgl);
+
+	my $r_c_s = init_counts_and_source($r_gene_data, 'r');
+	my $t_c_s = init_counts_and_source($t_gene_data, 's');
+
+
+	my %matrix;
+
+        foreach my $i (sort keys %{$r_gene_data}){
+                my $r_strand = $r_gene_data->{$i}->{strand};
+                my $r_exons  = $r_gene_data->{$i}->{exons};
+                my $r_id     = $r_gene_data->{$i}->{g_id};
+
+                foreach my $j (sort keys %{$t_gene_data}){
+                        my $t_strand = $t_gene_data->{$j}->{strand};
+                        my $t_exons  = $t_gene_data->{$j}->{exons};
+                        my $t_id     = $t_gene_data->{$j}->{g_id};
+
+                        if ($r_strand == $t_strand && they_overlap($r_exons, $t_exons)){
+				$r_c_s->{$r_id}->{counts}++;
+				$t_c_s->{$t_id}->{counts}++;
+				$matrix{$r_id}{$t_id}++;
+                        }
+                }
+        }
+
+        my $pairs = SimpleCluster::pairs(\%matrix);
+        my $map   = SimpleCluster::singleLinkageClusters($pairs);
+
+        my %clustered;
+
+	my $one_ones = 0;
+        foreach my $c (keys %{$map}){
+                my $size = @{$map->{$c}};
+		next unless $size == 2;
+		my $r = 0;
+		my $t = 0;
+                foreach my $m (@{$map->{$c}}){
+			$r++ if defined($r_c_s->{$m});
+			$t++ if defined($t_c_s->{$m});
+		}
+		$one_ones++ if $r == 1 && $t == 1;
+	}
+        my $tp = 0;
+        my $fp = 0;
+        my $tn = 0;
+        my $fn = 0;
+
+	$tp += $one_ones;
+
+	foreach my $r_id (keys %{$r_c_s}){
+		my $counts = $r_c_s->{$r_id}->{counts};
+		
+		$fn++ if $counts == 0;
+		$fn++ if $counts >  1;
+
+	}
+
+        foreach my $t_id (keys %{$t_c_s}){
+                my $counts = $t_c_s->{$t_id}->{counts};
+
+		$fp++ if $counts == 0;
+		$fn++ if $counts >  1;
+        }
+
+        my $sn = $tp/($tp + $fn);
+        my $sp = $tp/($tp + $fp);
+        my $ac = ($sn + $sp)/2;
+
+        print "GENE LEVEL\n";
+	print "SN:",sprintf("%.3f",$sn),"\n";
+        print "SP:",sprintf("%.3f",$sp), "\n";
+        print "AC:",sprintf("%.3f",$ac),"\n";
+
+=cut;
+	foreach my $i (sort keys %{$r_gene_data}){
+                my $r_strand = $r_gene_data->{$i}->{strand};
+                my $r_exons  = $r_gene_data->{$i}->{exons};
+                my $r_id     = $r_gene_data->{$i}->{g_id};
+
+                my $counts = $r_c_s->{$r_id}->{counts};
+
+		next unless $counts == 0;
+		
+		my ($nbeg, $nend) = get_gene_span($r_exons, $r_strand);
+
+		print "$r_id $nbeg $nend\n";
+	}
+=cut;
+}
+#-----------------------------------------------------------------------------
+sub cluster {
+	my $t_cgl = shift;
+	my $r_cgl = shift;
+
+	my $t_gene_data = get_gene_data($t_cgl);
+	my $r_gene_data = get_gene_data($r_cgl);
+
+	my %source;
+	my %matrix;
+	foreach my $i (sort keys %{$r_gene_data}){
+		my $r_strand = $r_gene_data->{$i}->{strand};
+		my $r_exons  = $r_gene_data->{$i}->{exons};
+		my $r_id     = $r_gene_data->{$i}->{g_id};
+		$source{$r_id} = 'r';
+
+		foreach my $j (sort keys %{$t_gene_data}){
+			my $t_strand = $t_gene_data->{$j}->{strand};
+			my $t_exons  = $t_gene_data->{$j}->{exons};
+			my $t_id     = $t_gene_data->{$j}->{g_id};
+
+			$source{$t_id} = 't';
+
+			if ($r_strand == $t_strand && they_overlap($r_exons, $t_exons)){
+				$matrix{$r_id}{$t_id}++;	
+			}
+		}
+	}
+
+	my $pairs = SimpleCluster::pairs(\%matrix);
+        my $map   = SimpleCluster::singleLinkageClusters($pairs);
+
+        my %clustered;
+
+	my $tp = 0;
+	my $fp = 0;
+	my $tn = 0;
+	my $fn = 0;
+
+
+	
+        foreach my $c (keys %{$map}){
+		my $size = @{$map->{$c}};
+		if ($size == 2){
+			$tp++;
+		}
+		else {
+			$fp += $size - 2;
+
+		}
+                foreach my $m (@{$map->{$c}}){
+                        my $source = $source{$m};
+			
+                        die "name not found in careful cluster!\n"
+                        unless defined $m;
+                        $clustered{$m}++;
+                }
+        }
+        # get the left overs...
+        foreach my $g_id (keys %source){
+
+                next if defined($clustered{$g_id});
+	
+		$fn++ if $source{$g_id} eq 'r';
+		$fp++ if $source{$g_id} eq 't';
+        }
+
+        my $sn = $tp/($tp + $fn);
+        my $sp = $tp/($tp + $fp);
+        my $ac = ($sn + $sp)/2;
+
+	print "GENE LEVEL\n";
+	
+	print "SN:",sprintf("%.3f",$sn),"\n";
+        print "SP:",sprintf("%.3f",$sp), "\n";
+        print "AC:",sprintf("%.3f",$ac),"\n";
+	
+}
+#-----------------------------------------------------------------------------
+sub they_overlap {
+	my $r_exons = shift;
+	my $t_exons = shift;
+
+	foreach my $r_p (@{$r_exons}){
+		my $r_nbeg = $r_p->[0];
+		my $r_nend = $r_p->[1];
+		foreach my $t_p (@{$t_exons}){
+			my $t_nbeg = $t_p->[0];
+			my $t_nend = $t_p->[1];
+
+			my $class = compare($r_nbeg, $r_nend, $t_nbeg, $t_nend);
+			die "wrong strand!\n" if $class eq 'R';
+			
+
+			return 1 if $class;
+			
+		}
+	}
+	
+	return 0;
+}
+#------------------------------------------------------------------------
+sub same_strand {
+        my $aB = shift;
+        my $aE = shift;
+        my $bB = shift;
+        my $bE = shift;
+
+        if    ($aB <= $aE && $bB <= $bE){
+                return 1;
+        }
+        elsif ($aB >= $aE && $bB >= $bE){
+                return 1;
+        }
+        else {
+                return 0;
+        }
+}
+#------------------------------------------------------------------------
+sub compare {
+        my $aB = shift;
+        my $aE = shift;
+        my $bB = shift;
+        my $bE = shift;
+        my $r  = shift || 0;
+
+        my $class;
+        if(same_strand($aB, $aE, $bB, $bE)){
+
+        }
+        else {
+                return 'R';
+        }
+
+        my $s = 1;
+        if ($aB > $aE && $bB > $bE){
+                ($aB, $aE) = ($aE, $aB);
+                ($bB, $bE) = ($bE, $bB);
+                $s = -1;
+        }
+
+        if     ($bE < $aB || $bB > $aE){
+                # a        ----
+                # b  ----
+                $class = 0;
+        }
+        elsif (abs($aB - $bB) <= $r && abs($aE - $bE) <= $r){
+                #  a -----
+                #  b -----
+                $class = 1;
+        }
+        elsif ($bB < $aB && abs($aE - $bE) <= $r){
+                # a   ----
+                # b ------
+                $class = $s == 1 ? 'B' : 'b';
+        }
+        elsif ($aB < $bB && abs($aE - $bE) <= $r){
+                # a ------
+                # b   ----
+                $class = $s == 1 ? 'A' : 'a';
+        }
+        elsif (abs($aB - $bB) <= $r && $aE < $bE){
+                # a ----
+                # b ------
+                $class = $s == 1 ? 'b' : 'B';
+        }
+        elsif (abs($aB - $bB) <= $r && $aE > $bE){
+                # a ------
+                # b ----
+                $class = $s == 1 ? 'a' : 'A';
+        }
+       elsif ($aB > $bB && $aE < $bE){
+                # a   ----
+                # b --------
+                $class = 'I'; # I for In
+        }
+        elsif ($aB < $bB && $aE > $bE){
+                # a --------
+                # b   ----
+                $class = 'i'; # i for in
+        }
+        elsif ($aB < $bB && $aE < $bE){
+                # a ------
+                # b   -------
+                $class = $s == 1 ? 'Z' : 'z'; ; # Z for zig-zag
+        }
+        elsif ($aB > $bB && $aE > $bE){
+                # a      ------
+                # b -------
+                $class = $s == 1 ? 'z' : 'Z'; # z for Zig-zag
+        }
+	else {
+		die "WHAT The HELL!\n";
+	}
+        return $class;
+}
+#------------------------------------------------------------------------
+{
+my $id;
+sub get_id {
+	$id++;
+	return $id;	
+}
+}
+#-----------------------------------------------------------------------------
+sub get_gene_data {
+	my $cgl = shift;
+
+        my $genes = $cgl->genes();
+
+	my %data;
+
+	my $n = 0;
+        for my $g (@{$genes}) {
+                my $i = 0;
+                while (my $t = $g->transcript($i)){
+                        if (!$opt_p && defined($t->status) && $t->status eq 'Predicted'){
+                                $i++;
+                                next;
+                        }
+
+			$data{$n}{strand} = $t->strand();	
+			$data{$n}{g_id}   = get_id();
+ 
+                        my $j = 0;
+                        while (my $e = $t->exon($j)){
+                                my $nbeg = $e->nbeg();
+                                my $nend = $e->nend();
+
+				push(@{$data{$n}{exons}}, [$nbeg, $nend]);
+
+                                $j++;
+                        }
+                        $i++;
+                }
+
+		$n++;
+        }
+
+	return \%data;
+}
+#-----------------------------------------------------------------------------
+sub exon_level_old {
+	my $t_exon_corrs = shift;
+	my $r_exon_coors = shift;
+
+        my $tp = 0;
+        my $tn = 0;
+        my $fp = 0;
+        my $fn = 0;
+
+	foreach my $t_nbeg (sort keys %{$t_exon_coors}){
+		my @keys = keys %{$t_exon_coors->{$t_nbeg}};
+		my $t_nend = $keys[0];
+
+		if (defined($r_exon_coors->{$t_nbeg}) && defined($r_exon_coors->{$t_nbeg}->{$t_nend})){
+			$tp++;
+		}
+		else {
+			$fp++;
+		}
+	}
+
+        foreach my $r_nbeg (sort keys %{$r_exon_coors}){
+                my @keys = keys %{$r_exon_coors->{$r_nbeg}};
+                my $r_nend = $keys[0];
+
+                if (defined($t_exon_coors->{$r_nbeg}) && defined($t_exon_coors->{$r_nbeg}->{$r_nend})){
+			# tn ?
+                }
+                else {
+                        $fn++;
+                }
+        }
+
+        my $sn = $tp/($tp + $fn);
+        my $sp = $tp/($tp + $fp);
+        my $ac = ($sn + $sp)/2;
+
+	print "INDVIDUAL EXON LEVEL (mRNAs)\n";
+	print "SN:",sprintf("%.3f",$sn),"\n";
+        print "SP:",sprintf("%.3f",$sp), "\n";
+        print "AC:",sprintf("%.3f",$ac),"\n";
+	
+}
+#-----------------------------------------------------------------------------
+sub exon_level {
+        my $t_exon_corrs = shift;
+        my $r_exon_coors = shift;
+
+	my $t_total = keys %{$t_exon_coors};
+	my $r_total = keys %{$r_exon_coors};
+
+	my $t_matched = 0;
+        foreach my $t_nbeg (sort keys %{$t_exon_coors}){
+                my @keys = keys %{$t_exon_coors->{$t_nbeg}};
+                my $t_nend = $keys[0];
+
+                if (defined($r_exon_coors->{$t_nbeg}) && defined($r_exon_coors->{$t_nbeg}->{$t_nend})){
+			$t_matched++;
+                }
+                else {
+                }
+        }
+
+	my $sp = 100*($t_matched/$t_total);
+
+	my $r_matched = 0;
+        foreach my $r_nbeg (sort keys %{$r_exon_coors}){
+                my @keys = keys %{$r_exon_coors->{$r_nbeg}};
+                my $r_nend = $keys[0];
+
+                if (defined($t_exon_coors->{$r_nbeg}) && defined($t_exon_coors->{$r_nbeg}->{$r_nend})){
+			$r_matched++;
+                }
+                else {
+                }
+        }
+
+	my $sn = 100*($r_matched/$r_total);
+
+        my $ac = ($sn + $sp)/2;
+
+        print "EXON LEVEL\n";
+        print "SN:",sprintf("%.3f",$sn),"\n";
+        print "SP:",sprintf("%.3f",$sp), "\n";
+        print "AC:",sprintf("%.3f",$ac),"\n";
+}
+#-----------------------------------------------------------------------------
+sub cds_ratio {
+    my $t_cgl = shift;
+    my $r_cgl = shift;
+    
+    my $t_ratio =  get_length_ratio($t_cgl);
+    my $r_ratio =  get_length_ratio($r_cgl);
+    
+    
+    print "CDS/UTR RATIO (reference)\n";
+    print sprintf("%.3f",$t_ratio)," (",sprintf("%.3f",$r_ratio),")\n";
+}               
+#-----------------------------------------------------------------------------
+sub get_length_ratio {
+        my $cgl  = shift;
+
+        my $genes = $cgl->genes();
+
+	my $total_tra_length = 0;
+	my $total_cds_length = 0;
+        for my $g (@{$genes}) {
+                my $i = 0;
+                while (my $t = $g->transcript($i)){
+                        if (!$opt_p && defined($t->status) && $t->status eq 'Predicted'){
+                                $i++;
+                                next;
+                        }
+			my $p = $t->translation(0);
+			my $beg_on_t = $p->metaPos($t, 0);
+			my $end_on_t = $p->metaPos($t, length($p->residues));
+	
+			my $cds_length = $end_on_t - $beg_on_t;
+			my $tra_length = length($t->residues);
+
+			$total_tra_length += $tra_length;
+			$total_cds_length += $cds_length;
+                        $i++;
+                }
+
+        }
+
+	return $total_cds_length/$total_tra_length;
+}
+#-----------------------------------------------------------------------------
+sub we {
+        my $t_exon_coors = shift;
+        my $r_exon_coors = shift;
+
+	my $total_overlapping = 0;
+        foreach my $t_nbeg (sort keys %{$t_exon_coors}){
+                my @keys = keys %{$t_exon_coors->{$t_nbeg}};
+                my $t_nend = $keys[0];
+
+		my $t_strand = $t_nend > $t_nbeg ? 1 : -1;
+
+		($t_nbeg, $t_nend) = ($t_nend, $t_nbeg) if $t_strand == -1;
+
+		my $found = 0;
+        	foreach my $r_nbeg (sort keys %{$r_exon_coors}){
+                	my @keys = keys %{$r_exon_coors->{$r_nbeg}};
+                	my $r_nend = $keys[0];
+
+			my $r_strand = $r_nend > $r_nbeg ? 1 : -1;
+
+			next unless $r_strand == $t_strand;
+
+			($r_nbeg, $r_nend) = ($r_nend, $r_nbeg) 
+			if $r_strand == -1;
+
+			my $class = compare::compare($t_nbeg, $t_nend, $r_nbeg, $r_nend);
+
+			$found++ if $class ne '0';
+
+			last if $class ne '0';
+		}
+
+		$total_overlapping++ if $found;
+        }
+
+
+	my $total_exons = keys %{$t_exon_coors};
+
+	my $num_missed = $total_exons - $total_overlapping;
+
+	my $we = 100*($num_missed/$total_exons);
+
+        print "XXXXXX  WE % XXXXX\n";
+	print sprintf("%.3f",$we),"\n";
+	
+    }
+#-----------------------------------------------------------------------------
+sub me {
+        my $t_exon_coors = shift;
+        my $r_exon_coors = shift;
+
+        my $total_overlapping = 0;
+        foreach my $r_nbeg (sort keys %{$r_exon_coors}){
+                my @keys = keys %{$r_exon_coors->{$r_nbeg}};
+                my $r_nend = $keys[0];
+
+                my $r_strand = $r_nend > $r_nbeg ? 1 : -1;
+
+                ($r_nbeg, $r_nend) = ($r_nend, $r_nbeg) if $r_strand == -1;
+
+                my $found = 0;
+                foreach my $t_nbeg (sort keys %{$t_exon_coors}){
+                        my @keys = keys %{$t_exon_coors->{$t_nbeg}};
+                        my $t_nend = $keys[0];
+
+                        my $t_strand = $t_nend > $t_nbeg ? 1 : -1;
+
+                        next unless $t_strand == $r_strand;
+
+                        ($t_nbeg, $t_nend) = ($t_nend, $t_nbeg)
+                        if $t_strand == -1;
+
+                        my $class = compare::compare($t_nbeg, $t_nend, $r_nbeg, $r_nend);
+
+                        $found++ if $class ne '0';
+
+                        last if $class ne '0';
+                }
+
+                $total_overlapping++ if $found;
+        }
+
+
+        my $total_exons = keys %{$t_exon_coors};
+
+        my $num_missed = $total_exons - $total_overlapping;
+
+        my $me = 100*($num_missed/$total_exons);
+	
+        print "XXXXXX  ME % XXXXX\n";
+        print sprintf("%.3f",$me),"\n";
+	
+}
+#-----------------------------------------------------------------------------
+sub alt_transcript_level {
+	my $t_cgl = shift;
+	my $r_cgl = shift;
+
+	my $t_alt_density = get_alt_density($t_cgl);
+	my $r_alt_density = get_alt_density($r_cgl);
+
+	
+        print "ALT TRANSCRIPT DENSITY (reference)\n";
+	print sprintf("%.3f",$t_alt_density)," (",sprintf("%.3f",$r_alt_density),")\n";
+}
+#-----------------------------------------------------------------------------
+sub get_alt_density {
+       my $cgl = shift;
+
+        my $genes = $cgl->genes();
+
+
+	my $t_counts = 0;
+	my $g_counts = 0;
+        for my $g (@{$genes}) {
+		my $i = 0;
+		my $num_pred_trans = 0;
+		my $tot_num_trans  = 0;
+                while (my $t = $g->transcript($i)){
+			$tot_num_trans++;
+
+			if (!$opt_p && defined($t->status) && $t->status eq 'Predicted') {
+				$num_pred_trans++;
+			}
+			else {
+				$t_counts++ 
+			}
+			$i++;
+                }
+		if (!$opt_p){
+			$g_counts++ unless $num_pred_trans == $tot_num_trans;
+		}
+		else {
+			$g_counts++;
+		}
+        }
+
+	return $t_counts/$g_counts;
+}
+#-----------------------------------------------------------------------------
+sub get_exon_beg_end {
+	my $data = shift;
+	
+	my @pairs;
+	foreach my $n_beg (keys %{$data}){
+		my @keys = keys %{$data->{$n_beg}};
+		foreach my $n_end (@keys){
+			push(@pairs, [$n_beg, $n_end]);
+		}
+	}
+	return \@pairs;
+}
+#-----------------------------------------------------------------------------
+sub utr_facts {
+	my $t_cgl = shift;
+	my $r_cgl = shift;
+
+	my ($t_5, $t_all, $t_3, $t_g_lookup)  = get_utrs_by_transcript($t_cgl);
+	my ($r_5, $r_all, $r_3, $r_g_lookup)  = get_utrs_by_transcript($r_cgl);
+
+	do_it($t_5, $r_5, $t_g_lookup, $r_g_lookup, '5-prime utr');
+	do_it($t_3, $r_3, $t_g_lookup, $r_g_lookup, '3-prime utr');
+	do_it($t_all, $r_all, $t_g_lookup, $r_g_lookup, 'all-utr');
+}
+#-----------------------------------------------------------------------------
+sub get_utrs_by_transcript {
+        my $cgl = shift;
+
+        my $genes = $cgl->genes();
+
+        my %g_lookup;
+
+        my %utrs_5_coors;
+	my %utrs_all_coors;
+	my %utrs_3_coors;	
+        my $count = -1;
+        for my $g (@{$genes}) {
+                my $i = 0;
+                while (my $t = $g->transcript($i)){
+                        if (!$opt_p && defined($t->status) && $t->status eq 'Predicted'){
+                                $i++;
+                                next;
+                        }
+
+                        $count++;
+                        my $j = 0;
+                        my ($utrs_5, $utrs_all, $utrs_3) = get_utrs($cgl, $t);
+                        foreach my $p (@{$utrs_5}){
+                                my $nbeg = $p->[0];
+                                my $nend = $p->[1];
+                                $utrs_5_coors{$count}{$nbeg}{$nend}++;
+                                $g_lookup{$nbeg}{$nend} = $g->id;
+                        }
+                        foreach my $p (@{$utrs_all}){
+                                my $nbeg = $p->[0];
+                                my $nend = $p->[1];
+                                $utrs_all_coors{$count}{$nbeg}{$nend}++;
+                                $g_lookup{$nbeg}{$nend} = $g->id;
+			}
+                        foreach my $p (@{$utrs_3}){
+                                my $nbeg = $p->[0];
+                                my $nend = $p->[1];
+                                $utrs_3_coors{$count}{$nbeg}{$nend}++;
+                                $g_lookup{$nbeg}{$nend} = $g->id;
+
+			}
+                        $i++;
+                }
+        }
+
+        return (\%utrs_5_coors, \%utrs_all_coors, \%utrs_3_coors, \%g_lookup);
+}
+#-----------------------------------------------------------------------------
+sub do_it {
+
+	my $t_data     = shift;
+	my $r_data     = shift;
+	my $t_g_lookup = shift;
+	my $r_g_lookup = shift;
+	my $type       = shift;
+ 
+        my $r_size = keys %{$r_data};
+        my $t_size = keys %{$t_data};
+
+        my $total_number_r_utrs  = 0;
+        my %r_exon_sets;
+        foreach my $i (keys %{$r_data}){
+                my $r_trans = $r_data->{$i};
+                my $pairs = get_exon_beg_end($r_trans);
+
+                $r_exon_sets{$i} = $pairs;
+
+                $total_number_r_utrs += @{$pairs};
+        }
+
+        my $total_number_t_utrs  = 0;
+        my %t_exon_sets;
+        foreach my $i (keys %{$t_data}){
+                my $t_trans = $t_data->{$i};
+                my $pairs   = get_exon_beg_end($t_trans);
+                $t_exon_sets{$i} = $pairs;
+                $total_number_t_utrs += @{$pairs};
+        }
+
+        my %total_num_r_utrs_right;
+        my %r_genes_right;
+        my $sn_frac = 0;
+        my $got_r_right = 0;
+        foreach my $i (keys %{$r_data}){
+                my $r_trans = $r_data->{$i};
+                my $r_exons = $r_exon_sets{$i};
+                foreach my $j (keys %{$t_data}){
+                        my $t_exons = $t_exon_sets{$j};
+                        my $yes = 0;
+                        my $no = 0;
+                        my $r_g_id;
+                        foreach my $t_pair (@{$t_exons}){
+                                my $t_nbeg = $t_pair->[0];
+                                my $t_nend = $t_pair->[1];
+
+                                $no++ if !defined($r_trans->{$t_nbeg}->{$t_nend});
+                                $yes++ if defined($r_trans->{$t_nbeg}->{$t_nend});
+
+                                $total_num_r_utrs_right{$t_nbeg.$t_nend}++
+                                if defined($r_trans->{$t_nbeg}->{$t_nend});
+
+                                $r_g_id = $r_g_lookup->{$t_nbeg}->{$t_nend}
+                                if defined($r_trans->{$t_nbeg}->{$t_nend});
+                        }
+                        my $num_exons = @$r_exons;
+
+                        $sn_frac += $yes/$num_exons;
+
+                        unless ($no){
+                                $r_genes_right{$r_g_id}++;
+                                $got_r_right++
+                        }
+                }
+        }
+
+       my %total_num_t_utrs_right;
+        my %t_genes_right;
+        my $sp_frac = 0;
+        my $got_t_right = 0;
+        foreach my $i (keys %{$t_data}){
+                my $t_trans = $t_data->{$i};
+                my $t_exons = $t_exon_sets{$i};
+                foreach my $j (keys %{$r_data}){
+                        my $r_exons = $r_exon_sets{$j};
+                        my $yes = 0;
+                        my $no = 0;
+                        my $t_g_id;
+                        foreach my $r_pair (@{$r_exons}){
+                                my $r_nbeg = $r_pair->[0];
+                                my $r_nend = $r_pair->[1];
+
+                                $no++ if !defined($t_trans->{$r_nbeg}->{$r_nend});
+                                $yes++ if defined($t_trans->{$r_nbeg}->{$r_nend});
+
+                                $total_num_t_utrs_right{$r_nbeg.$r_nend}++
+                                if defined($t_trans->{$r_nbeg}->{$r_nend});
+
+                                $t_g_id = $t_g_lookup->{$r_nbeg}->{$r_nend}
+                                if defined($t_trans->{$r_nbeg}->{$r_nend});
+
+                        }
+                        my $num_exons = @$t_exons;
+
+                        $sp_frac += $yes/$num_exons;
+
+                        unless ($no){
+                                $t_genes_right{$t_g_id}++;
+                                $got_t_right++;
+                        }
+                }
+        }
+
+        my $r_utrs_right = keys %total_num_r_utrs_right;
+        my $t_utrs_right = keys %total_num_t_utrs_right;
+
+        my $utrs_sn   = $total_number_r_utrs == 0 ? 0 : $r_utrs_right/$total_number_r_utrs;
+        my $utrs_sp   = $total_number_t_utrs == 0 ? 0 : $t_utrs_right/$total_number_t_utrs;
+        my $utrs_ac   = ($utrs_sn + $utrs_sp)/2;
+        my $ave_t_sn  = $r_size == 0 ? 0 : 100*($sn_frac/$r_size);
+        my $ave_t_sp  = $t_size == 0 ? 0 : 100*($sp_frac/$t_size);
+        my $t_sn      = $r_size == 0 ? 0 : 100*($got_r_right/$r_size);
+        my $t_sp      = $t_size == 0 ? 0 : 100*($got_t_right/$t_size);
+
+        my $t_ac = ($t_sn + $t_sp)/2;
+        my $ave_t_ac = ($ave_t_sn + $ave_t_sp)/2;
+
+
+        my $num_r_g_right = keys %r_genes_right;
+        my $num_t_g_right = keys %t_genes_right;
+
+        my $num_r_genes = get_num_genes($r_g_lookup);
+        my $num_t_genes = get_num_genes($t_g_lookup);
+
+        my $g_sn = $num_r_genes == 0 ? 0 : 100*($num_r_g_right/$num_r_genes);
+        my $g_sp = $num_t_genes == 0 ? 0 : 100*($num_t_g_right/$num_t_genes);
+
+        my $g_ac = ($g_sn + $g_sp)/2;
+
+        print "INDIVIDUAL UTR LEVEL ($type)\n";
+        print "SN:$utrs_sn SP:$utrs_sp AC:$utrs_ac\n";
+
+        print "eGASP TRANSCRIPTS ($type LEVEL)\n";
+        print "SN:$t_sn SP:$t_sp AC:$t_ac\n";
+        print "AVE UTR LEVEL ($type)\n";
+        print "SN:$ave_t_sn SP:$ave_t_sp AC:$ave_t_ac\n";
+        print "eGASP GENE LEVEL for UTRs ($type)\n";
+        print "SN:$g_sn SP:$g_sp AC:$g_ac\n";
+
+}
+#-----------------------------------------------------------------------------
+sub e_gasp_cds {
+        my $t_cgl = shift;
+        my $r_cgl = shift;
+
+        my ($t_data, $t_g_lookup)  = get_cds_by_transcript($t_cgl);
+
+	my ($r_data, $r_g_lookup)  = get_cds_by_transcript($r_cgl);
+
+        my $r_size = keys %{$r_data};
+        my $t_size = keys %{$t_data};
+
+	my $total_number_r_cdss  = 0;
+        my %r_exon_sets;
+        foreach my $i (keys %{$r_data}){
+                my $r_trans = $r_data->{$i};
+		my $pairs = get_exon_beg_end($r_trans);
+		
+                $r_exon_sets{$i} = $pairs;
+	
+		$total_number_r_cdss += @{$pairs};
+        }
+
+	my $total_number_t_cdss  = 0;
+        my %t_exon_sets;
+        foreach my $i (keys %{$t_data}){
+                my $t_trans = $t_data->{$i};
+		my $pairs   = get_exon_beg_end($t_trans);
+                $t_exon_sets{$i} = $pairs;
+		$total_number_t_cdss += @{$pairs};
+        }
+
+	my %total_num_r_cds_right;
+        my %r_genes_right;
+        my $sn_frac = 0;
+        my $got_r_right = 0;
+        foreach my $i (keys %{$r_data}){
+                my $r_trans = $r_data->{$i};
+                my $r_exons = $r_exon_sets{$i};
+                foreach my $j (keys %{$t_data}){
+                        my $t_exons = $t_exon_sets{$j};
+                        my $yes = 0;
+                        my $no = 0;
+                        my $r_g_id;
+                        foreach my $t_pair (@{$t_exons}){
+                                my $t_nbeg = $t_pair->[0];
+                                my $t_nend = $t_pair->[1];
+
+                                $no++ if !defined($r_trans->{$t_nbeg}->{$t_nend});
+                                $yes++ if defined($r_trans->{$t_nbeg}->{$t_nend});
+
+				$total_num_r_cds_right{$t_nbeg.$t_nend}++ 
+				if defined($r_trans->{$t_nbeg}->{$t_nend});
+
+                                $r_g_id = $r_g_lookup->{$t_nbeg}->{$t_nend}
+                                if defined($r_trans->{$t_nbeg}->{$t_nend});
+                        }
+                        my $num_exons = @$r_exons;
+
+                        $sn_frac += $yes/$num_exons;
+
+                        unless ($no){
+                                $r_genes_right{$r_g_id}++;
+                                $got_r_right++
+                        }
+                }
+        }
+
+	my %total_num_t_cds_right;
+        my %t_genes_right;
+        my $sp_frac = 0;
+        my $got_t_right = 0;
+        foreach my $i (keys %{$t_data}){
+                my $t_trans = $t_data->{$i};
+                my $t_exons = $t_exon_sets{$i};
+                foreach my $j (keys %{$r_data}){
+                        my $r_exons = $r_exon_sets{$j};
+                        my $yes = 0;
+                        my $no = 0;
+                        my $t_g_id;
+                        foreach my $r_pair (@{$r_exons}){
+                                my $r_nbeg = $r_pair->[0];
+                                my $r_nend = $r_pair->[1];
+
+                                $no++ if !defined($t_trans->{$r_nbeg}->{$r_nend});
+                                $yes++ if defined($t_trans->{$r_nbeg}->{$r_nend});
+
+				$total_num_t_cds_right{$r_nbeg.$r_nend}++ 
+				if defined($t_trans->{$r_nbeg}->{$r_nend});
+
+                                $t_g_id = $t_g_lookup->{$r_nbeg}->{$r_nend}
+                                if defined($t_trans->{$r_nbeg}->{$r_nend});
+
+                        }
+                        my $num_exons = @$t_exons;
+
+                        $sp_frac += $yes/$num_exons;
+
+                        unless ($no){
+                                $t_genes_right{$t_g_id}++;
+                                $got_t_right++;
+                        }
+                }
+        }
+
+
+	my $r_cds_right = keys %total_num_r_cds_right;
+	my $t_cds_right = keys %total_num_t_cds_right;
+ 
+	my $cds_sn   = $r_cds_right/$total_number_r_cdss;
+	my $cds_sp   = $t_cds_right/$total_number_t_cdss;
+	my $cds_ac   = ($cds_sn + $cds_sp)/2;
+        my $ave_t_sn = 100*($sn_frac/$r_size);
+        my $ave_t_sp = 100*($sp_frac/$t_size);
+        my $t_sn = 100*($got_r_right/$r_size);
+        my $t_sp = 100*($got_t_right/$t_size);
+
+        my $t_ac = ($t_sn + $t_sp)/2;
+        my $ave_t_ac = ($ave_t_sn + $ave_t_sp)/2;
+
+
+        my $num_r_g_right = keys %r_genes_right;
+        my $num_t_g_right = keys %t_genes_right;
+
+        my $num_r_genes = get_num_genes($r_g_lookup);
+        my $num_t_genes = get_num_genes($t_g_lookup);
+
+        my $g_sn = 100*($num_r_g_right/$num_r_genes);
+        my $g_sp = 100*($num_t_g_right/$num_t_genes);
+
+        my $g_ac = ($g_sn + $g_sp)/2;
+
+	print "INDIVIDUAL CDS LEVEL (CDSs)\n";
+	print "SN:$cds_sn SP:$cds_sp AC:$cds_ac\n";
+
+        print "eGASP TRANSCRIPTS (CDS LEVEL)\n";
+        print "SN:$t_sn SP:$t_sp AC:$t_ac\n";
+        print "AVE CDS LEVEL\n";
+        print "SN:$ave_t_sn SP:$ave_t_sp AC:$ave_t_ac\n";
+        print "eGASP GENE LEVEL for CDS\n";
+        print "SN:$g_sn SP:$g_sp AC:$g_ac\n";
+}
+
+#-----------------------------------------------------------------------------
+sub e_gasp_trans {
+	my $t_cgl = shift;
+	my $r_cgl = shift;
+
+	my ($t_data, $t_g_lookup)  = get_exons_by_transcript($t_cgl);
+	my ($r_data, $r_g_lookup)  = get_exons_by_transcript($r_cgl);
+
+	my $r_size = keys %{$r_data};
+	my $t_size = keys %{$t_data};
+
+	my %r_exon_sets;
+	foreach my $i (keys %{$r_data}){
+		my $r_trans = $r_data->{$i};
+		$r_exon_sets{$i} = get_exon_beg_end($r_trans);
+	}
+
+        my %t_exon_sets;
+        foreach my $i (keys %{$t_data}){
+                my $t_trans = $t_data->{$i};
+                $t_exon_sets{$i} = get_exon_beg_end($t_trans);
+        }
+
+	my %r_genes_right;
+	my $sn_frac = 0;
+	my $got_r_right = 0;
+	foreach my $i (keys %{$r_data}){
+		my $r_trans = $r_data->{$i};
+		my $r_exons = $r_exon_sets{$i};
+		foreach my $j (keys %{$t_data}){
+			my $t_exons = $t_exon_sets{$j}; 
+			my $yes = 0;
+			my $no = 0;
+			my $r_g_id;
+			foreach my $t_pair (@{$t_exons}){
+				my $t_nbeg = $t_pair->[0];
+				my $t_nend = $t_pair->[1];
+
+				$no++ if !defined($r_trans->{$t_nbeg}->{$t_nend});
+				$yes++ if defined($r_trans->{$t_nbeg}->{$t_nend});
+
+				$r_g_id = $r_g_lookup->{$t_nbeg}->{$t_nend}
+				if defined($r_trans->{$t_nbeg}->{$t_nend});
+			} 
+			my $num_exons = @$r_exons;
+
+			$sn_frac += $yes/$num_exons;
+
+			unless ($no){
+				$r_genes_right{$r_g_id}++;
+				$got_r_right++
+			}
+		}
+	}
+
+	my %t_genes_right;
+	my $sp_frac = 0;
+        my $got_t_right = 0;
+        foreach my $i (keys %{$t_data}){
+                my $t_trans = $t_data->{$i};
+		my $t_exons = $t_exon_sets{$i};
+                foreach my $j (keys %{$r_data}){
+                        my $r_exons = $r_exon_sets{$j};
+                        my $yes = 0;
+                        my $no = 0;
+			my $t_g_id;
+                        foreach my $r_pair (@{$r_exons}){
+                                my $r_nbeg = $r_pair->[0];
+                                my $r_nend = $r_pair->[1];
+
+                                $no++ if !defined($t_trans->{$r_nbeg}->{$r_nend});
+                                $yes++ if defined($t_trans->{$r_nbeg}->{$r_nend});
+
+				$t_g_id = $t_g_lookup->{$r_nbeg}->{$r_nend}
+                                if defined($t_trans->{$r_nbeg}->{$r_nend});
+
+                        }
+                        my $num_exons = @$t_exons;
+
+                        $sp_frac += $yes/$num_exons;
+
+			unless ($no){
+				$t_genes_right{$t_g_id}++;
+				$got_t_right++;
+			}
+                }
+        }
+
+
+	my $ave_t_sn = 100*($sn_frac/$r_size);
+	my $ave_t_sp = 100*($sp_frac/$t_size);
+	my $t_sn = 100*($got_r_right/$r_size);
+	my $t_sp = 100*($got_t_right/$t_size);
+
+	my $t_ac = ($t_sn + $t_sp)/2;
+	my $ave_t_ac = ($ave_t_sn + $ave_t_sp)/2;
+	
+	my $num_r_g_right = keys %r_genes_right;
+	my $num_t_g_right = keys %t_genes_right;
+
+	my $num_r_genes = get_num_genes($r_g_lookup);
+	my $num_t_genes = get_num_genes($t_g_lookup);
+
+	my $g_sn = 100*($num_r_g_right/$num_r_genes);
+	my $g_sp = 100*($num_t_g_right/$num_t_genes);
+
+	my $g_ac = ($g_sn + $g_sp)/2;
+
+	#print "eGASP Transcripts (mRNA LEVEL)\n";
+	#print "SN:$t_sn SP:$t_sp AC:$t_ac\n";  
+	#print "AVE mRNA LEVEL\n";
+	#print "SN:$ave_t_sn SP:$ave_t_sp AC:$ave_t_ac\n";
+	#print "eGASP GENE LEVEL for mRNAs\n";
+	#print "SN:$g_sn SP:$g_sp AC:$g_ac\n";
+
+	#print "eGASP TRANSCRIPT LEVEL\n";
+	#print "SN:",sprintf("%.3f",$sn)," SP:",sprintf("%.3f",$sp)," AC:",sprintf("%.3f",$ac),"\n";  
+	#print "AVE TRANSCRIPT LEVEL\n";
+	#print "SN:",sprintf("%.3f",$ave_sn)," SP:",sprintf("%.3f",$ave_sp)," AC:",sprintf("%.3f",$ave_ac),"\n";
+} 
+#-----------------------------------------------------------------------------
+sub get_num_genes {
+	my $lookup = shift;
+
+	my %g_ids;
+	foreach my $i (keys %{$lookup}){
+		foreach my $j (keys %{$lookup->{$i}}){
+			my $g_id = $lookup->{$i}->{$j};
+			$g_ids{$g_id}++;
+		}
+	}
+	my $total = keys %g_ids;
+
+	return $total;
+}
+#-----------------------------------------------------------------------------
+sub get_exons_by_transcript {
+    my $cgl = shift;
+
+        my $genes = $cgl->genes();
+
+	my %g_lookup;
+
+        my %coors;
+	my $count = -1;
+        for my $g (@{$genes}) {
+                my $i = 0;
+                while (my $t = $g->transcript($i)){
+                        if (!$opt_p && defined($t->status) && $t->status eq 'Predicted'){
+                                $i++;
+                                next;
+                        }
+
+			$count++;
+                        my $j = 0;
+                        while (my $e = $t->exon($j)){
+                                my $nbeg = $e->nbeg();
+                                my $nend = $e->nend();
+
+                                $coors{$count}{$nbeg}{$nend}++;
+				$g_lookup{$nbeg}{$nend} = $g->id;
+                                $j++;
+                        }
+                        $i++;
+                }
+        }
+
+	return (\%coors, \%g_lookup);
+}
+#-----------------------------------------------------------------------------
+sub get_utrs {
+        my $cgl = shift;
+        my $t   = shift;
+
+        my $p = $t->translation(0);
+        my $c = $cgl->contig(0);
+
+        my $strand = $t->strand();
+
+        my $first_three = substr($t->residues, 0, 3);
+
+        my $last_three = substr($t->residues, length($t->residues) -3, 3);
+
+        my $d_d = length($t->residues) - $p->metaPos($t, length($p->residues));
+        my $d_u = $p->metaPos($t, 0);
+
+	my $p_b_on_t = $p->metaPos($t, 0);
+	my $p_e_on_t = $p->metaPos($t, length($p->residues) + 3) || 'HELLLLL';
+
+	die $p_e_on_t if $p_e_on_t eq 'HELLLLL';
+ 
+	my @utrs_3;
+	my @utrs_all;
+        my @utrs_5;
+        my $i = 0;
+        my $not_encluded = 0;
+        while (my $e = $t->exon($i)){
+                my $nbeg = $e->nbeg();
+                my $nend = $e->nend();
+
+                my $e_b_on_t = $e->metaPos($t, 0);
+                my $e_e_on_t = $e->metaPos($t, length($e->residues));
+
+		if    ($e_e_on_t < $p_b_on_t){
+			push (@utrs_5, [$nbeg, $nend]);
+			push (@utrs_all, [$nbeg, $nend]);
+		}
+		elsif ($e_b_on_t < $p_b_on_t && $e_e_on_t > $p_b_on_t){
+			push (@utrs_5, [$nbeg, $t->metaPos($c, $p_b_on_t)]);
+			push (@utrs_all, [$nbeg, $t->metaPos($c, $p_b_on_t)]);
+		}
+		elsif ($e_b_on_t > $p_e_on_t){
+			push (@utrs_3, [$nbeg, $nend]);
+			push (@utrs_all, [$nbeg, $nend]);
+		}
+		elsif ($e_e_on_t > $p_e_on_t){
+			push (@utrs_3, [$t->metaPos($c, $p_e_on_t), $nend]);
+			push (@utrs_all, [$t->metaPos($c, $p_e_on_t), $nend]);
+		}
+		
+                $i++;
+        }
+
+	
+        return (\@utrs_5, \@utrs_all, \@utrs_3);
+}
+#-----------------------------------------------------------------------------
+sub get_cdss {
+	my $cgl = shift;
+	my $t   = shift;
+
+	my $p = $t->translation(0);
+	my $c = $cgl->contig(0);
+
+	my @cdss;
+         my $p_b_on_t = $p->metaPos($t, 0);
+         my $p_e_on_t = $p->metaPos($t, length($p->residues));
+
+         my $p_b_on_c = $t->metaPos($c, $p_b_on_t);
+         my $p_e_on_c = $t->metaPos($c, $p_e_on_t);
+
+         my $num_exons = @{$t->exons};
+         if ($num_exons == 1){
+                my $e = $t->exon(0);
+                my $e_b_on_t = $e->metaPos($t, 0);
+                my $e_b_on_p = $t->metaPos($p, $e_b_on_t);
+
+                my $e_e_on_t = $e->metaPos($t, length($e->residues));
+                my $e_e_on_p = $t->metaPos($p, $e_e_on_t);
+
+                my $nbeg = $e->nbeg();
+                my $nend = $e->nend();
+
+                if (defined($e_b_on_p) && defined($e_e_on_p)){
+                        push(@cdss, [$nbeg, $nend]);
+                }
+                else {
+                        push(@cdss, [$p_b_on_c, $p_e_on_c]);
+                }
+                return \@cdss;
+         }
+         my $j = 0;
+         while (my $e = $t->exon($j)){
+         	my $nbeg = $e->nbeg();
+                my $nend = $e->nend();
+
+                my $e_b_on_t = $e->metaPos($t, 0);
+                my $e_b_on_p = $t->metaPos($p, $e_b_on_t);
+
+                my $e_e_on_t = $e->metaPos($t, length($e->residues));
+                my $e_e_on_p = $t->metaPos($p, $e_e_on_t);
+
+                if    ($e_e_on_t < $p_b_on_t){
+                	# 5-prime entirely-utr exon
+                }
+                elsif ($e_b_on_t > $p_e_on_t){
+                        # 3-prime entirely-utr exon
+                }
+                elsif ($e_b_on_t >= $p_b_on_t && $e_e_on_t <= $p_e_on_t){
+                        # entirely coding exon 
+			push(@cdss, [$nbeg, $nend]);
+                }
+                elsif ($e_b_on_t < $p_b_on_t && $e_e_on_t <= $p_e_on_t){
+                        # 5-prime portion of exon is UTR
+			push(@cdss, [$p_b_on_c, $nend]);
+                }
+                elsif ($p_b_on_t >= $e_b_on_t && $p_e_on_t <= $e_e_on_t ){
+                        # entire internal portion of exon is coding
+			push(@cdss, [$p_b_on_c, $p_e_on_c]);
+                }
+                elsif ($e_b_on_t <= $p_e_on_t &&  $e_e_on_t > $p_e_on_t ){
+                        # 3-prime portion of exon is UTR
+			push(@cdss, [$nbeg, $p_e_on_c]);	
+                }
+                else {
+                      die "logic error in get_CDS_data!\n";
+                }
+
+                $j++;
+        }
+
+	return \@cdss;
+}
+#-----------------------------------------------------------------------------
+sub get_cds_by_transcript {
+        my $cgl = shift;
+
+        my $genes = $cgl->genes();
+
+        my %g_lookup;
+
+        my %coors;
+        my $count = -1;
+        for my $g (@{$genes}) {
+                my $i = 0;
+                while (my $t = $g->transcript($i)){
+                        if (!$opt_p && defined($t->status) && $t->status eq 'Predicted'){
+                                $i++;
+                                next;
+                        }
+
+                        $count++;
+                        my $j = 0;
+			my $cdss = get_cdss($cgl, $t);
+			foreach my $p (@{$cdss}){
+				my $nbeg = $p->[0];
+				my $nend = $p->[1];
+				print "HELL:".$g->id unless defined($nbeg);
+				print "CRAP:".$g->id unless defined($nend);
+				die unless defined($nend);
+				die unless defined($nbeg);
+
+				$coors{$count}{$nbeg}{$nend}++;
+				$g_lookup{$nbeg}{$nend} = $g->id;
+			}
+                        $i++;
+                }
+        }
+
+        return (\%coors, \%g_lookup);
+}
+#-----------------------------------------------------------------------------
+sub get_exon_coors {
+	my $cgl    = shift;
+
+	my $genes = $cgl->genes();
+
+	my %coors;
+	for my $g (@{$genes}) {
+        	my $i = 0;
+        	while (my $t = $g->transcript($i)){
+			if (!$opt_p && defined($t->status) && $t->status eq 'Predicted'){
+				$i++;
+				next;
+			}
+
+                	my $j = 0;
+                	while (my $e = $t->exon($j)){
+                        	my $nbeg = $e->nbeg();
+                        	my $nend = $e->nend();
+
+				$coors{$nbeg}{$nend}++;
+                        	$j++;
+                	}
+                	$i++;
+        	}
+	
+	}
+
+	return \%coors;
+}
+#-----------------------------------------------------------------------------
+

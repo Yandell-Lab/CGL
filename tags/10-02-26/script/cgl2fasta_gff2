@@ -1,0 +1,200 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use lib "$ENV{CGL_GFF_LIB}";
+
+use CGL::Annotation;
+use CGL::Annotation::Iterator;
+use Getopt::Long;
+use Text::Wrap qw(wrap);
+use File::Temp qw(tempfile);
+
+#-----------------------------------------------------------------------------
+#----------------------------------- MAIN ------------------------------------
+#-----------------------------------------------------------------------------
+my $usage = "
+
+Synopsis:
+
+cgl2fasta_gff --format gff3_flybase [options] <master_datastore.index>
+cgl2fasta_gff --format gff3_wormbase --trans <master_datastore.index>
+cgl2fasta_gff --format gff3_maker --utr3 --col 70 <master_datastore.index>
+cgl2fasta_gff --format gff3_flybase --prot --gene_name <master_datastore.index>
+
+This script takes input from a datastore index and outputs a fasta file of
+sequences.  The options control what fasta sequence to produce.
+
+
+Options:
+  --format     The format of the input files.
+  --trans      transcript sequence
+  --prot       protien sequence
+  --utr3       3' UTR sequence
+  --utr5       5' UTR sequence
+  --col        Number of colmns to wrap sequences at [80].
+  --cds        coding sequences from translational start to stop site
+  --gene_name  Use gene_name-mRNA-1 or gene_name-CDS-1 naming convention.
+	       This is useful for making RBH mappings.  Only works for
+	       transcript and protein sequences.
+
+";
+
+my ($format, $trans, $prot, $utr3, $utr5, $cds, $column, $gene_name);
+
+GetOptions('format'    => \$format, 
+	   'trans'     => \$trans,
+	   'prot'      => \$prot,
+	   'utr3'      => \$utr3,
+	   'utr5'      => \$utr5,
+	   'cds'       => \$cds,
+	   'col=i'     => \$column,
+	   'gene_name' => \$gene_name,
+	   );
+
+local ($Text::Wrap::column) = $column || 80;
+my $md_file = shift;
+die $usage unless $md_file;
+
+my $md = parse_datastore($md_file);
+
+ GENE:
+    for my $id (keys %{$md}) {
+
+	    unless (-e $md->{$id}) {
+		    print STDERR "Missing path for ID: $id\n";
+		    next GENE;
+	    }
+
+	    my $gff_file = $md->{$id} ? $md->{$id} : undef;
+	    #my $fasta_file;
+	    #($fasta_file = $gff_file) =~ s/.gff3/.fasta/;
+
+	    #print STDERR "$gff_file\n";
+
+	    my $fasta = fasta_creator ($gff_file);
+	    my ($tmp_fh, $tmp_file)= tempfile();
+	    print $tmp_fh $fasta;
+	    my $fasta_file = $tmp_file;
+
+
+
+
+	    my $cgl;
+	    eval {$cgl = new CGL::Annotation->new(format     => "gff3_maker",
+						  gff_file   => $gff_file,
+						  fasta_file => $fasta_file)};
+
+	    print STDERR "Gene: $id died with errors:\n$@\n" if $@;
+	    next GENE unless $cgl;
+
+	    my $iterator = new CGL::Annotation::Iterator($cgl);
+	    while (my $g = $iterator->next_by_gene()){
+		    eval {print get_fasta_seq($g)};
+		    print STDERR "$@\n" if $@;
+	    }
+    }
+
+#------------------------------------------------------------------------------
+#--------------------------------- Subroutines --------------------------------
+#------------------------------------------------------------------------------
+
+sub parse_datastore {
+	my $file = shift;
+
+	open (my $IN, '<', $file) or die "Can't open $file\n";
+
+	my %md;
+	while (<$IN>) {
+		chomp;
+		my @fields = split;
+		my ($id, $path) = ($fields[0], $fields[1]);
+		die "Incorrect format specified.  Can't parse datastore\n"
+		    unless (defined $id && defined $path);
+
+		$md{$id} = $path;
+	}
+	return \%md;
+}
+#------------------------------------------------------------------------------
+sub get_fasta_seq {
+
+	my $g = shift;
+
+	my $i = 0;
+	my $fasta;
+
+      TRANS:
+	while (my $t = $g->transcript($i++)) {
+		my $p = $t->translation(0);
+		my $sequence;
+		my $header;
+		my $p_end_on_t = $p->metaPos($t, $p->length);
+		my $p_beg_on_t = $p->metaPos($t, 0);
+
+		if ($trans) {
+			print STDERR "Getting ID\n";
+			$header   = $t->id;
+			if ($gene_name) {
+				$header = $g->id . "-mRNA-" . $i;
+			}
+			$sequence = $t->residues;
+		}
+		elsif ($prot) {
+			next TRANS if ! $p;
+			$header   = $p->id;
+			if ($gene_name) {
+				$header = $g->id . "-CDS-$i";
+			}
+			$sequence = $p->residues;
+		}
+		elsif ($utr3) {
+			next TRANS if ! $p;
+			my $three_length = $t->length - $p_end_on_t - 3;
+			$header   = $t->id . " 3-prime utr";
+			$sequence = substr($t->residues, $p_end_on_t, $three_length);
+			next TRANS if ! $sequence;
+		}
+		elsif ($utr5) {
+			next TRANS if ! $p;
+			my $five_length  = $p_beg_on_t;
+			$header   = $t->id . "5-prime utr";
+			$sequence = substr($t->residues, 0, $five_length);
+			next TRANS if ! $sequence;
+		    }
+		elsif ($cds) {
+			next TRANS if ! $p;
+			my $five_length_cd  = $p_beg_on_t;
+			my $three_length_cd = $t->length - $p_end_on_t - 3;
+			$header   = $t->id . "cds-sequences";
+			$sequence = substr($t->residues, $five_length_cd, $three_length_cd);
+			next TRANS if ! $sequence;
+		    
+}		
+		$fasta .= ">$header\n";
+		$fasta .= wrap('', '', $sequence);
+		$fasta .= "\n";
+
+	}
+	return $fasta;
+}
+#------------------------------------------------------------------------------
+sub fasta_creator {
+    my $gff3_file = shift;
+
+    open my $IN,' >', "$gff3_file" || 
+	die "fasta_creator could not open the gff3_file";
+
+    while (my $line= <$IN>){
+
+	last if ($line =~ /\#FASTA/ );
+
+    }
+    my $seq_id= <$IN>;
+    my @sequences= <$IN>;
+    my $seq = join '',  @sequences;
+    my $fasta = $seq_id.$seq;
+
+    return $fasta;
+} 
+

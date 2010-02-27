@@ -1,0 +1,29 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+use CGL::Version;
+
+print "CGL Version $CGL::Version::VERSION\n";
+
+exit(0);
+
+__END__
+
+=head1 NAME
+
+cgl_version
+
+=head1 SYNOPSIS
+
+  cgl_version
+
+=head1 DESCRIPTION
+
+  Prints out the version number of the cgl library.
+
+=head1 DOCUMENTATION
+
+L<http://www.yandell-lab.org/cgl>
+
+=cut
