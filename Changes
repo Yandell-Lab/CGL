@@ -3,4 +3,9 @@ Revision history for Perl module Foo::Bar
 0.01 Sat Jul 31 17:17:18 2004
 	- original version; created by ExtUtils::ModuleMaker 0.32
 
+--------------------------------------------------------------------------------
 
+10-02-26 (Revision: 113)
+
+Fixed major bug that cause incorrect calls on variants that overlapped
+minus strand transcripts.
