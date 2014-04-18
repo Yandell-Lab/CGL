@@ -22,7 +22,7 @@ Given a master_datastore.index, print a mapping of $cgl->id to $cgl->unique_name
 ';
 
 my ($help, $format);
-my $opt_success = GetOptions('help'     => \$help;
+my $opt_success = GetOptions('help'     => \$help,
 			     'format=s' => \$format);
 
 my $md_file = shift;

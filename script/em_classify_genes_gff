@@ -46,56 +46,56 @@ my $md = parse_ds_index($ds_index_file);
 
  GENE:
     for my $id (keys %{$md}) {
+	
+	print STDERR "\n\n";
+	unless (-e $md->{$id}) {
+	    print STDERR "Missing path for ID: $id\n";
+	    next GENE;
+	}
+	
+	my $gff_file = $md->{$id} ? $md->{$id} : undef;
+	my $fasta_file;
+	($fasta_file = $gff_file) =~ s/.gff3/.fasta/;
+	
+	print STDERR "$gff_file\n";
+	
+	my $cgl = CGL::Annotation->new(format     => $format,
+				       gff_file   => $gff_file,
+				       fasta_file => $fasta_file);
 
-	    print STDERR "\n\n";
-            unless (-e $md->{$id}) {
-                    print STDERR "Missing path for ID: $id\n";
-                    next GENE;
-            }
-
-            my $gff_file = $md->{$id} ? $md->{$id} : undef;
-            my $fasta_file;
-            ($fasta_file = $gff_file) =~ s/.gff3/.fasta/;
-
-            print STDERR "$gff_file\n";
-
-            my $cgl = CGL::Annotation->new(format     => $format,
-					   gff_file   => $gff_file,
-					   fasta_file => $fasta_file)};
-
-	    print "ERROR: Can't create CGL object.\n$@\n" if $@;
-	    next GENE unless $cgl;
-
-            my $iterator = CGL::Annotation::Iterator->new($cgl);
-            while (my $gene = $iterator->next_by_gene()){
-
-		#Skip single transcript genes
-		my $trnsc_count;
-		eval{$trnsc_count = scalar @{$gene->transcripts}};
-		if ($@) {
-			print STDERR "ERROR: Can't count transcripts\n$@\n";
-			next GENE;
-		}
-
-		if ($trnsc_count <= 1) {
-			print STDERR "ERROR: single transcript gene" .
-				  "($id)";
-			next;
-		}
-		
-		#Get the count for the three transcript pair classes
-		#for this gene.
-		my ($seq_disjoint, $parts_disjoint, $aligned) = 
-		    em_classify_gene($gene);
-		print join "\t", ($id,
-				  $seq_disjoint,
-				  $parts_disjoint,
-				  $aligned,
-				  $md->{$id},
-				  );
-		print "\n";
-		print STDERR "SUCCESS: gene classified " .
-			  "($id)";
+	print "ERROR: Can't create CGL object.\n$@\n" if $@;
+	next GENE unless $cgl;
+	
+	my $iterator = CGL::Annotation::Iterator->new($cgl);
+	while (my $gene = $iterator->next_by_gene()){
+	    
+	    #Skip single transcript genes
+	    my $trnsc_count;
+	    eval{$trnsc_count = scalar @{$gene->transcripts}};
+	    if ($@) {
+		print STDERR "ERROR: Can't count transcripts\n$@\n";
+		next GENE;
+	    }
+	    
+	    if ($trnsc_count <= 1) {
+		print STDERR "ERROR: single transcript gene" .
+		    "($id)";
+		next;
+	    }
+	    
+	    #Get the count for the three transcript pair classes
+	    #for this gene.
+	    my ($seq_disjoint, $parts_disjoint, $aligned) = 
+		em_classify_gene($gene);
+	    print join "\t", ($id,
+			      $seq_disjoint,
+			      $parts_disjoint,
+			      $aligned,
+			      $md->{$id},
+	    );
+	    print "\n";
+	    print STDERR "SUCCESS: gene classified " .
+		"($id)";
 	}
 }
 

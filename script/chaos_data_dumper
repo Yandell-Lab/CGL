@@ -14,7 +14,7 @@ $SIG{INT} = \&gotControlC;
 use FileHandle;
 use CGL::Annotation;
 use CGL::Annotation::Iterator;
-use PostData;
+#use PostData;
 use FastaFile;
 use Fasta;
 
