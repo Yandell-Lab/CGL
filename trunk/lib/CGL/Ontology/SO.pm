@@ -122,19 +122,25 @@ sub new
 	bless($self, $class);
 
 	if(defined($source)){
-		$self->source($source);
-	}
-	elsif (defined($ENV{'CGL_SO_SOURCE'})){
-		$self->source($ENV{'CGL_SO_SOURCE'});
-	}
-	else {
-		print "\n#######################################################\n";
-		print "Error in CGL::Ontology::SO.pm.\n";
-		print "You must either set the CGL_SO_SOURCE environment varible\n";
-		print "or provide a so.obo file.\n";
-		print "#######################################################\n\n";
-		die;
-	}
+	    $self->source($source);
+        }
+        elsif (defined($ENV{'CGL_SO_SOURCE'})){
+	    $self->source($ENV{'CGL_SO_SOURCE'});
+        }
+        else {
+            (my $file = $INC{'CGL/Ontology/SO.pm'}) =~ s/Ontology\/SO\.pm/so.obo/;
+            if(-f $file){
+                $self->source($file);
+            }
+            else{
+                print "\n#######################################################\n";
+                print "Error in CGL::Ontology::SO.pm.\n";
+                print "You must either set the CGL_SO_SOURCE environment varible\n";
+                print "or provide a so.obo file.\n";
+                print "#######################################################\n\n";
+                die;
+            }
+        }
 
 	# might want to instantiate a variety of parsers, depending on
 	# the source....

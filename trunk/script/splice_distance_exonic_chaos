@@ -12,7 +12,7 @@ use lib $ENV{CGL_GFF_LIB};
 use FileHandle;
 use CGL::Annotation;
 use CGL::Annotation::Iterator;
-use PostData;
+#use PostData;
 
 my $usage = "
 

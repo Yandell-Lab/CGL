@@ -4,6 +4,7 @@ use strict;
 use FileHandle;
 use Shadower;
 use Getopt::Long;
+use CGL::Annotation;
 
 my $usage = '
 
@@ -62,6 +63,11 @@ my ($gene_id, $num_t, $num_t_p, $esc_m_x, $esc_m, $esc_c_x, $esc_c, $esc_u_x,
 #-----------------------------------------------------------------------------
 
 my ($gff_file, $fasta_file, $chaos_file, $format);
+
+if(!$format){
+    print $usage;
+    exit(0);
+}
 
 my $opt_success = GetOptions('gff=s'   	 => \$gff_file,
                              'fasta=s' 	 => \$fasta_file,

@@ -30,7 +30,7 @@ my $so = CGL::Ontology::SO->();
 my $tm = CGL::TranslationMachine->();
 
 my $chaos;
-eval {$chaos= CGL::Annotation->new(format => 'chaos'
+eval {$chaos= CGL::Annotation->new(format => 'chaos',
 				   file   => $file)};
 print_out('DOC_INVALID', undef, $file, $@) if $@;
 

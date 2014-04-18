@@ -5,6 +5,7 @@ use warnings;
 
 use FileHandle;
 use Getopt::Long;
+use CGL::Annotation;
 
 my $usage = "
 
@@ -45,9 +46,9 @@ isc_5_x  ??
 isc_3    Intron splice complexity of the 3' UTR
 isc_3_x  ??
 
-my ($gene_id, $num_t, $num_t_p, $esc_m_x, $esc_m, $esc_c_x, $esc_c, $esc_u_x, 
-    $esc_u, $esc_5_x, $esc_5, $esc_3_x, $esc_3, $isc_m_x, $isc_m, $isc_c_x, 
-    $isc_c, $isc_5_x, $isc_5, $isc_3_x, $isc_3) = split;
+my (\$gene_id, \$num_t, \$num_t_p, \$esc_m_x, \$esc_m, \$esc_c_x, \$esc_c, \$esc_u_x, 
+    \$esc_u, \$esc_5_x, \$esc_5, \$esc_3_x, \$esc_3, \$isc_m_x, \$isc_m, \$isc_c_x, 
+    \$isc_c, \$isc_5_x, \$isc_5, \$isc_3_x, \$isc_3) = split;
 
 Options:
   --format [Flybase|Wormbase]  Is the annotation in FlyBase GFF or 
@@ -69,6 +70,11 @@ my $opt_success = GetOptions('gff=s'    => \$gff_file,
                              'chaos=s'   => \$chaos_file,
 			     'format=s'  => \$format,
                              );
+
+if(! $format){
+    print $usage;
+    exit(0);
+}
 
 my $cgl = CGL::Annotation->new(format     => $format,
 			       gff_file   => $gff_file,
