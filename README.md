@@ -1,16 +1,13 @@
-pod2text Foo::Bar.pm > README
+### CGL
+![CGL](http://www.yandell-lab.org/images/CGL-Logo.png "CGL")
 
-If this is still here it means the programmer was too lazy to create the readme file.
+# Overview
+CGL is a software library designed to facilitate the use of genome annotations as substrates for computation and experimentation; we call it "CGL", an acronym for Comparitive Genomics Library, and pronounce it "Seagull". The purpose of CGL is to provide an informatics infrastructure for a laboratory, department, or research institute engaged in the large-scale analysis of genomes and their annotations.
 
-You can create it now by using the command shown above from this directory.
+# Installing CGL
+* perl Makefile.PL
+* make
+* make test
+* make install
 
-At the very least you should be able to use this set of instructions
-to install the module...
-
-perl Makefile.PL
-make
-make test
-make install
-
-
-If you are on a windows box you should use 'nmake' rather than 'make'.
+See our [website](http://www.yandell-lab.org/software/cgl.html) for more information.
